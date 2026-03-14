@@ -12,10 +12,20 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// Configurar CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReactApp", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddScoped<MotoService>();
 builder.Services.AddEndpointsApiExplorer();
-
 
 // Configurar AutoMapper
 builder.Services.AddAutoMapper( cfg =>
@@ -32,6 +42,9 @@ if (app.Environment.IsDevelopment())
     // Ativa a interface visual do Scalar em /scalar
     app.MapScalarApiReference();
 }
+
+app.UseCors("AllowReactApp");
+
 app.UseHttpsRedirection();
 
 app.MapControllers();

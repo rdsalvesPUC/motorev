@@ -16,21 +16,21 @@ public class MotoController : ControllerBase
         _motoService = motoService;
     }
     
-    [HttpPost("motos")]
+    [HttpPost("criar")]
     public IActionResult AdicionarMoto(MotoRequest request)
     {
         var response = _motoService.CadastrarMoto(request);
         return CreatedAtAction(nameof(ObterMoto), new { id = response.Id }, response);
     }
     
-    [HttpGet("motos/{id}")]
+    [HttpGet("id/{id}")]
     public ActionResult<MotoResponse> ObterMoto(int id)
     {
         var response = _motoService.ObterMoto(id);
         return Ok(response);
     }
     
-    [HttpGet("motos")]
+    [HttpGet("listar")]
     public ActionResult<List<MotoResponse>> ObterMotos()
     {
         var response = _motoService.ListarMotos();
