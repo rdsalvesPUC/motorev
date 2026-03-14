@@ -11,7 +11,7 @@ using MotoRevApi.Data;
 namespace MotoRevApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260314141659_InitialCreate")]
+    [Migration("20260314144027_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
