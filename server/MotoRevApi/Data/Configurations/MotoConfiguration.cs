@@ -17,7 +17,7 @@ public class MotoConfiguration : IEntityTypeConfiguration<Moto>
         builder
             .Property(m => m.Cor)
             .HasMaxLength(20)
-            .IsRequired();
+            .IsRequired(false);
         builder
             .Property(m => m.Ano)
             .HasMaxLength(4)
