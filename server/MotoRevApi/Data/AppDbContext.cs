@@ -1,15 +1,20 @@
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Model;
 
 namespace MotoRevApi.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext : IdentityDbContext<Usuario>
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
     {
     }
     
     public DbSet<Moto> Motos { get; set; }
+    public DbSet<Cliente> Clientes { get; set; }
+    public DbSet<Concessionaria> Concessionarias { get; set; }
+    public DbSet<Endereco> Enderecos { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
