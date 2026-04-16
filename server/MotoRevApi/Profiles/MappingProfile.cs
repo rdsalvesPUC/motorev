@@ -11,8 +11,12 @@ public class MappingProfile : Profile
     {
         // Requests
         CreateMap<MotoRequest, Moto>();
+        CreateMap<RegisterClienteRequest, Cliente>();
+        CreateMap<RegisterConcessionariaRequest, Concessionaria>();
         
         // Responses
         CreateMap<Moto, MotoResponse>();
+        CreateMap<Cliente, ClienteResponse>();
+        CreateMap<Concessionaria, ConcessionariaResponse>();
     }
 }
