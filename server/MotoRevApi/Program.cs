@@ -91,7 +91,23 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     
     // Ativa a interface visual do Scalar em /scalar
-    app.MapScalarApiReference();
+    app.MapScalarApiReference(options =>
+    {
+        options
+            .WithTitle("MotoRev Server")
+            .WithDefaultHttpClient(ScalarTarget.CSharp, ScalarClient.HttpClient);
+
+        options
+            .AddPreferredSecuritySchemes("Bearer")
+            .AddHttpAuthentication(
+                "Bearer",
+                auth =>
+                {
+                    auth.Token = "";
+                }
+            )
+            .EnablePersistentAuthentication();
+    }); 
 }
 
 app.UseCors("AllowReactApp");
