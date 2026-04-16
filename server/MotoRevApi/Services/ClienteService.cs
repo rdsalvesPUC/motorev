@@ -1,5 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using MotoRevApi.Authorization;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
@@ -23,6 +25,11 @@ public class ClienteService
 
     public async Task<ClienteResponse> RegisterAsync(RegisterClienteRequest request)
     {
+        if (await _context.Clientes.AnyAsync(c => c.Cpf == request.Cpf))
+        {
+            throw new DuplicateDataException($"Já existe um cliente com o CPF {request.Cpf}.");
+        }
+
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -34,7 +41,7 @@ public class ClienteService
                 throw new RegistrationException(identityResult.Errors);
             }
 
-            await _userManager.AddToRoleAsync(user, "Cliente");
+            await _userManager.AddToRoleAsync(user, Roles.Cliente);
 
             var cliente = _mapper.Map<Cliente>(request);
             cliente.UsuarioId = user.Id;

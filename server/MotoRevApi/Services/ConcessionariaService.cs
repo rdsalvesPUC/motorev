@@ -1,5 +1,7 @@
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using MotoRevApi.Authorization;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
@@ -23,6 +25,11 @@ public class ConcessionariaService
 
     public async Task<ConcessionariaResponse> RegisterAsync(RegisterConcessionariaRequest request)
     {
+        if (await _context.Concessionarias.AnyAsync(c => c.Cnpj == request.Cnpj))
+        {
+            throw new DuplicateDataException($"Já existe uma concessionária com o CNPJ {request.Cnpj}.");
+        }
+
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -34,7 +41,7 @@ public class ConcessionariaService
                 throw new RegistrationException(identityResult.Errors);
             }
 
-            await _userManager.AddToRoleAsync(user, "Concessionaria");
+            await _userManager.AddToRoleAsync(user, Roles.Concessionaria);
 
             var concessionaria = _mapper.Map<Concessionaria>(request);
             concessionaria.UsuarioId = user.Id;

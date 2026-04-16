@@ -1,5 +1,6 @@
-using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MotoRevApi.Authorization;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
 using MotoRevApi.Services;
@@ -17,6 +18,7 @@ public class MotoController : ControllerBase
     }
     
     [HttpPost("criar")]
+    [Authorize(Roles = Roles.Cliente)]
     public IActionResult AdicionarMoto(MotoRequest request)
     {
         var response = _motoService.CadastrarMoto(request);
@@ -36,6 +38,4 @@ public class MotoController : ControllerBase
         var response = _motoService.ListarMotos();
         return Ok(response);
     }
-    
-    
 }

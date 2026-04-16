@@ -37,6 +37,12 @@ public class GlobalExceptionHandler : IExceptionHandler
                 Title = "Recurso Não Encontrado",
                 Detail = notFoundEx.Message
             },
+            DuplicateDataException dupEx => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Dados Duplicados",
+                Detail = dupEx.Message
+            },
             _ => new ProblemDetails
             {
                 Status = StatusCodes.Status500InternalServerError,
