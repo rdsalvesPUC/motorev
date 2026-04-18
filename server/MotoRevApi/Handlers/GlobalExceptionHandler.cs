@@ -47,7 +47,7 @@ public class GlobalExceptionHandler : IExceptionHandler
             {
                 Status = StatusCodes.Status500InternalServerError,
                 Title = "Erro Interno no Servidor",
-                Detail = "Ocorreu um erro inesperado. Tente novamente mais tarde."
+                Detail = exception.Message
             }
         };
     }

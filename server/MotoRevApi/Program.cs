@@ -22,6 +22,7 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddOpenApi(options =>
 {
+    options.AddScalarTransformers();
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 

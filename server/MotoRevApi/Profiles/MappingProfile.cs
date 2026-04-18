@@ -14,6 +14,12 @@ public class MappingProfile : Profile
         CreateMap<RegisterClienteRequest, Cliente>();
         CreateMap<RegisterConcessionariaRequest, Concessionaria>();
         
+        CreateMap<UpdateClienteRequest, Cliente>()
+            .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+            
+        CreateMap<UpdateConcessionariaRequest, Concessionaria>()
+            .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
+        
         // Responses
         CreateMap<Moto, MotoResponse>();
         CreateMap<Cliente, ClienteResponse>();
