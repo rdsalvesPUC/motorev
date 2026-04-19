@@ -1,5 +1,4 @@
-using AutoMapper;
-using AutoMapper.QueryableExtensions;
+using Mapster;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Authorization;
@@ -15,13 +14,11 @@ public class ConcessionariaService
 {
     private readonly AppDbContext _context;
     private readonly UserManager<Usuario> _userManager;
-    private readonly IMapper _mapper;
 
-    public ConcessionariaService(AppDbContext context, UserManager<Usuario> userManager, IMapper mapper)
+    public ConcessionariaService(AppDbContext context, UserManager<Usuario> userManager)
     {
         _context = context;
         _userManager = userManager;
-        _mapper = mapper;
     }
 
     public async Task<ConcessionariaResponse> RegisterAsync(RegisterConcessionariaRequest request)
@@ -46,14 +43,14 @@ public class ConcessionariaService
 
             await _userManager.AddToRoleAsync(user, Roles.Concessionaria);
 
-            var concessionaria = _mapper.Map<Concessionaria>(request);
+            var concessionaria = request.Adapt<Concessionaria>();
             concessionaria.UsuarioId = user.Id;
 
             _context.Concessionarias.Add(concessionaria);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            return _mapper.Map<ConcessionariaResponse>(concessionaria);
+            return concessionaria.Adapt<ConcessionariaResponse>();
         }
         catch
         {
@@ -66,7 +63,7 @@ public class ConcessionariaService
     {
         return await _context.Concessionarias
             .Where(c => c.IsActive)
-            .ProjectTo<ConcessionariaResponse>(_mapper.ConfigurationProvider)
+            .ProjectToType<ConcessionariaResponse>()
             .ToListAsync();
     }
 
@@ -74,7 +71,7 @@ public class ConcessionariaService
     {
         var concessionaria = await _context.Concessionarias
             .Where(c => c.Id == id && c.IsActive)
-            .ProjectTo<ConcessionariaResponse>(_mapper.ConfigurationProvider)
+            .ProjectToType<ConcessionariaResponse>()
             .FirstOrDefaultAsync();
 
         return concessionaria ?? throw new NotFoundException($"Concessionária com ID {id} não encontrada.");
@@ -84,7 +81,7 @@ public class ConcessionariaService
     {
         var concessionaria = await _context.Concessionarias
             .Where(c => c.UsuarioId == userId && c.IsActive)
-            .ProjectTo<ConcessionariaResponse>(_mapper.ConfigurationProvider)
+            .ProjectToType<ConcessionariaResponse>()
             .FirstOrDefaultAsync();
 
         return concessionaria ?? throw new NotFoundException($"Concessionária não encontrada.");
@@ -98,7 +95,7 @@ public class ConcessionariaService
             throw new NotFoundException("Concessionária não encontrada ou inativa.");
         }
 
-        _mapper.Map(request, concessionaria);
+        request.Adapt(concessionaria);
         await _context.SaveChangesAsync();
     }
 

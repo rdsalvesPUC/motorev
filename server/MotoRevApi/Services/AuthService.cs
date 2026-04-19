@@ -1,4 +1,3 @@
-using AutoMapper;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
@@ -18,22 +17,19 @@ public class AuthService
     private readonly TokenService _tokenService;
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
-    private readonly IMapper _mapper;
 
     public AuthService(
         UserManager<Usuario> userManager,
         SignInManager<Usuario> signInManager,
         TokenService tokenService,
         AppDbContext context,
-        IConfiguration configuration,
-        IMapper mapper)
+        IConfiguration configuration)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokenService = tokenService;
         _context = context;
         _configuration = configuration;
-        _mapper = mapper;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)

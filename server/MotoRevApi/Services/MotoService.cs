@@ -1,37 +1,41 @@
-using AutoMapper;
+using Mapster;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Exceptions;
 
 namespace MotoRevApi.Services;
 
 public class MotoService
 {
     private readonly AppDbContext _context;
-    private readonly IMapper _mapper;
     
-    public MotoService(AppDbContext context, IMapper mapper)
+    public MotoService(AppDbContext context)
     {
         _context = context;
-        _mapper = mapper;
     }
     
     public MotoResponse CadastrarMoto (MotoRequest request)
     {
-        var moto = _mapper.Map<Model.Moto>(request);
+        var moto = request.Adapt<Model.Moto>();
         _context.Motos.Add(moto);
         _context.SaveChanges();
         
-        return _mapper.Map<MotoResponse>(moto);
+        return moto.Adapt<MotoResponse>();
     }
     
     public MotoResponse ObterMoto(int id)
     {
-        return _mapper.Map<MotoResponse>(_context.Motos.Find(id));
+        var moto = _context.Motos.Find(id)?.Adapt<MotoResponse>();
+        if (moto == null)
+        {
+            throw new NotFoundException($"Moto com ID {id} não encontrada.");
+        }
+        return moto;
     }
     
     public List<MotoResponse> ListarMotos()
     {
-        return _mapper.Map<List<MotoResponse>>(_context.Motos.ToList());
+        return _context.Motos.ToList().Adapt<List<MotoResponse>>();
     }
 }

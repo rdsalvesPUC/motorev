@@ -74,10 +74,8 @@ builder.Services.AddScoped<ClienteService>();
 builder.Services.AddScoped<ConcessionariaService>();
 builder.Services.AddEndpointsApiExplorer();
 
-// Configurar AutoMapper
-builder.Services.AddAutoMapper( cfg =>
-    cfg.AddProfile<MappingProfile>()
-    );
+// Configurar Mapster
+MapsterConfig.RegisterMapsterConfiguration();
 
 var app = builder.Build();
 

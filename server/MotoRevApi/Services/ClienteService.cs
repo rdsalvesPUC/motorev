@@ -1,5 +1,4 @@
-using AutoMapper;
-using AutoMapper.QueryableExtensions;
+using Mapster;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Authorization;
@@ -15,13 +14,11 @@ public class ClienteService
 {
     private readonly AppDbContext _context;
     private readonly UserManager<Usuario> _userManager;
-    private readonly IMapper _mapper;
 
-    public ClienteService(AppDbContext context, UserManager<Usuario> userManager, IMapper mapper)
+    public ClienteService(AppDbContext context, UserManager<Usuario> userManager)
     {
         _context = context;
         _userManager = userManager;
-        _mapper = mapper;
     }
 
     public async Task<ClienteResponse> RegisterAsync(RegisterClienteRequest request)
@@ -46,14 +43,14 @@ public class ClienteService
 
             await _userManager.AddToRoleAsync(user, Roles.Cliente);
 
-            var cliente = _mapper.Map<Cliente>(request);
+            var cliente = request.Adapt<Cliente>();
             cliente.UsuarioId = user.Id;
 
             _context.Clientes.Add(cliente);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
             
-            return _mapper.Map<ClienteResponse>(cliente);
+            return cliente.Adapt<ClienteResponse>();
         }
         catch
         {
@@ -66,7 +63,7 @@ public class ClienteService
     {
         var cliente = await _context.Clientes
             .Where(c => c.UsuarioId == userId && c.IsActive)
-            .ProjectTo<ClienteResponse>(_mapper.ConfigurationProvider)
+            .ProjectToType<ClienteResponse>()
             .FirstOrDefaultAsync();
 
         return cliente ?? throw new NotFoundException($"Cliente não encontrado.");
@@ -80,7 +77,7 @@ public class ClienteService
             throw new NotFoundException("Cliente não encontrado ou inativo.");
         }
 
-        _mapper.Map(request, cliente);
+        request.Adapt(cliente);
         await _context.SaveChangesAsync();
     }
 
