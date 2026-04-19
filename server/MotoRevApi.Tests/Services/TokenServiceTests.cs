@@ -124,4 +124,77 @@ public class TokenServiceTests
         var ex = Assert.Throws<SecurityTokenException>(() => service.GetPrincipalFromExpiredToken(tokenString));
         Assert.Equal("Token inválido", ex.Message);
     }
+
+    [Fact]
+    public void ValidarTokenExpirado_DeveFalhar_QuandoTokenEstaExpirado()
+    {
+        // Arrange
+        var service = new TokenService(_mockConfiguration.Object);
+        
+        // Gerar um token manualmente que já nasceu expirado
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_secret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")]),
+            NotBefore = DateTime.UtcNow.AddMinutes(-20),
+            Expires = DateTime.UtcNow.AddMinutes(-10), // Expirado há 10 minutos
+            SigningCredentials = creds,
+            Issuer = "test.com",
+            Audience = "test.com"
+        };
+        
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var tokenString = tokenHandler.WriteToken(token);
+
+        var tokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateAudience = true,
+            ValidAudience = "test.com",
+            ValidateIssuer = true,
+            ValidIssuer = "test.com",
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = key,
+            ValidateLifetime = true, // Aqui validamos a expiração
+            ClockSkew = TimeSpan.Zero
+        };
+
+        // Act & Assert
+        Assert.Throws<SecurityTokenExpiredException>(() => 
+            tokenHandler.ValidateToken(tokenString, tokenValidationParameters, out _));
+    }
+
+    [Fact]
+    public void GetPrincipalFromExpiredToken_DeveRetornarPrincipal_MesmoSeTokenEstiverExpirado()
+    {
+        // Arrange
+        var service = new TokenService(_mockConfiguration.Object);
+        
+        // Gerar um token manualmente que já nasceu expirado
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = new SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(_secret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "user-1")]),
+            NotBefore = DateTime.UtcNow.AddMinutes(-20),
+            Expires = DateTime.UtcNow.AddMinutes(-10), // Expirado há 10 minutos
+            SigningCredentials = creds,
+            Issuer = "test.com",
+            Audience = "test.com"
+        };
+        
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var tokenString = tokenHandler.WriteToken(token);
+
+        // Act
+        var principal = service.GetPrincipalFromExpiredToken(tokenString);
+
+        // Assert
+        Assert.NotNull(principal);
+        Assert.Equal("user-1", principal.FindFirst(ClaimTypes.NameIdentifier)?.Value);
+    }
 }
