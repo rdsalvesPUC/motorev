@@ -15,13 +15,15 @@ public class ConcessionariaService
     private readonly AppDbContext _context;
     private readonly UserManager<Usuario> _userManager;
 
+    public ConcessionariaService() { } // Construtor para Moq
+
     public ConcessionariaService(AppDbContext context, UserManager<Usuario> userManager)
     {
         _context = context;
         _userManager = userManager;
     }
 
-    public async Task<ConcessionariaResponse> RegisterAsync(RegisterConcessionariaRequest request)
+    public virtual async Task<ConcessionariaResponse> RegisterAsync(RegisterConcessionariaRequest request)
     {
         if (await _context.Concessionarias.AnyAsync(c => c.Cnpj == request.Cnpj))
         {
@@ -59,7 +61,7 @@ public class ConcessionariaService
         }
     }
 
-    public async Task<List<ConcessionariaResponse>> GetAllAsync()
+    public virtual async Task<List<ConcessionariaResponse>> GetAllAsync()
     {
         return await _context.Concessionarias
             .Where(c => c.IsActive)
@@ -67,7 +69,7 @@ public class ConcessionariaService
             .ToListAsync();
     }
 
-    public async Task<ConcessionariaResponse> GetByIdAsync(int id)
+    public virtual async Task<ConcessionariaResponse> GetByIdAsync(int id)
     {
         var concessionaria = await _context.Concessionarias
             .Where(c => c.Id == id && c.IsActive)
@@ -77,7 +79,7 @@ public class ConcessionariaService
         return concessionaria ?? throw new NotFoundException($"Concessionária com ID {id} não encontrada.");
     }
     
-    public async Task<ConcessionariaResponse> GetByUserIdAsync(string userId)
+    public virtual async Task<ConcessionariaResponse> GetByUserIdAsync(string userId)
     {
         var concessionaria = await _context.Concessionarias
             .Where(c => c.UsuarioId == userId && c.IsActive)
@@ -87,7 +89,7 @@ public class ConcessionariaService
         return concessionaria ?? throw new NotFoundException($"Concessionária não encontrada.");
     }
 
-    public async Task UpdateAsync(string userId, UpdateConcessionariaRequest request)
+    public virtual async Task UpdateAsync(string userId, UpdateConcessionariaRequest request)
     {
         var concessionaria = await _context.Concessionarias.FirstOrDefaultAsync(c => c.UsuarioId == userId && c.IsActive);
         if (concessionaria == null)
@@ -99,7 +101,7 @@ public class ConcessionariaService
         await _context.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(string userId)
+    public virtual async Task DeleteAsync(string userId)
     {
         var concessionaria = await _context.Concessionarias.FirstOrDefaultAsync(c => c.UsuarioId == userId && c.IsActive);
         if (concessionaria == null)

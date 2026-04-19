@@ -23,7 +23,7 @@ public class TokenService
         _key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
     }
 
-    public string GenerateToken(Usuario user, IEnumerable<string> roles)
+    public virtual string GenerateToken(Usuario user, IEnumerable<string> roles)
     {
         var claims = new List<Claim>
         {
@@ -52,7 +52,7 @@ public class TokenService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
     
-    public string GenerateRefreshToken()
+    public virtual string GenerateRefreshToken()
     {
         var randomNumber = new byte[64];
         using var rng = RandomNumberGenerator.Create();
@@ -60,7 +60,7 @@ public class TokenService
         return Convert.ToBase64String(randomNumber);
     }
 
-    public ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
+    public virtual ClaimsPrincipal? GetPrincipalFromExpiredToken(string token)
     {
         var tokenValidationParameters = new TokenValidationParameters
         {

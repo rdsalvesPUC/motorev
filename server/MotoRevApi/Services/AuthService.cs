@@ -7,6 +7,7 @@ using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
+using MotoRevApi.Authorization;
 
 namespace MotoRevApi.Services;
 
@@ -17,6 +18,8 @@ public class AuthService
     private readonly TokenService _tokenService;
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
+
+    public AuthService() { } // Construtor para Moq
 
     public AuthService(
         UserManager<Usuario> userManager,
@@ -32,7 +35,7 @@ public class AuthService
         _configuration = configuration;
     }
 
-    public async Task<LoginResponse> LoginAsync(LoginRequest request)
+    public virtual async Task<LoginResponse> LoginAsync(LoginRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user == null)
@@ -77,7 +80,7 @@ public class AuthService
         return new LoginResponse(token, refreshToken, role, userData);
     }
     
-    public async Task<LoginResponse> RefreshTokenAsync(RefreshTokenRequest request)
+    public virtual async Task<LoginResponse> RefreshTokenAsync(RefreshTokenRequest request)
     {
         var principal = _tokenService.GetPrincipalFromExpiredToken(request.AccessToken);
         if (principal == null)
@@ -103,27 +106,34 @@ public class AuthService
         var role = roles.FirstOrDefault();
         UserData userData = null;
 
-        if (role == "Cliente")
+        switch (role)
         {
-            var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.UsuarioId == user.Id);
-            if (cliente != null)
+            case Roles.Cliente:
             {
-                userData = new UserData(cliente.Id, cliente.Nome);
+                var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.UsuarioId == user.Id);
+                if (cliente != null)
+                {
+                    userData = new UserData(cliente.Id, cliente.Nome);
+                }
+
+                break;
             }
-        }
-        else if (role == "Concessionaria")
-        {
-            var concessionaria = await _context.Concessionarias.FirstOrDefaultAsync(c => c.UsuarioId == user.Id);
-            if (concessionaria != null)
+            case Roles.Concessionaria:
             {
-                userData = new UserData(concessionaria.Id, concessionaria.Nome);
+                var concessionaria = await _context.Concessionarias.FirstOrDefaultAsync(c => c.UsuarioId == user.Id);
+                if (concessionaria != null)
+                {
+                    userData = new UserData(concessionaria.Id, concessionaria.Nome);
+                }
+
+                break;
             }
         }
 
         return new LoginResponse(newAccessToken, newRefreshToken, role, userData);
     }
     
-    public async Task LogoutAsync(string userId)
+    public virtual async Task LogoutAsync(string userId)
     {
         var user = await _userManager.FindByIdAsync(userId);
         if (user == null) return;

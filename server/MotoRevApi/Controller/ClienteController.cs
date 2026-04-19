@@ -38,7 +38,6 @@ public class ClienteController : ControllerBase
     public async Task<IActionResult> Register([FromBody] RegisterClienteRequest request)
     {
         var response = await _clienteService.RegisterAsync(request);
-        // Changed to use the default 'Get' route since GetById now uses user context
         return CreatedAtAction(nameof(Get), response);
     }
 

@@ -15,13 +15,15 @@ public class ClienteService
     private readonly AppDbContext _context;
     private readonly UserManager<Usuario> _userManager;
 
+    public ClienteService() { } // Construtor para Moq
+
     public ClienteService(AppDbContext context, UserManager<Usuario> userManager)
     {
         _context = context;
         _userManager = userManager;
     }
 
-    public async Task<ClienteResponse> RegisterAsync(RegisterClienteRequest request)
+    public virtual async Task<ClienteResponse> RegisterAsync(RegisterClienteRequest request)
     {
         if (await _context.Clientes.AnyAsync(c => c.Cpf == request.Cpf))
         {
@@ -59,7 +61,7 @@ public class ClienteService
         }
     }
 
-    public async Task<ClienteResponse> GetByUserIdAsync(string userId)
+    public virtual async Task<ClienteResponse> GetByUserIdAsync(string userId)
     {
         var cliente = await _context.Clientes
             .Where(c => c.UsuarioId == userId && c.IsActive)
@@ -69,7 +71,7 @@ public class ClienteService
         return cliente ?? throw new NotFoundException($"Cliente não encontrado.");
     }
 
-    public async Task UpdateAsync(string userId, UpdateClienteRequest request)
+    public virtual async Task UpdateAsync(string userId, UpdateClienteRequest request)
     {
         var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.UsuarioId == userId && c.IsActive);
         if (cliente == null)
@@ -81,7 +83,7 @@ public class ClienteService
         await _context.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(string userId)
+    public virtual async Task DeleteAsync(string userId)
     {
         var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.UsuarioId == userId && c.IsActive);
         if (cliente == null)
