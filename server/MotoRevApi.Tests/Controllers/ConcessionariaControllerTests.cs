@@ -1,4 +1,6 @@
 using System.Security.Claims;
+using System.Linq;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -163,5 +165,41 @@ public class ConcessionariaControllerTests
 
         // Assert
         Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public void Atributo_GetMe_DeveTerRoleConcessionaria()
+    {
+        var method = typeof(ConcessionariaController).GetMethod(nameof(ConcessionariaController.GetMe));
+        var attribute = method.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
+            .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+            .FirstOrDefault();
+
+        Assert.NotNull(attribute);
+        Assert.Equal(Authorization.Roles.Concessionaria, attribute.Roles);
+    }
+
+    [Fact]
+    public void Atributo_Update_DeveTerRoleConcessionaria()
+    {
+        var method = typeof(ConcessionariaController).GetMethod(nameof(ConcessionariaController.Update));
+        var attribute = method.GetCustomAttributes(typeof(AuthorizeAttribute), true)
+            .Cast<AuthorizeAttribute>()
+            .FirstOrDefault();
+
+        Assert.NotNull(attribute);
+        Assert.Equal(Authorization.Roles.Concessionaria, attribute.Roles);
+    }
+
+    [Fact]
+    public void Atributo_Delete_DeveTerRoleConcessionaria()
+    {
+        var method = typeof(ConcessionariaController).GetMethod(nameof(ConcessionariaController.Delete));
+        var attribute = method.GetCustomAttributes(typeof(AuthorizeAttribute), true)
+            .Cast<AuthorizeAttribute>()
+            .FirstOrDefault();
+
+        Assert.NotNull(attribute);
+        Assert.Equal(Authorization.Roles.Concessionaria, attribute.Roles);
     }
 }

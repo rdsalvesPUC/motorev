@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
@@ -165,5 +166,29 @@ public class ClienteControllerTests
 
         // Assert
         Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public void Update_DeveTerAtributoAuthorizeComRoleCliente()
+    {
+        var method = typeof(ClienteController).GetMethod(nameof(ClienteController.Update));
+        var attribute = method.GetCustomAttributes(typeof(AuthorizeAttribute), true)
+            .Cast<AuthorizeAttribute>()
+            .FirstOrDefault();
+
+        Assert.NotNull(attribute);
+        Assert.Equal(MotoRevApi.Authorization.Roles.Cliente, attribute.Roles);
+    }
+    
+    [Fact]
+    public void Delete_DeveTerAtributoAuthorizeComRoleCliente()
+    {
+        var method = typeof(ClienteController).GetMethod(nameof(ClienteController.Delete));
+        var attribute = method.GetCustomAttributes(typeof(AuthorizeAttribute), true)
+            .Cast<AuthorizeAttribute>()
+            .FirstOrDefault();
+
+        Assert.NotNull(attribute);
+        Assert.Equal(MotoRevApi.Authorization.Roles.Cliente, attribute.Roles);
     }
 }
