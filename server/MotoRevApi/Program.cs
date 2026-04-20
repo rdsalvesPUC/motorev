@@ -25,6 +25,7 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<MotoService>();
+builder.Services.AddScoped<ModeloMotoService>();
 builder.Services.AddEndpointsApiExplorer();
 
 // Configurar AutoMapper
