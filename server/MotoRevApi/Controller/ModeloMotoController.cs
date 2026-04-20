@@ -45,4 +45,22 @@ public class ModeloMotoController : ControllerBase
         var response = _modeloMotoService.ListarModelosMotos();
         return Ok(response);
     }
+
+    [HttpPut("atualizar/{id}")]
+    public IActionResult AtualizarModeloMoto(int id, [FromBody] ModeloMotoRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var response = _modeloMotoService.AtualizarModeloMoto(id, request);
+        
+        if (response == null)
+        {
+            return NotFound(new { message = "Modelo de moto não encontrado." });
+        }
+
+        return Ok(response);
+    }
 }

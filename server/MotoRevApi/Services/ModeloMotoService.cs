@@ -2,6 +2,7 @@
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Model;
 
 namespace MotoRevApi.Services;
 
@@ -18,7 +19,7 @@ public class ModeloMotoService
     
     public ModeloMotoResponse CadastrarModeloMoto(ModeloMotoRequest request)
     {
-        var modeloMoto = _mapper.Map<Model.ModeloMoto>(request);
+        var modeloMoto = _mapper.Map<ModeloMoto>(request);
         _context.ModelosMotos.Add(modeloMoto);
         _context.SaveChanges();
         
@@ -28,15 +29,27 @@ public class ModeloMotoService
     public ModeloMotoResponse? ObterModeloMoto(int id)
     {
         var modeloMoto = _context.ModelosMotos.Find(id);
-        if (modeloMoto == null)
-        {
-            return null;
-        }
         return _mapper.Map<ModeloMotoResponse>(modeloMoto);
     }
     
     public List<ModeloMotoResponse> ListarModelosMotos()
     {
         return _mapper.Map<List<ModeloMotoResponse>>(_context.ModelosMotos.ToList());
+    }
+    
+    public ModeloMotoResponse? AtualizarModeloMoto(int id, ModeloMotoRequest request)
+    {
+        var modeloMoto = _context.ModelosMotos.Find(id);
+        if (modeloMoto == null)
+        {
+            return null;
+        }
+        
+        // Mapeia os dados do request para a entidade que já existe e está sendo rastreada pelo EF
+        _mapper.Map(request, modeloMoto);
+        
+        _context.SaveChanges();
+        
+        return _mapper.Map<ModeloMotoResponse>(modeloMoto);
     }
 }
