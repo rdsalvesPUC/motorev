@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     }
     
     public DbSet<Moto> Motos { get; set; }
+    public DbSet<ModeloMoto> ModelosMotos { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
