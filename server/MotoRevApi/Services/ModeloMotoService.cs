@@ -29,11 +29,18 @@ public class ModeloMotoService
     public ModeloMotoResponse? ObterModeloMoto(int id)
     {
         var modeloMoto = _context.ModelosMotos.Find(id);
+        if (modeloMoto == null)
+        {
+            return null;
+        }
         return _mapper.Map<ModeloMotoResponse>(modeloMoto);
     }
     
     public List<ModeloMotoResponse> ListarModelosMotos()
     {
+        // Alterado para trazer todos, permitindo ver os inativos. 
+        // Caso queira listar APENAS os ativos, basta descomentar o filtro abaixo:
+        // return _mapper.Map<List<ModeloMotoResponse>>(_context.ModelosMotos.Where(m => m.Ativo).ToList());
         return _mapper.Map<List<ModeloMotoResponse>>(_context.ModelosMotos.ToList());
     }
     
@@ -50,6 +57,20 @@ public class ModeloMotoService
         
         _context.SaveChanges();
         
+        return _mapper.Map<ModeloMotoResponse>(modeloMoto);
+    }
+    
+    public ModeloMotoResponse? AlternarStatus(int id)
+    {
+        var modeloMoto = _context.ModelosMotos.Find(id);
+        if (modeloMoto == null)
+        {
+            return null;
+        }
+
+        modeloMoto.Ativo = !modeloMoto.Ativo; // Inverte o status atual
+        _context.SaveChanges();
+
         return _mapper.Map<ModeloMotoResponse>(modeloMoto);
     }
 }

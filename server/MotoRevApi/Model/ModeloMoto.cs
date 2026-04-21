@@ -6,4 +6,5 @@ public class ModeloMoto
     public required string NomeModelo { get; set; }
     public required string Marca { get; set; }
     public string? Categoria { get; set; }
+    public bool Ativo { get; set; } = true;
 }

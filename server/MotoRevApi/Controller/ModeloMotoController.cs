@@ -63,4 +63,17 @@ public class ModeloMotoController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpPatch("alternar-status/{id}")]
+    public IActionResult AlternarStatusModeloMoto(int id)
+    {
+        var response = _modeloMotoService.AlternarStatus(id);
+
+        if (response == null)
+        {
+            return NotFound(new { message = "Modelo de moto não encontrado." });
+        }
+
+        return Ok(new { message = response.Ativo ? "Modelo ativado com sucesso." : "Modelo inativado com sucesso.", modelo = response });
+    }
 }
