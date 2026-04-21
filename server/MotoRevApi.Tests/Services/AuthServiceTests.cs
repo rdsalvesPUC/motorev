@@ -20,6 +20,7 @@ public class AuthServiceTests
     private readonly Mock<SignInManager<Usuario>> _mockSignInManager;
     private readonly Mock<TokenService> _mockTokenService;
     private readonly Mock<IConfiguration> _mockConfiguration;
+    private readonly Mock<HashService> _mockHashService;
 
     public AuthServiceTests()
     {
@@ -46,6 +47,10 @@ public class AuthServiceTests
 
         _mockTokenService = new Mock<TokenService>(_mockConfiguration.Object);
         _mockTokenService.CallBase = true; // Permite chamar a implementação real dos métodos não mockados
+
+        _mockHashService = new Mock<HashService>();
+        _mockHashService.Setup(x => x.HashToken(It.IsAny<string>())).Returns((string s) => s);
+        _mockHashService.Setup(x => x.VerifyToken(It.IsAny<string>(), It.IsAny<string>())).Returns((string p, string s) => p == s);
     }
 
     private AppDbContext CreateContext() => new AppDbContext(_dbContextOptions);
@@ -58,7 +63,7 @@ public class AuthServiceTests
         var user = new Usuario { Id = "user-cliente", Email = "cliente@email.com", UserName = "cliente@email.com" };
         var request = new LoginRequest("cliente@email.com", "password");
         
-        context.Clientes.Add(new Cliente { UsuarioId = user.Id, Nome = "Cliente Teste", Cpf = "1", Email = "c@e.com", Cel = "1" });
+        context.Clientes.Add(new Cliente { UsuarioId = user.Id, Nome = "Cliente Teste" });
         await context.SaveChangesAsync();
 
         _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email)).ReturnsAsync(user);
@@ -66,8 +71,9 @@ public class AuthServiceTests
         _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Cliente" });
         _mockTokenService.Setup(x => x.GenerateToken(It.IsAny<Usuario>(), It.IsAny<IList<string>>())).Returns("access_token");
         _mockTokenService.Setup(x => x.GenerateRefreshToken()).Returns("refresh_token");
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act
         var result = await service.LoginAsync(request);
@@ -88,7 +94,7 @@ public class AuthServiceTests
         var user = new Usuario { Id = "user-conc", Email = "conc@email.com", UserName = "conc@email.com" };
         var request = new LoginRequest("conc@email.com", "password");
         
-        context.Concessionarias.Add(new Concessionaria { UsuarioId = user.Id, Nome = "Conc Teste", Cnpj = "1", Tel = "1" });
+        context.Concessionarias.Add(new Concessionaria { UsuarioId = user.Id, Nome = "Conc Teste" });
         await context.SaveChangesAsync();
 
         _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email)).ReturnsAsync(user);
@@ -96,8 +102,9 @@ public class AuthServiceTests
         _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Concessionaria" });
         _mockTokenService.Setup(x => x.GenerateToken(It.IsAny<Usuario>(), It.IsAny<IList<string>>())).Returns("access_token");
         _mockTokenService.Setup(x => x.GenerateRefreshToken()).Returns("refresh_token");
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act
         var result = await service.LoginAsync(request);
@@ -125,15 +132,12 @@ public class AuthServiceTests
         _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Cliente" });
         _mockTokenService.Setup(x => x.GenerateToken(It.IsAny<Usuario>(), It.IsAny<IList<string>>())).Returns("access_token");
         _mockTokenService.Setup(x => x.GenerateRefreshToken()).Returns("refresh_token");
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
-        // Act
-        var result = await service.LoginAsync(request);
-
-        // Assert
-        Assert.Equal("Cliente", result.Perfil);
-        Assert.Null(result.Usuario);
+        // Act & Assert
+        await Assert.ThrowsAsync<Exception>(() => service.LoginAsync(request));
     }
 
     [Fact]
@@ -151,15 +155,12 @@ public class AuthServiceTests
         _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Concessionaria" });
         _mockTokenService.Setup(x => x.GenerateToken(It.IsAny<Usuario>(), It.IsAny<IList<string>>())).Returns("access_token");
         _mockTokenService.Setup(x => x.GenerateRefreshToken()).Returns("refresh_token");
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
-        // Act
-        var result = await service.LoginAsync(request);
-
-        // Assert
-        Assert.Equal("Concessionaria", result.Perfil);
-        Assert.Null(result.Usuario);
+        // Act & Assert
+        await Assert.ThrowsAsync<Exception>(() => service.LoginAsync(request));
     }
 
     [Fact]
@@ -170,7 +171,7 @@ public class AuthServiceTests
         var request = new LoginRequest("naoexiste@email.com", "password");
         _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email)).ReturnsAsync((Usuario)null);
         
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.LoginAsync(request));
@@ -187,10 +188,10 @@ public class AuthServiceTests
         _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email)).ReturnsAsync(user);
         _mockSignInManager.Setup(x => x.CheckPasswordSignInAsync(user, request.Password, false)).ReturnsAsync(SignInResult.Failed);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => service.LoginAsync(request));
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoginAsync(request));
     }
 
     [Fact]
@@ -208,6 +209,9 @@ public class AuthServiceTests
         };
         var request = new RefreshTokenRequest("expired-access-token", refreshToken);
 
+        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Teste" });
+        await context.SaveChangesAsync();
+
         var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
@@ -216,8 +220,9 @@ public class AuthServiceTests
         _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Cliente" });
         _mockTokenService.Setup(x => x.GenerateToken(user, It.IsAny<IList<string>>())).Returns("new-access-token");
         _mockTokenService.Setup(x => x.GenerateRefreshToken()).Returns("new-refresh-token");
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act
         var result = await service.RefreshTokenAsync(request);
@@ -226,7 +231,7 @@ public class AuthServiceTests
         Assert.NotNull(result);
         Assert.Equal("new-access-token", result.Token);
         Assert.Equal("new-refresh-token", result.RefreshToken);
-        Assert.Null(result.Usuario); // Não configuramos cliente no banco para este teste
+        Assert.NotNull(result.Usuario);
         _mockUserManager.Verify(x => x.UpdateAsync(user), Times.Once);
     }
 
@@ -245,7 +250,7 @@ public class AuthServiceTests
         };
         var request = new RefreshTokenRequest("expired-token", refreshToken);
 
-        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Refresh", Cpf = "2", Email = "c2@e.com", Cel = "2" });
+        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Refresh" });
         await context.SaveChangesAsync();
 
         var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
@@ -256,8 +261,9 @@ public class AuthServiceTests
         _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Cliente" });
         _mockTokenService.Setup(x => x.GenerateToken(user, It.IsAny<IList<string>>())).Returns("new-access-token");
         _mockTokenService.Setup(x => x.GenerateRefreshToken()).Returns("new-refresh-token");
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act
         var result = await service.RefreshTokenAsync(request);
@@ -282,7 +288,7 @@ public class AuthServiceTests
         };
         var request = new RefreshTokenRequest("expired-token", refreshToken);
 
-        context.Concessionarias.Add(new Concessionaria { UsuarioId = userId, Nome = "Conc Refresh", Cnpj = "2", Tel = "2" });
+        context.Concessionarias.Add(new Concessionaria { UsuarioId = userId, Nome = "Conc Refresh" });
         await context.SaveChangesAsync();
 
         var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
@@ -293,8 +299,9 @@ public class AuthServiceTests
         _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Concessionaria" });
         _mockTokenService.Setup(x => x.GenerateToken(user, It.IsAny<IList<string>>())).Returns("new-access-token");
         _mockTokenService.Setup(x => x.GenerateRefreshToken()).Returns("new-refresh-token");
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act
         var result = await service.RefreshTokenAsync(request);
@@ -312,7 +319,7 @@ public class AuthServiceTests
         var request = new RefreshTokenRequest("invalid-token", "refresh");
         _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(It.IsAny<string>())).Returns((ClaimsPrincipal)null);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<SecurityTokenException>(() => service.RefreshTokenAsync(request));
@@ -331,10 +338,111 @@ public class AuthServiceTests
         _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(It.IsAny<string>())).Returns(principal);
         _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync((Usuario)null);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act & Assert
         await Assert.ThrowsAsync<SecurityTokenException>(() => service.RefreshTokenAsync(request));
+    }
+
+    [Fact]
+    public async Task LoginAsync_DeveLancarException_QuandoUsuarioNaoPossuiRole()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var user = new Usuario { Id = "user-sem-role", Email = "teste@email.com" };
+        var request = new LoginRequest("teste@email.com", "password");
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email)).ReturnsAsync(user);
+        _mockSignInManager.Setup(x => x.CheckPasswordSignInAsync(user, request.Password, false)).ReturnsAsync(SignInResult.Success);
+        _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string>()); // Vazio
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(() => service.LoginAsync(request));
+        Assert.Equal("Usuário não possui um perfil associado.", exception.Message);
+    }
+
+    [Fact]
+    public async Task LoginAsync_DeveLancarException_QuandoUpdateAsyncFalha()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var user = new Usuario { Id = "user-update-fail", Email = "teste@email.com" };
+        var request = new LoginRequest("teste@email.com", "password");
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email)).ReturnsAsync(user);
+        _mockSignInManager.Setup(x => x.CheckPasswordSignInAsync(user, request.Password, false)).ReturnsAsync(SignInResult.Success);
+        _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Cliente" });
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Erro de teste" }));
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(() => service.LoginAsync(request));
+        Assert.Equal("Não foi possível salvar o refresh token.", exception.Message);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_DeveLancarException_QuandoUsuarioNaoPossuiRole()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        var user = new Usuario { Id = userId, RefreshToken = "valid", RefreshTokenExpiryTime = DateTime.UtcNow.AddHours(1) };
+        var request = new RefreshTokenRequest("expired", "valid");
+        var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(request.AccessToken)).Returns(principal);
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string>()); // Vazio
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(() => service.RefreshTokenAsync(request));
+        Assert.Equal("Usuário não possui um perfil associado.", exception.Message);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_DeveLancarException_QuandoUpdateAsyncFalha()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        var user = new Usuario { Id = userId, RefreshToken = "valid", RefreshTokenExpiryTime = DateTime.UtcNow.AddHours(1) };
+        var request = new RefreshTokenRequest("expired", "valid");
+        var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(request.AccessToken)).Returns(principal);
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Cliente" });
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Failed());
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(() => service.RefreshTokenAsync(request));
+        Assert.Equal("Não foi possível atualizar o refresh token.", exception.Message);
+    }
+
+    [Fact]
+    public async Task LogoutAsync_DeveLancarException_QuandoUpdateAsyncFalha()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        var user = new Usuario { Id = userId };
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Failed());
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(() => service.LogoutAsync(userId));
+        Assert.Equal("Não foi possível realizar o logout.", exception.Message);
     }
 
     [Fact]
@@ -345,8 +453,9 @@ public class AuthServiceTests
         var userId = "user-1";
         var user = new Usuario { Id = userId, RefreshToken = "some-token" };
         _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
 
-        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object);
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act
         await service.LogoutAsync(userId);

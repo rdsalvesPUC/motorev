@@ -25,11 +25,6 @@ public class ConcessionariaService
 
     public virtual async Task<ConcessionariaResponse> RegisterAsync(RegisterConcessionariaRequest request)
     {
-        if (await _context.Concessionarias.AnyAsync(c => c.Cnpj == request.Cnpj))
-        {
-            throw new DuplicateDataException($"Já existe uma concessionária com o CNPJ {request.Cnpj}.");
-        }
-
         if (await _userManager.FindByEmailAsync(request.Email) != null)
         {
             throw new DuplicateDataException($"O email {request.Email} já está em uso.");
@@ -43,7 +38,9 @@ public class ConcessionariaService
 
             if (!identityResult.Succeeded) throw new RegistrationException(identityResult.Errors);
 
-            await _userManager.AddToRoleAsync(user, Roles.Concessionaria);
+            var roleResult = await _userManager.AddToRoleAsync(user, Roles.Concessionaria);
+
+            if(!roleResult.Succeeded) throw new RegistrationException(roleResult.Errors);
 
             var concessionaria = request.Adapt<Concessionaria>();
             concessionaria.UsuarioId = user.Id;
@@ -61,18 +58,9 @@ public class ConcessionariaService
         }
     }
 
-    public virtual async Task<List<ConcessionariaResponse>> GetAllAsync()
-    {
-        return await _context.Concessionarias
-            .Where(c => c.IsActive)
-            .ProjectToType<ConcessionariaResponse>()
-            .ToListAsync();
-    }
-
     public virtual async Task<ConcessionariaResponse> GetByIdAsync(int id)
     {
         var concessionaria = await _context.Concessionarias
-            .Where(c => c.Id == id && c.IsActive)
             .ProjectToType<ConcessionariaResponse>()
             .FirstOrDefaultAsync();
 
@@ -82,35 +70,10 @@ public class ConcessionariaService
     public virtual async Task<ConcessionariaResponse> GetByUserIdAsync(string userId)
     {
         var concessionaria = await _context.Concessionarias
-            .Where(c => c.UsuarioId == userId && c.IsActive)
+            .Where(c => c.UsuarioId == userId)
             .ProjectToType<ConcessionariaResponse>()
             .FirstOrDefaultAsync();
 
         return concessionaria ?? throw new NotFoundException($"Concessionária não encontrada.");
-    }
-
-    public virtual async Task UpdateAsync(string userId, UpdateConcessionariaRequest request)
-    {
-        var concessionaria = await _context.Concessionarias.FirstOrDefaultAsync(c => c.UsuarioId == userId && c.IsActive);
-        if (concessionaria == null)
-        {
-            throw new NotFoundException("Concessionária não encontrada ou inativa.");
-        }
-
-        request.Adapt(concessionaria);
-        await _context.SaveChangesAsync();
-    }
-
-    public virtual async Task DeleteAsync(string userId)
-    {
-        var concessionaria = await _context.Concessionarias.FirstOrDefaultAsync(c => c.UsuarioId == userId && c.IsActive);
-        if (concessionaria == null)
-        {
-            throw new NotFoundException("Concessionária não encontrada ou inativa.");
-        }
-
-        concessionaria.IsActive = false;
-        concessionaria.DeletedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
     }
 }

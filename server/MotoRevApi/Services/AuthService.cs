@@ -18,6 +18,7 @@ public class AuthService
     private readonly TokenService _tokenService;
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
+    private readonly HashService _hashService;
 
     public AuthService() { } // Construtor para Moq
 
@@ -26,13 +27,15 @@ public class AuthService
         SignInManager<Usuario> signInManager,
         TokenService tokenService,
         AppDbContext context,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        HashService hashService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokenService = tokenService;
         _context = context;
         _configuration = configuration;
+        _hashService = hashService;
     }
 
     public virtual async Task<LoginResponse> LoginAsync(LoginRequest request)
@@ -46,38 +49,56 @@ public class AuthService
         var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
         if (!result.Succeeded)
         {
-            throw new NotFoundException("Email ou senha inválidos.");
+            throw new UnauthorizedAccessException("Email ou senha inválidos.");
         }
 
         var roles = await _userManager.GetRolesAsync(user);
+        var role = roles.FirstOrDefault();
+        
+        if (role == null)
+        {
+            throw new Exception("Usuário não possui um perfil associado.");
+        }
+
         var token = _tokenService.GenerateToken(user, roles);
         
         var refreshToken = _tokenService.GenerateRefreshToken();
-        user.RefreshToken = refreshToken;
-        user.RefreshTokenExpiryTime = DateTime.Now.AddDays(Convert.ToDouble(_configuration["JwtSettings:RefreshTokenExpirationInDays"] ?? "7"));
-        await _userManager.UpdateAsync(user);
+        user.RefreshToken = _hashService.HashToken(refreshToken); // Armazena o hash
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(Convert.ToDouble(_configuration["JwtSettings:RefreshTokenExpirationInDays"] ?? "7"));
         
-        var role = roles.FirstOrDefault();
-        UserData userData = null;
-
-        if (role == "Cliente")
+        var updateResult = await _userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
         {
-            var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.UsuarioId == user.Id);
-            if (cliente != null)
+            throw new Exception("Não foi possível salvar o refresh token.");
+        }
+        
+        UserData? userData = null;
+
+        switch (role)
+        {
+            case Roles.Cliente:
             {
-                userData = new UserData(cliente.Id, cliente.Nome);
+                var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.UsuarioId == user.Id);
+                if (cliente != null)
+                {
+                    userData = new UserData(cliente.Id, cliente.Nome);
+                }
+
+                break;
+            }
+            case Roles.Concessionaria:
+            {
+                var concessionaria = await _context.Concessionarias.FirstOrDefaultAsync(c => c.UsuarioId == user.Id);
+                if (concessionaria != null)
+                {
+                    userData = new UserData(concessionaria.Id, concessionaria.Nome);
+                }
+
+                break;
             }
         }
-        else if (role == "Concessionaria")
-        {
-            var concessionaria = await _context.Concessionarias.FirstOrDefaultAsync(c => c.UsuarioId == user.Id);
-            if (concessionaria != null)
-            {
-                userData = new UserData(concessionaria.Id, concessionaria.Nome);
-            }
-        }
 
-        return new LoginResponse(token, refreshToken, role, userData);
+        return userData == null ? throw new Exception("Não foi possível encontrar os dados do perfil do usuário.") : new LoginResponse(token, refreshToken, role, userData); // Retorna o token original
     }
     
     public virtual async Task<LoginResponse> RefreshTokenAsync(RefreshTokenRequest request)
@@ -91,19 +112,29 @@ public class AuthService
         var userId = principal.FindFirstValue(ClaimTypes.NameIdentifier);
         var user = await _userManager.FindByIdAsync(userId ?? "");
 
-        if (user == null || user.RefreshToken != request.RefreshToken || user.RefreshTokenExpiryTime <= DateTime.Now)
+        if (user == null || user.RefreshToken == null || !_hashService.VerifyToken(request.RefreshToken, user.RefreshToken) || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
         {
             throw new SecurityTokenException("O Access token ou o Refresh token estão inválidos");
         }
 
         var roles = await _userManager.GetRolesAsync(user);
+        var role = roles.FirstOrDefault();
+        
+        if (role == null)
+        {
+            throw new Exception("Usuário não possui um perfil associado.");
+        }
+
         var newAccessToken = _tokenService.GenerateToken(user, roles);
         var newRefreshToken = _tokenService.GenerateRefreshToken();
 
-        user.RefreshToken = newRefreshToken;
-        await _userManager.UpdateAsync(user);
+        user.RefreshToken = _hashService.HashToken(newRefreshToken); // Armazena o novo hash
+        var updateResult = await _userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+        {
+            throw new Exception("Não foi possível atualizar o refresh token.");
+        }
         
-        var role = roles.FirstOrDefault();
         UserData userData = null;
 
         switch (role)
@@ -130,7 +161,7 @@ public class AuthService
             }
         }
 
-        return new LoginResponse(newAccessToken, newRefreshToken, role, userData);
+        return userData == null ? throw new Exception("Não foi possível encontrar os dados do perfil do usuário.") : new LoginResponse(newAccessToken, newRefreshToken, role, userData); // Retorna o novo token original
     }
     
     public virtual async Task LogoutAsync(string userId)
@@ -139,6 +170,10 @@ public class AuthService
         if (user == null) return;
 
         user.RefreshToken = null;
-        await _userManager.UpdateAsync(user);
+        var updateResult = await _userManager.UpdateAsync(user);
+        if (!updateResult.Succeeded)
+        {
+            throw new Exception("Não foi possível realizar o logout.");
+        }
     }
 }

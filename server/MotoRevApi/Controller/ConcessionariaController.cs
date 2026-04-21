@@ -43,18 +43,6 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
-    /// Obter todas as concessionárias cadastradas.
-    /// </summary>
-    /// <response code="200">Retorna a lista de concessionárias.</response>
-    [HttpGet]
-    [ProducesResponseType(typeof(List<ConcessionariaResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetAll()
-    {
-        var response = await _concessionariaService.GetAllAsync();
-        return Ok(response);
-    }
-
-    /// <summary>
     /// Obter uma concessionária específica pelo ID.
     /// </summary>
     /// <param name="id">O ID da concessionária.</param>
@@ -95,64 +83,5 @@ public class ConcessionariaController : ControllerBase
 
         var response = await _concessionariaService.GetByUserIdAsync(userId);
         return Ok(response);
-    }
-
-    /// <summary>
-    /// Atualizar as informações de uma concessionária.
-    /// </summary>
-    /// <remarks>
-    /// O ID da concessionária é extraído automaticamente do token JWT do usuário autenticado.
-    /// </remarks>
-    /// <param name="request">Os novos dados da concessionária.</param>
-    /// <response code="204">Concessionária atualizada com sucesso.</response>
-    /// <response code="400">Se os dados fornecidos forem inválidos.</response>
-    /// <response code="401">Se o usuário não estiver autenticado.</response>
-    /// <response code="403">Se o usuário não tiver permissão de 'Concessionaria'.</response>
-    /// <response code="404">Se a concessionária não for encontrada.</response>
-    [HttpPut]
-    [Authorize(Roles = Roles.Concessionaria)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Update([FromBody] UpdateConcessionariaRequest request)
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
-        await _concessionariaService.UpdateAsync(userId, request);
-        return NoContent();
-    }
-
-    /// <summary>
-    /// Deletar uma concessionária.
-    /// </summary>
-    /// <remarks>
-    /// O ID da concessionária a ser deletada é extraído automaticamente do token JWT.
-    /// </remarks>
-    /// <response code="204">Concessionária deletada com sucesso.</response>
-    /// <response code="401">Se o usuário não estiver autenticado.</response>
-    /// <response code="403">Se o usuário não tiver permissão de 'Concessionaria'.</response>
-    /// <response code="404">Se a concessionária não for encontrada.</response>
-    [HttpDelete]
-    [Authorize(Roles = Roles.Concessionaria)]
-    [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> Delete()
-    {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (userId == null)
-        {
-            return Unauthorized();
-        }
-
-        await _concessionariaService.DeleteAsync(userId);
-        return NoContent();
     }
 }

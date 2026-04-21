@@ -56,20 +56,14 @@ public class AuthControllerTests
     }
 
     [Fact]
-    public async Task RefreshToken_DeveRetornarBadRequest_QuandoErro()
+    public async Task RefreshToken_DeveLancarExcecao_QuandoErro()
     {
         // Arrange
         var request = new RefreshTokenRequest("invalid_access_token", "invalid_refresh_token");
         _authServiceMock.Setup(s => s.RefreshTokenAsync(request)).ThrowsAsync(new System.Exception("Token inválido"));
 
-        // Act
-        var result = await _controller.RefreshToken(request);
-
-        // Assert
-        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
-        Assert.Equal(400, badRequestResult.StatusCode);
-        var problemDetails = Assert.IsType<ProblemDetails>(badRequestResult.Value);
-        Assert.Equal("Token inválido", problemDetails.Detail);
+        // Act & Assert
+        await Assert.ThrowsAsync<System.Exception>(() => _controller.RefreshToken(request));
     }
 
     [Fact]

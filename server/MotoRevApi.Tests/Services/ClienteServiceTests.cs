@@ -34,7 +34,7 @@ public class ClienteServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ClienteService(context, _mockUserManager.Object);
-        var request = new RegisterClienteRequest("teste@email.com", "Password123", "Teste", "12345678901", "11999999999", null);
+        var request = new RegisterClienteRequest("teste@email.com", "Password123", "Teste");
 
         _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario)null);
         _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<Usuario>(), It.IsAny<string>())).ReturnsAsync(IdentityResult.Success);
@@ -48,24 +48,9 @@ public class ClienteServiceTests
         Assert.Equal("Teste", result.Nome);
         var clienteNoDb = await context.Clientes.SingleOrDefaultAsync();
         Assert.NotNull(clienteNoDb);
-        Assert.Equal("12345678901", clienteNoDb.Cpf);
+        Assert.Equal("Teste", clienteNoDb.Nome);
     }
 
-    [Fact]
-    public async Task RegisterAsync_DeveLancarExcecao_QuandoCpfJaExiste()
-    {
-        // Arrange
-        using var context = CreateContext();
-        context.Clientes.Add(new Cliente { Cpf = "12345678901", Nome = "Teste", Email = "teste@email.com", Cel = "11999999999", UsuarioId = "user-1" });
-        await context.SaveChangesAsync();
-        
-        var service = new ClienteService(context, _mockUserManager.Object);
-        var request = new RegisterClienteRequest("", "", "", "12345678901", "", null);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<DuplicateDataException>(() => service.RegisterAsync(request));
-    }
-    
     [Fact]
     public async Task RegisterAsync_DeveLancarExcecao_QuandoEmailJaExiste()
     {
@@ -76,7 +61,7 @@ public class ClienteServiceTests
         _mockUserManager.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
 
         var service = new ClienteService(context, _mockUserManager.Object);
-        var request = new RegisterClienteRequest(email, "Password123", "Teste", "99999999999", "11999999999", null);
+        var request = new RegisterClienteRequest(email, "Password123", "Teste");
 
         // Act & Assert
         await Assert.ThrowsAsync<DuplicateDataException>(() => service.RegisterAsync(request));
@@ -88,7 +73,7 @@ public class ClienteServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ClienteService(context, _mockUserManager.Object);
-        var request = new RegisterClienteRequest("teste@email.com", "Password123", "Teste", "12345678901", "11999999999", null);
+        var request = new RegisterClienteRequest("teste@email.com", "Password123", "Teste");
 
         _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario)null);
         _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<Usuario>(), It.IsAny<string>()))
@@ -104,7 +89,7 @@ public class ClienteServiceTests
         // Arrange
         using var context = CreateContext();
         var userId = "user-id-123";
-        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Teste", IsActive = true, Cpf = "12345678901", Email = "teste@email.com", Cel = "11999999999" });
+        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Teste" });
         await context.SaveChangesAsync();
 
         var service = new ClienteService(context, _mockUserManager.Object);
@@ -126,69 +111,5 @@ public class ClienteServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetByUserIdAsync("id-inexistente"));
-    }
-    
-    [Fact]
-    public async Task UpdateAsync_DeveAtualizarClienteComSucesso()
-    {
-        // Arrange
-        using var context = CreateContext();
-        var userId = "user-id-456";
-        var cliente = new Cliente { UsuarioId = userId, Nome = "Nome Antigo", IsActive = true, Cpf = "12345678901", Email = "teste@email.com", Cel = "11999999999" };
-        context.Clientes.Add(cliente);
-        await context.SaveChangesAsync();
-
-        var service = new ClienteService(context, _mockUserManager.Object);
-        var request = new UpdateClienteRequest("Nome Novo", null, null);
-
-        // Act
-        await service.UpdateAsync(userId, request);
-
-        // Assert
-        var clienteAtualizado = await context.Clientes.FindAsync(cliente.Id);
-        Assert.Equal("Nome Novo", clienteAtualizado.Nome);
-    }
-    
-    [Fact]
-    public async Task UpdateAsync_DeveLancarExcecao_QuandoClienteNaoEncontrado()
-    {
-        // Arrange
-        using var context = CreateContext();
-        var service = new ClienteService(context, _mockUserManager.Object);
-        var request = new UpdateClienteRequest("Novo", null, null);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateAsync("invalido", request));
-    }
-
-    [Fact]
-    public async Task DeleteAsync_DeveMarcarClienteComoInativo()
-    {
-        // Arrange
-        using var context = CreateContext();
-        var userId = "user-id-789";
-        var cliente = new Cliente { UsuarioId = userId, Nome = "A ser deletado", IsActive = true, Cpf = "12345678901", Email = "teste@email.com", Cel = "11999999999" };
-        context.Clientes.Add(cliente);
-        await context.SaveChangesAsync();
-
-        var service = new ClienteService(context, _mockUserManager.Object);
-
-        // Act
-        await service.DeleteAsync(userId);
-
-        // Assert
-        var clienteDeletado = await context.Clientes.FindAsync(cliente.Id);
-        Assert.False(clienteDeletado.IsActive);
-        Assert.NotNull(clienteDeletado.DeletedAt);
-    }
-    [Fact]
-    public async Task DeleteAsync_DeveLancarExcecao_QuandoClienteNaoEncontrado()
-    {
-        // Arrange
-        using var context = CreateContext();
-        var service = new ClienteService(context, _mockUserManager.Object);
-
-        // Act & Assert
-        await Assert.ThrowsAsync<NotFoundException>(() => service.DeleteAsync("invalido"));
     }
 }

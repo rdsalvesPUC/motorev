@@ -49,15 +49,8 @@ public class AuthController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
     {
-        try
-        {
-            var response = await _authService.RefreshTokenAsync(request);
-            return Ok(response);
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new ProblemDetails { Detail = ex.Message });
-        }
+        var response = await _authService.RefreshTokenAsync(request);
+        return Ok(response);
     }
     
     /// <summary>

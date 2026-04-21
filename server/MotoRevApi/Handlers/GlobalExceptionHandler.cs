@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 using MotoRevApi.Exceptions;
 
 namespace MotoRevApi.Handlers;
@@ -24,6 +25,12 @@ public class GlobalExceptionHandler : IExceptionHandler
     {
         return exception switch
         {
+            SecurityTokenException or UnauthorizedAccessException => new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = "Não Autorizado",
+                Detail = "O token de acesso ou refresh token fornecido é inválido ou expirou."
+            },
             RegistrationException regEx => new ProblemDetails
             {
                 Status = StatusCodes.Status400BadRequest,

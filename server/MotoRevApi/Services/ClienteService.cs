@@ -25,11 +25,6 @@ public class ClienteService
 
     public virtual async Task<ClienteResponse> RegisterAsync(RegisterClienteRequest request)
     {
-        if (await _context.Clientes.AnyAsync(c => c.Cpf == request.Cpf))
-        {
-            throw new DuplicateDataException($"Já existe um cliente com o CPF {request.Cpf}.");
-        }
-
         if (await _userManager.FindByEmailAsync(request.Email) != null)
         {
             throw new DuplicateDataException($"O email {request.Email} já está em uso.");
@@ -43,7 +38,9 @@ public class ClienteService
 
             if (!identityResult.Succeeded) throw new RegistrationException(identityResult.Errors);
 
-            await _userManager.AddToRoleAsync(user, Roles.Cliente);
+            var roleResult = await _userManager.AddToRoleAsync(user, Roles.Cliente);
+
+            if (!roleResult.Succeeded) throw new RegistrationException(roleResult.Errors);
 
             var cliente = request.Adapt<Cliente>();
             cliente.UsuarioId = user.Id;
@@ -64,35 +61,10 @@ public class ClienteService
     public virtual async Task<ClienteResponse> GetByUserIdAsync(string userId)
     {
         var cliente = await _context.Clientes
-            .Where(c => c.UsuarioId == userId && c.IsActive)
+            .Where(c => c.UsuarioId == userId)
             .ProjectToType<ClienteResponse>()
             .FirstOrDefaultAsync();
 
         return cliente ?? throw new NotFoundException($"Cliente não encontrado.");
-    }
-
-    public virtual async Task UpdateAsync(string userId, UpdateClienteRequest request)
-    {
-        var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.UsuarioId == userId && c.IsActive);
-        if (cliente == null)
-        {
-            throw new NotFoundException("Cliente não encontrado ou inativo.");
-        }
-
-        request.Adapt(cliente);
-        await _context.SaveChangesAsync();
-    }
-
-    public virtual async Task DeleteAsync(string userId)
-    {
-        var cliente = await _context.Clientes.FirstOrDefaultAsync(c => c.UsuarioId == userId && c.IsActive);
-        if (cliente == null)
-        {
-            throw new NotFoundException("Cliente não encontrado ou inativo.");
-        }
-
-        cliente.IsActive = false;
-        cliente.DeletedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
     }
 }

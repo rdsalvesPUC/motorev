@@ -40,6 +40,8 @@ namespace MotoRevApi.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    RefreshToken = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    RefreshTokenExpiryTime = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -167,65 +169,12 @@ namespace MotoRevApi.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Concessionarias",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Nome = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Cnpj = table.Column<string>(type: "nvarchar(14)", maxLength: 14, nullable: false),
-                    Tel = table.Column<string>(type: "nvarchar(11)", maxLength: 11, nullable: false),
-                    UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Concessionarias", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Concessionarias_AspNetUsers_UsuarioId",
-                        column: x => x.UsuarioId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Enderecos",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Cep = table.Column<string>(type: "nvarchar(8)", maxLength: 8, nullable: false),
-                    Cidade = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Estado = table.Column<string>(type: "nvarchar(2)", maxLength: 2, nullable: false),
-                    Rua = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Numero = table.Column<int>(type: "int", nullable: false),
-                    Bairro = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    Complemento = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    ConcessionariaId = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Enderecos", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Enderecos_Concessionarias_ConcessionariaId",
-                        column: x => x.ConcessionariaId,
-                        principalTable: "Concessionarias",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Clientes",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Nome = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Cpf = table.Column<string>(type: "nvarchar(11)", maxLength: 11, nullable: false),
-                    Email = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
-                    Tel = table.Column<string>(type: "nvarchar(11)", maxLength: 11, nullable: true),
-                    Cel = table.Column<string>(type: "nvarchar(11)", maxLength: 11, nullable: false),
-                    EnderecoId = table.Column<int>(type: "int", nullable: true),
                     UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false)
                 },
                 constraints: table =>
@@ -237,11 +186,26 @@ namespace MotoRevApi.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Concessionarias",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nome = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Concessionarias", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Clientes_Enderecos_EnderecoId",
-                        column: x => x.EnderecoId,
-                        principalTable: "Enderecos",
-                        principalColumn: "Id");
+                        name: "FK_Concessionarias_AspNetUsers_UsuarioId",
+                        column: x => x.UsuarioId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -284,32 +248,9 @@ namespace MotoRevApi.Migrations
                 filter: "[NormalizedUserName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Clientes_Cpf",
-                table: "Clientes",
-                column: "Cpf",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Clientes_Email",
-                table: "Clientes",
-                column: "Email",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Clientes_EnderecoId",
-                table: "Clientes",
-                column: "EnderecoId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Clientes_UsuarioId",
                 table: "Clientes",
                 column: "UsuarioId",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Concessionarias_Cnpj",
-                table: "Concessionarias",
-                column: "Cnpj",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -317,11 +258,6 @@ namespace MotoRevApi.Migrations
                 table: "Concessionarias",
                 column: "UsuarioId",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Enderecos_ConcessionariaId",
-                table: "Enderecos",
-                column: "ConcessionariaId");
         }
 
         /// <inheritdoc />
@@ -346,13 +282,10 @@ namespace MotoRevApi.Migrations
                 name: "Clientes");
 
             migrationBuilder.DropTable(
-                name: "AspNetRoles");
-
-            migrationBuilder.DropTable(
-                name: "Enderecos");
-
-            migrationBuilder.DropTable(
                 name: "Concessionarias");
+
+            migrationBuilder.DropTable(
+                name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
