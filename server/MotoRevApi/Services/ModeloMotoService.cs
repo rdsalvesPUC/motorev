@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+﻿using Mapster;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
@@ -9,42 +9,38 @@ namespace MotoRevApi.Services;
 public class ModeloMotoService
 {
     private readonly AppDbContext _context;
-    private readonly IMapper _mapper;
-    
-    public ModeloMotoService(AppDbContext context, IMapper mapper)
+
+    public ModeloMotoService(AppDbContext context)
     {
         _context = context;
-        _mapper = mapper;
     }
     
-    public ModeloMotoResponse CadastrarModeloMoto(ModeloMotoRequest request)
+    // Adicionado virtual para permitir o mock pelo Moq
+    public virtual ModeloMotoResponse CadastrarModeloMoto(ModeloMotoRequest request)
     {
-        var modeloMoto = _mapper.Map<ModeloMoto>(request);
+        var modeloMoto = request.Adapt<ModeloMoto>();
         _context.ModelosMotos.Add(modeloMoto);
         _context.SaveChanges();
         
-        return _mapper.Map<ModeloMotoResponse>(modeloMoto);
+        return modeloMoto.Adapt<ModeloMotoResponse>();
     }
     
-    public ModeloMotoResponse? ObterModeloMoto(int id)
+    public virtual ModeloMotoResponse? ObterModeloMoto(int id)
     {
         var modeloMoto = _context.ModelosMotos.Find(id);
         if (modeloMoto == null)
         {
             return null;
         }
-        return _mapper.Map<ModeloMotoResponse>(modeloMoto);
+        return modeloMoto.Adapt<ModeloMotoResponse>();
     }
     
-    public List<ModeloMotoResponse> ListarModelosMotos()
+    public virtual List<ModeloMotoResponse> ListarModelosMotos()
     {
-        // Alterado para trazer todos, permitindo ver os inativos. 
-        // Caso queira listar APENAS os ativos, basta descomentar o filtro abaixo:
-        // return _mapper.Map<List<ModeloMotoResponse>>(_context.ModelosMotos.Where(m => m.Ativo).ToList());
-        return _mapper.Map<List<ModeloMotoResponse>>(_context.ModelosMotos.ToList());
+        return _context.ModelosMotos.ToList().Adapt<List<ModeloMotoResponse>>();
     }
     
-    public ModeloMotoResponse? AtualizarModeloMoto(int id, ModeloMotoRequest request)
+    public virtual ModeloMotoResponse? AtualizarModeloMoto(int id, ModeloMotoRequest request)
     {
         var modeloMoto = _context.ModelosMotos.Find(id);
         if (modeloMoto == null)
@@ -53,14 +49,14 @@ public class ModeloMotoService
         }
         
         // Mapeia os dados do request para a entidade que já existe e está sendo rastreada pelo EF
-        _mapper.Map(request, modeloMoto);
+        request.Adapt(modeloMoto);
         
         _context.SaveChanges();
         
-        return _mapper.Map<ModeloMotoResponse>(modeloMoto);
+        return modeloMoto.Adapt<ModeloMotoResponse>();
     }
     
-    public ModeloMotoResponse? AlternarStatus(int id)
+    public virtual ModeloMotoResponse? AlternarStatus(int id)
     {
         var modeloMoto = _context.ModelosMotos.Find(id);
         if (modeloMoto == null)
@@ -71,6 +67,6 @@ public class ModeloMotoService
         modeloMoto.Ativo = !modeloMoto.Ativo; // Inverte o status atual
         _context.SaveChanges();
 
-        return _mapper.Map<ModeloMotoResponse>(modeloMoto);
+        return modeloMoto.Adapt<ModeloMotoResponse>();
     }
 }

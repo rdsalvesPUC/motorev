@@ -205,6 +205,33 @@ namespace MotoRevApi.Migrations
                     b.ToTable("Concessionarias");
                 });
 
+            modelBuilder.Entity("MotoRevApi.Model.ModeloMoto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Categoria")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Marca")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NomeModelo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ModelosMotos");
+                });
+
             modelBuilder.Entity("MotoRevApi.Model.Moto", b =>
                 {
                     b.Property<int>("Id")
