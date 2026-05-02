@@ -20,8 +20,8 @@ public class ServicoConfiguration : IEntityTypeConfiguration<Servico>
         builder.Property(s => s.TempoEstimado)
             .IsRequired();
 
-        // Índice único para evitar duplicidade de serviço com mesmo nome e categoria globalmente
-        builder.HasIndex(s => new { s.Nome, s.Categoria })
+        // Índice único para evitar duplicidade e otimizar buscas por Categoria e Nome
+        builder.HasIndex(s => new { s.Categoria, s.Nome })
             .IsUnique();
     }
 }

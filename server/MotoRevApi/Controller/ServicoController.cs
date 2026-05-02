@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Enums;
 using MotoRevApi.Services;
 
 namespace MotoRevApi.Controller;
@@ -46,5 +47,19 @@ public class ServicoController : ControllerBase
     {
         var response = await _servicoService.CreateAsync(request);
         return CreatedAtAction(nameof(Create), new { id = response.Id }, response);
+    }
+
+    /// <summary>
+    /// Listar serviços disponíveis.
+    /// </summary>
+    /// <param name="categoria">Filtro opcional por categoria do serviço.</param>
+    /// <response code="200">Retorna a lista de serviços encontrados ou lista vazia.</response>
+    [HttpGet]
+    [AllowAnonymous] // Ou [Authorize] dependendo dos requisitos.
+    [ProducesResponseType(typeof(IEnumerable<ServicoResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll([FromQuery] CategoriaServico? categoria)
+    {
+        var response = await _servicoService.GetAllAsync(categoria);
+        return Ok(response);
     }
 }

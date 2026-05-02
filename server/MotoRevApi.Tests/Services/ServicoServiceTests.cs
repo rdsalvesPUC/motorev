@@ -96,4 +96,55 @@ public class ServicoServiceTests
         // Assert
         Assert.Equal(categoria, response.Categoria);
     }
+
+    [Fact]
+    public async Task GetAllAsync_DeveRetornarListaVaziaQuandoNaoHouverservicos()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+
+        // Act
+        var response = await service.GetAllAsync();
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Empty(response);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_DeveRetornarListaDeServicos()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        await service.CreateAsync(new ServicoRequest("Ajuste Corrente", CategoriaServico.Ajuste, 10));
+        await service.CreateAsync(new ServicoRequest("Troca Pneu", CategoriaServico.Troca, 45));
+
+        // Act
+        var response = await service.GetAllAsync();
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Equal(2, response.Count());
+    }
+
+    [Fact]
+    public async Task GetAllAsync_DeveFiltrarPorCategoria()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        await service.CreateAsync(new ServicoRequest("Ajuste Corrente", CategoriaServico.Ajuste, 10));
+        await service.CreateAsync(new ServicoRequest("Ajuste Embreagem", CategoriaServico.Ajuste, 15));
+        await service.CreateAsync(new ServicoRequest("Troca Pneu", CategoriaServico.Troca, 45));
+
+        // Act
+        var response = await service.GetAllAsync(CategoriaServico.Ajuste);
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Equal(2, response.Count());
+        Assert.All(response, s => Assert.Equal(CategoriaServico.Ajuste, s.Categoria));
+    }
 }

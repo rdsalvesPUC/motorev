@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
 
@@ -39,5 +40,22 @@ public class ServicoService
         await _context.SaveChangesAsync();
 
         return servico.Adapt<ServicoResponse>();
+    }
+
+    public virtual async Task<IEnumerable<ServicoResponse>> GetAllAsync(CategoriaServico? categoria = null)
+    {
+        var query = _context.Servicos.AsNoTracking();
+
+        if (categoria.HasValue)
+        {
+            query = query.Where(s => s.Categoria == categoria.Value);
+        }
+
+        var servicos = await query
+            .OrderBy(s => s.Categoria)
+            .ThenBy(s => s.Nome)
+            .ToListAsync();
+
+        return servicos.Adapt<IEnumerable<ServicoResponse>>();
     }
 }
