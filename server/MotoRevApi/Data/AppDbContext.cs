@@ -14,6 +14,7 @@ public class AppDbContext : IdentityDbContext<Usuario>
     public DbSet<ModeloMoto> ModelosMotos { get; set; }
     public DbSet<Cliente> Clientes { get; set; }
     public DbSet<Concessionaria> Concessionarias { get; set; }
+    public DbSet<Endereco> Enderecos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,6 +38,13 @@ public class AppDbContext : IdentityDbContext<Usuario>
             .WithOne(c => c.Usuario)
             .HasForeignKey<Cliente>(c => c.UsuarioId)
             .OnDelete(DeleteBehavior.Cascade);
+            
+        // Configuração do relacionamento 1:N entre Concessionaria e Enderecos
+        modelBuilder.Entity<Concessionaria>()
+            .HasMany(c => c.Enderecos)
+            .WithOne(e => e.Concessionaria)
+            .HasForeignKey(e => e.ConcessionariaId)
+            .OnDelete(DeleteBehavior.Cascade); // Apagar concessionária apaga os endereços
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }

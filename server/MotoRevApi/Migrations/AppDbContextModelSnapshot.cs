@@ -226,6 +226,51 @@ namespace MotoRevApi.Migrations
                     b.ToTable("Concessionarias");
                 });
 
+            modelBuilder.Entity("MotoRevApi.Model.Endereco", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Bairro")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Cep")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Cidade")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Complemento")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ConcessionariaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Logradouro")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConcessionariaId");
+
+                    b.ToTable("Enderecos");
+                });
+
             modelBuilder.Entity("MotoRevApi.Model.ModeloMoto", b =>
                 {
                     b.Property<int>("Id")
@@ -430,6 +475,22 @@ namespace MotoRevApi.Migrations
                         .HasForeignKey("MotoRevApi.Model.Concessionaria", "UsuarioId1");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.Endereco", b =>
+                {
+                    b.HasOne("MotoRevApi.Model.Concessionaria", "Concessionaria")
+                        .WithMany("Enderecos")
+                        .HasForeignKey("ConcessionariaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Concessionaria");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.Concessionaria", b =>
+                {
+                    b.Navigation("Enderecos");
                 });
 
             modelBuilder.Entity("MotoRevApi.Model.Usuario", b =>

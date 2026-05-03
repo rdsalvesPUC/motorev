@@ -18,13 +18,15 @@ namespace MotoRevApi.Controller;
 public class ConcessionariaController : ControllerBase
 {
     private readonly ConcessionariaService _concessionariaService;
+    private readonly EnderecoService _enderecoService;
 
     /// <summary>
     /// Construtor do controller de concessionárias.
     /// </summary>
-    public ConcessionariaController(ConcessionariaService concessionariaService)
+    public ConcessionariaController(ConcessionariaService concessionariaService, EnderecoService enderecoService)
     {
         _concessionariaService = concessionariaService;
+        _enderecoService = enderecoService;
     }
 
     /// <summary>
@@ -48,7 +50,7 @@ public class ConcessionariaController : ControllerBase
     /// Obter uma concessionária específica pelo ID.
     /// </summary>
     /// <param name="id">O ID da concessionária.</param>
-    /// <response code="200">Retorna os dados da concessionária.</response>
+    /// <response code="200">Retorna os dados da concessionária e seus endereços.</response>
     /// <response code="404">Se a concessionária não for encontrada.</response>
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(ConcessionariaResponse), StatusCodes.Status200OK)]
@@ -65,7 +67,7 @@ public class ConcessionariaController : ControllerBase
     /// <remarks>
     /// O ID da concessionária é extraído automaticamente do token JWT.
     /// </remarks>
-    /// <response code="200">Retorna os dados da concessionária.</response>
+    /// <response code="200">Retorna os dados da concessionária e seus endereços.</response>
     /// <response code="401">Se o usuário não estiver autenticado.</response>
     /// <response code="403">Se o usuário não tiver permissão de 'Concessionaria'.</response>
     /// <response code="404">Se a concessionária não for encontrada.</response>
@@ -85,5 +87,56 @@ public class ConcessionariaController : ControllerBase
 
         var response = await _concessionariaService.GetByUserIdAsync(userId);
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Adicionar um novo endereço ao perfil da concessionária logada.
+    /// </summary>
+    /// <param name="request">Dados do endereço.</param>
+    /// <response code="201">Retorna o endereço recém-criado.</response>
+    /// <response code="400">Dados de endereço inválidos.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem permissão de 'Concessionaria'.</response>
+    [HttpPost("me/enderecos")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(EnderecoResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> AdicionarEndereco([FromBody] EnderecoRequest request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return Unauthorized();
+
+        var concessionaria = await _concessionariaService.GetByUserIdAsync(userId);
+
+        var response = await _enderecoService.AdicionarEnderecoAsync(concessionaria.Id, request);
+        return Created("", response); // Pode-se criar um endpoint GetEnderecoById no futuro para usar CreatedAtAction
+    }
+
+    /// <summary>
+    /// Remover um endereço do perfil da concessionária logada.
+    /// </summary>
+    /// <param name="enderecoId">ID do endereço a ser removido.</param>
+    /// <response code="200">Endereço removido com sucesso.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem permissão de 'Concessionaria'.</response>
+    /// <response code="404">Endereço não encontrado ou não pertence a esta concessionária.</response>
+    [HttpDelete("me/enderecos/{enderecoId}")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoverEndereco(int enderecoId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return Unauthorized();
+
+        var concessionaria = await _concessionariaService.GetByUserIdAsync(userId);
+
+        await _enderecoService.RemoverEnderecoAsync(enderecoId, concessionaria.Id);
+        
+        return Ok(new { message = "Endereço removido com sucesso." });
     }
 }

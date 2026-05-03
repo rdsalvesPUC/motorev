@@ -12,6 +12,8 @@ public record ConcessionariaResponse
         init => _cnpj = value; 
     }
 
+    public List<EnderecoResponse> Enderecos { get; init; } = new();
+
     private static string FormatCnpj(string cnpj)
     {
         if (string.IsNullOrWhiteSpace(cnpj) || cnpj.Length != 14)
