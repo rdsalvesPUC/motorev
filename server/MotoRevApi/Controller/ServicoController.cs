@@ -62,4 +62,32 @@ public class ServicoController : ControllerBase
         var response = await _servicoService.GetAllAsync(categoria);
         return Ok(response);
     }
+
+    /// <summary>
+    /// Atualizar os dados de um serviço existente.
+    /// </summary>
+    /// <remarks>
+    /// Endpoint disponível apenas para Concessionárias.
+    /// </remarks>
+    /// <param name="id">ID do serviço a ser atualizado.</param>
+    /// <param name="request">Novos dados do serviço.</param>
+    /// <response code="200">Retorna o serviço atualizado.</response>
+    /// <response code="400">Se os dados fornecidos forem inválidos.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão (não é concessionária).</response>
+    /// <response code="404">Se o serviço não for encontrado.</response>
+    /// <response code="409">Se já existir outro serviço com o mesmo nome e categoria.</response>
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Concessionaria")]
+    [ProducesResponseType(typeof(ServicoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Update(int id, [FromBody] ServicoUpdateRequest request)
+    {
+        var response = await _servicoService.UpdateAsync(id, request);
+        return Ok(response);
+    }
 }

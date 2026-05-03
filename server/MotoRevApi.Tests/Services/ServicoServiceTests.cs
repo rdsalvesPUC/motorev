@@ -3,7 +3,6 @@ using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
-using MotoRevApi.Model;
 using MotoRevApi.Services;
 using Xunit;
 
@@ -142,9 +141,73 @@ public class ServicoServiceTests
         // Act
         var response = await service.GetAllAsync(CategoriaServico.Ajuste);
 
+        var responseList = response.ToList();
+
+        // Assert
+        Assert.NotNull(responseList);
+        Assert.Equal(2, responseList.Count);
+        Assert.All(responseList, s => Assert.Equal(CategoriaServico.Ajuste, s.Categoria));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DeveAtualizarServicoComSucesso()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        var createRequest = new ServicoRequest("Troca de Óleo", CategoriaServico.Troca, 30);
+        var servicoCriado = await service.CreateAsync(createRequest);
+
+        var updateRequest = new ServicoUpdateRequest("Troca de Óleo Sintético", CategoriaServico.Troca, 45);
+
+        // Act
+        var response = await service.UpdateAsync(servicoCriado.Id, updateRequest);
+
         // Assert
         Assert.NotNull(response);
-        Assert.Equal(2, response.Count());
-        Assert.All(response, s => Assert.Equal(CategoriaServico.Ajuste, s.Categoria));
+        Assert.Equal(servicoCriado.Id, response.Id);
+        Assert.Equal("Troca de Óleo Sintético", response.Nome);
+        Assert.Equal(CategoriaServico.Troca, response.Categoria);
+        Assert.Equal(45, response.TempoEstimado);
+
+        var servicoNoBanco = await context.Servicos.FindAsync(servicoCriado.Id);
+        Assert.NotNull(servicoNoBanco);
+        Assert.Equal("Troca de Óleo Sintético", servicoNoBanco.Nome);
+        Assert.Equal(45, servicoNoBanco.TempoEstimado);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DeveRetornarErroSeServicoNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        var updateRequest = new ServicoUpdateRequest("Serviço Inexistente", CategoriaServico.Troca, 30);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => service.UpdateAsync(999, updateRequest));
+            
+        Assert.Contains("não encontrado", exception.Message);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DeveRetornarErroParaDuplicidadeComOutroServico()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        
+        await service.CreateAsync(new ServicoRequest("Serviço A", CategoriaServico.Troca, 30));
+        var servico2 = await service.CreateAsync(new ServicoRequest("Serviço B", CategoriaServico.Troca, 45));
+
+        // Tenta atualizar o serviço 2 com o nome e categoria do serviço 1
+        var updateRequest = new ServicoUpdateRequest("Serviço A", CategoriaServico.Troca, 60);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<DuplicateDataException>(
+            () => service.UpdateAsync(servico2.Id, updateRequest));
+            
+        Assert.Contains("Já existe outro serviço com o nome", exception.Message);
     }
 }

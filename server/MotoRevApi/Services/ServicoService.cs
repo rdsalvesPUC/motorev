@@ -58,4 +58,34 @@ public class ServicoService
 
         return servicos.Adapt<IEnumerable<ServicoResponse>>();
     }
+
+    public virtual async Task<ServicoResponse> UpdateAsync(int id, ServicoUpdateRequest request)
+    {
+        var servico = await _context.Servicos.FindAsync(id);
+        if (servico == null)
+        {
+            throw new NotFoundException($"Serviço com ID {id} não encontrado.");
+        }
+
+        // Verificar duplicidade: mesmo nome e categoria globalmente para outro serviço
+        var servicoDuplicado = await _context.Servicos
+            .AsNoTracking()
+            .AnyAsync(s => s.Id != id 
+                && s.Nome == request.Nome
+                && s.Categoria == request.Categoria);
+
+        if (servicoDuplicado)
+        {
+            throw new DuplicateDataException(
+                $"Já existe outro serviço com o nome '{request.Nome}' e categoria '{request.Categoria}'.");
+        }
+
+        servico.Nome = request.Nome;
+        servico.Categoria = request.Categoria;
+        servico.TempoEstimado = request.TempoEstimado;
+
+        await _context.SaveChangesAsync();
+
+        return servico.Adapt<ServicoResponse>();
+    }
 }
