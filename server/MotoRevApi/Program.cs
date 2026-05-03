@@ -79,6 +79,7 @@ builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ClienteService>();
 builder.Services.AddScoped<ConcessionariaService>();
+builder.Services.AddScoped<ServicoService>();
 builder.Services.AddScoped<HashService>();
 builder.Services.AddEndpointsApiExplorer();
 

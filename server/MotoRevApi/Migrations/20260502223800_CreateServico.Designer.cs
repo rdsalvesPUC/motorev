@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MotoRevApi.Data;
 
@@ -11,9 +12,11 @@ using MotoRevApi.Data;
 namespace MotoRevApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260502223800_CreateServico")]
+    partial class CreateServico
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -240,9 +243,6 @@ namespace MotoRevApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("bit");
-
                     b.Property<int>("Categoria")
                         .HasColumnType("int");
 
@@ -256,7 +256,7 @@ namespace MotoRevApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Categoria", "Nome")
+                    b.HasIndex("Nome", "Categoria")
                         .IsUnique();
 
                     b.ToTable("Servicos");
