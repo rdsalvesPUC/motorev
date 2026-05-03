@@ -46,7 +46,7 @@ public class ServicoController : ControllerBase
     public async Task<IActionResult> Create([FromBody] ServicoRequest request)
     {
         var response = await _servicoService.CreateAsync(request);
-        return CreatedAtAction(nameof(Create), new { id = response.Id }, response);
+        return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
     }
 
     /// <summary>
@@ -60,6 +60,22 @@ public class ServicoController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] CategoriaServico? categoria)
     {
         var response = await _servicoService.GetAllAsync(categoria);
+        return Ok(response);
+    }
+    
+    /// <summary>
+    /// Consultar um serviço pelo ID.
+    /// </summary>
+    /// <param name="id">ID do serviço.</param>
+    /// <response code="200">Retorna o serviço encontrado.</response>
+    /// <response code="404">Se o serviço não for encontrado.</response>
+    [HttpGet("{id}")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ServicoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var response = await _servicoService.GetByIdAsync(id);
         return Ok(response);
     }
 

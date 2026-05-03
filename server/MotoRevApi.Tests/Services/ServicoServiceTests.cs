@@ -38,7 +38,6 @@ public class ServicoServiceTests
         Assert.Equal("Troca de Óleo", response.Nome);
         Assert.Equal(CategoriaServico.Troca, response.Categoria);
         Assert.Equal(30, response.TempoEstimado);
-        Assert.True(response.Ativo);
     }
 
     [Fact]
@@ -174,6 +173,54 @@ public class ServicoServiceTests
         Assert.DoesNotContain(responseList, s => s.Id == servicoInativo.Id);
         Assert.Contains(responseList, s => s.Id == servicoAtivo1.Id);
         Assert.Contains(responseList, s => s.Id == servicoAtivo2.Id);
+    }
+    
+    [Fact]
+    public async Task GetByIdAsync_DeveRetornarServicoComSucesso()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        var servicoCriado = await service.CreateAsync(new ServicoRequest("Ajuste Corrente", CategoriaServico.Ajuste, 10));
+
+        // Act
+        var response = await service.GetByIdAsync(servicoCriado.Id);
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Equal(servicoCriado.Id, response.Id);
+        Assert.Equal("Ajuste Corrente", response.Nome);
+        Assert.Equal(CategoriaServico.Ajuste, response.Categoria);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_DeveRetornarErroSeServicoNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => service.GetByIdAsync(999));
+            
+        Assert.Contains("não encontrado", exception.Message);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_NaoDeveRetornarServicoInativo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        var servicoCriado = await service.CreateAsync(new ServicoRequest("Ajuste Corrente", CategoriaServico.Ajuste, 10));
+        await service.InactivateAsync(servicoCriado.Id);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => service.GetByIdAsync(servicoCriado.Id));
+
+        Assert.Contains("não encontrado", exception.Message);
     }
 
     [Fact]

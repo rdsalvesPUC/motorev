@@ -6,6 +6,5 @@ public record ServicoResponse(
     int Id,
     string Nome,
     CategoriaServico Categoria,
-    int TempoEstimado,
-    bool Ativo
+    int TempoEstimado
 );

@@ -57,6 +57,20 @@ public class ServicoService
 
         return servicos.Adapt<IEnumerable<ServicoResponse>>();
     }
+    
+    public virtual async Task<ServicoResponse> GetByIdAsync(int id)
+    {
+        var servico = await _context.Servicos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.Id == id && s.Ativo);
+
+        if (servico == null)
+        {
+            throw new NotFoundException($"Serviço com ID {id} não encontrado.");
+        }
+
+        return servico.Adapt<ServicoResponse>();
+    }
 
     public virtual async Task<ServicoResponse> UpdateAsync(int id, ServicoUpdateRequest request)
     {
