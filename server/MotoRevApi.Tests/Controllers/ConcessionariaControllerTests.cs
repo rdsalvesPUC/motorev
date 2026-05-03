@@ -27,8 +27,8 @@ public class ConcessionariaControllerTests
     public async Task Register_DeveRetornarCreated_QuandoSucesso()
     {
         // Arrange
-        var request = new RegisterConcessionariaRequest("conc@test.com", "Pass123!", "Conc Test");
-        var response = new ConcessionariaResponse(1, "Conc Test");
+        var request = new RegisterConcessionariaRequest("conc@test.com", "Pass123!", "Conc Test", "12345678000190");
+        var response = new ConcessionariaResponse { Id = 1, Nome = "Conc Test", Cnpj = "12345678000190" };
         _serviceMock.Setup(s => s.RegisterAsync(request)).ReturnsAsync(response);
 
         // Act
@@ -44,7 +44,7 @@ public class ConcessionariaControllerTests
     public async Task GetById_DeveRetornarOk_QuandoEncontrado()
     {
         // Arrange
-        var response = new ConcessionariaResponse(1, "Conc 1");
+        var response = new ConcessionariaResponse { Id = 1, Nome = "Conc 1", Cnpj = "12345678000190" };
         _serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(response);
 
         // Act
@@ -63,7 +63,7 @@ public class ConcessionariaControllerTests
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock"));
         _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
         
-        var response = new ConcessionariaResponse(1, "Conc 1");
+        var response = new ConcessionariaResponse { Id = 1, Nome = "Conc 1", Cnpj = "12345678000190" };
         _serviceMock.Setup(s => s.GetByUserIdAsync(userId)).ReturnsAsync(response);
 
         // Act

@@ -18,6 +18,26 @@ public class AppDbContext : IdentityDbContext<Usuario>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        
+        // Define que a coluna Cnpj deve ser única no banco de dados
+        modelBuilder.Entity<Concessionaria>()
+            .HasIndex(c => c.Cnpj)
+            .IsUnique();
+
+        // Configuração explícita do relacionamento 1:1 entre Usuario e Concessionaria
+        modelBuilder.Entity<Usuario>()
+            .HasOne(u => u.Concessionaria)
+            .WithOne(c => c.Usuario)
+            .HasForeignKey<Concessionaria>(c => c.UsuarioId)
+            .OnDelete(DeleteBehavior.Cascade); // Se o usuário for deletado, apaga a concessionária junto
+
+        // Configuração explícita do relacionamento 1:1 entre Usuario e Cliente (já deixando pronto)
+        modelBuilder.Entity<Usuario>()
+            .HasOne(u => u.Cliente)
+            .WithOne(c => c.Usuario)
+            .HasForeignKey<Cliente>(c => c.UsuarioId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }

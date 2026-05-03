@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -20,6 +19,9 @@ public class ConcessionariaController : ControllerBase
 {
     private readonly ConcessionariaService _concessionariaService;
 
+    /// <summary>
+    /// Construtor do controller de concessionárias.
+    /// </summary>
     public ConcessionariaController(ConcessionariaService concessionariaService)
     {
         _concessionariaService = concessionariaService;

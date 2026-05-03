@@ -172,10 +172,17 @@ namespace MotoRevApi.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("UsuarioId1")
+                        .HasColumnType("nvarchar(450)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UsuarioId")
                         .IsUnique();
+
+                    b.HasIndex("UsuarioId1")
+                        .IsUnique()
+                        .HasFilter("[UsuarioId1] IS NOT NULL");
 
                     b.ToTable("Clientes");
                 });
@@ -188,6 +195,10 @@ namespace MotoRevApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Cnpj")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -197,10 +208,20 @@ namespace MotoRevApi.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<string>("UsuarioId1")
+                        .HasColumnType("nvarchar(450)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("Cnpj")
+                        .IsUnique();
 
                     b.HasIndex("UsuarioId")
                         .IsUnique();
+
+                    b.HasIndex("UsuarioId1")
+                        .IsUnique()
+                        .HasFilter("[UsuarioId1] IS NOT NULL");
 
                     b.ToTable("Concessionarias");
                 });
@@ -389,6 +410,10 @@ namespace MotoRevApi.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MotoRevApi.Model.Usuario", null)
+                        .WithOne("Cliente")
+                        .HasForeignKey("MotoRevApi.Model.Cliente", "UsuarioId1");
+
                     b.Navigation("Usuario");
                 });
 
@@ -400,7 +425,18 @@ namespace MotoRevApi.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MotoRevApi.Model.Usuario", null)
+                        .WithOne("Concessionaria")
+                        .HasForeignKey("MotoRevApi.Model.Concessionaria", "UsuarioId1");
+
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.Usuario", b =>
+                {
+                    b.Navigation("Cliente");
+
+                    b.Navigation("Concessionaria");
                 });
 #pragma warning restore 612, 618
         }

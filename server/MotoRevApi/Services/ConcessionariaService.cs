@@ -30,6 +30,13 @@ public class ConcessionariaService
             throw new DuplicateDataException($"O email {request.Email} já está em uso.");
         }
 
+        // Nova verificação: Validar se o CNPJ já está cadastrado
+        var cnpjExiste = await _context.Concessionarias.AnyAsync(c => c.Cnpj == request.Cnpj);
+        if (cnpjExiste)
+        {
+            throw new DuplicateDataException($"O CNPJ {request.Cnpj} já está cadastrado no sistema.");
+        }
+
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {

@@ -34,7 +34,7 @@ public class ConcessionariaServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ConcessionariaService(context, _mockUserManager.Object);
-        var request = new RegisterConcessionariaRequest("contato@top.com", "Password123", "Concessionaria Top");
+        var request = new RegisterConcessionariaRequest("contato@top.com", "Password123", "Concessionaria Top", "12345678000190");
 
         _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario)null);
         _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<Usuario>(), It.IsAny<string>())).ReturnsAsync(IdentityResult.Success);
@@ -46,6 +46,7 @@ public class ConcessionariaServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("Concessionaria Top", result.Nome);
+        Assert.Equal("12345678000190", result.Cnpj);
         var concessionariaNoDb = await context.Concessionarias.SingleOrDefaultAsync();
         Assert.NotNull(concessionariaNoDb);
         Assert.Equal("Concessionaria Top", concessionariaNoDb.Nome);
@@ -61,10 +62,29 @@ public class ConcessionariaServiceTests
         _mockUserManager.Setup(x => x.FindByEmailAsync(email)).ReturnsAsync(user);
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);
-        var request = new RegisterConcessionariaRequest(email, "Password123", "Conc");
+        var request = new RegisterConcessionariaRequest(email, "Password123", "Conc", "12345678000190");
 
         // Act & Assert
         await Assert.ThrowsAsync<DuplicateDataException>(() => service.RegisterAsync(request));
+    }
+    
+    [Fact]
+    public async Task RegisterAsync_DeveLancarExcecao_QuandoCnpjJaExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var cnpj = "11222333000144";
+        context.Concessionarias.Add(new Concessionaria { Nome = "Existente", Cnpj = cnpj, UsuarioId = "u-old" });
+        await context.SaveChangesAsync();
+        
+        _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario)null);
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new RegisterConcessionariaRequest("novo@email.com", "Password123", "Nova Conc", cnpj);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<DuplicateDataException>(() => service.RegisterAsync(request));
+        Assert.Contains("já está cadastrado", exception.Message);
     }
 
     [Fact]
@@ -73,7 +93,7 @@ public class ConcessionariaServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ConcessionariaService(context, _mockUserManager.Object);
-        var request = new RegisterConcessionariaRequest("teste@email.com", "Password123", "Conc");
+        var request = new RegisterConcessionariaRequest("teste@email.com", "Password123", "Conc", "12345678000190");
 
         _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario)null);
         _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<Usuario>(), It.IsAny<string>()))
@@ -88,7 +108,7 @@ public class ConcessionariaServiceTests
     {
         // Arrange
         using var context = CreateContext();
-        var concessionaria = new Concessionaria { Id = 1, Nome = "Teste", UsuarioId = "u1" };
+        var concessionaria = new Concessionaria { Id = 1, Nome = "Teste", Cnpj = "123", UsuarioId = "u1" };
         context.Concessionarias.Add(concessionaria);
         await context.SaveChangesAsync();
 
@@ -113,13 +133,14 @@ public class ConcessionariaServiceTests
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(99));
     }
 
+
     [Fact]
     public async Task GetByUserIdAsync_DeveRetornarConcessionaria_QuandoExiste()
     {
         // Arrange
         using var context = CreateContext();
         var userId = "user-1";
-        context.Concessionarias.Add(new Concessionaria { UsuarioId = userId, Nome = "Conc" });
+        context.Concessionarias.Add(new Concessionaria { UsuarioId = userId, Nome = "Conc", Cnpj = "123" });
         await context.SaveChangesAsync();
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);
