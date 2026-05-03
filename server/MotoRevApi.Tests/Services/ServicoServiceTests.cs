@@ -38,6 +38,7 @@ public class ServicoServiceTests
         Assert.Equal("Troca de Óleo", response.Nome);
         Assert.Equal(CategoriaServico.Troca, response.Categoria);
         Assert.Equal(30, response.TempoEstimado);
+        Assert.True(response.Ativo);
     }
 
     [Fact]
@@ -150,6 +151,32 @@ public class ServicoServiceTests
     }
 
     [Fact]
+    public async Task GetAllAsync_NaoDeveRetornarServicosInativos()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        
+        var servicoAtivo1 = await service.CreateAsync(new ServicoRequest("Ajuste Corrente", CategoriaServico.Ajuste, 10));
+        var servicoInativo = await service.CreateAsync(new ServicoRequest("Ajuste Embreagem", CategoriaServico.Ajuste, 15));
+        var servicoAtivo2 = await service.CreateAsync(new ServicoRequest("Troca Pneu", CategoriaServico.Troca, 45));
+
+        await service.InactivateAsync(servicoInativo.Id);
+
+        // Act
+        var response = await service.GetAllAsync();
+
+        var responseList = response.ToList();
+
+        // Assert
+        Assert.NotNull(responseList);
+        Assert.Equal(2, responseList.Count);
+        Assert.DoesNotContain(responseList, s => s.Id == servicoInativo.Id);
+        Assert.Contains(responseList, s => s.Id == servicoAtivo1.Id);
+        Assert.Contains(responseList, s => s.Id == servicoAtivo2.Id);
+    }
+
+    [Fact]
     public async Task UpdateAsync_DeveAtualizarServicoComSucesso()
     {
         // Arrange
@@ -209,5 +236,56 @@ public class ServicoServiceTests
             () => service.UpdateAsync(servico2.Id, updateRequest));
             
         Assert.Contains("Já existe outro serviço com o nome", exception.Message);
+    }
+
+    [Fact]
+    public async Task InactivateAsync_DeveInativarServicoComSucessoENaoRemoverFisicamente()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        var createRequest = new ServicoRequest("Troca de Óleo", CategoriaServico.Troca, 30);
+        var servicoCriado = await service.CreateAsync(createRequest);
+
+        // Act
+        await service.InactivateAsync(servicoCriado.Id);
+
+        // Assert
+        var servicoNoBanco = await context.Servicos.FindAsync(servicoCriado.Id);
+        Assert.NotNull(servicoNoBanco);
+        Assert.False(servicoNoBanco.Ativo);
+    }
+
+    [Fact]
+    public async Task InactivateAsync_ServicoJaInativo_DeveManterInativoSemErro()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        var createRequest = new ServicoRequest("Troca de Óleo", CategoriaServico.Troca, 30);
+        var servicoCriado = await service.CreateAsync(createRequest);
+        await service.InactivateAsync(servicoCriado.Id); // Primeira inativação
+
+        // Act
+        await service.InactivateAsync(servicoCriado.Id); // Segunda inativação
+
+        // Assert
+        var servicoNoBanco = await context.Servicos.FindAsync(servicoCriado.Id);
+        Assert.NotNull(servicoNoBanco);
+        Assert.False(servicoNoBanco.Ativo);
+    }
+
+    [Fact]
+    public async Task InactivateAsync_DeveRetornarErroSeServicoNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => service.InactivateAsync(999));
+
+        Assert.Contains("não encontrado", exception.Message);
     }
 }

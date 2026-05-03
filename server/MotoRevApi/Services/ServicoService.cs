@@ -22,7 +22,6 @@ public class ServicoService
 
     public virtual async Task<ServicoResponse> CreateAsync(ServicoRequest request)
     {
-        // Verificar duplicidade: mesmo nome e categoria globalmente
         var servicoDuplicado = await _context.Servicos
             .AsNoTracking()
             .AnyAsync(s => s.Nome == request.Nome
@@ -44,7 +43,7 @@ public class ServicoService
 
     public virtual async Task<IEnumerable<ServicoResponse>> GetAllAsync(CategoriaServico? categoria = null)
     {
-        var query = _context.Servicos.AsNoTracking();
+        var query = _context.Servicos.AsNoTracking().Where(s => s.Ativo);
 
         if (categoria.HasValue)
         {
@@ -67,7 +66,6 @@ public class ServicoService
             throw new NotFoundException($"Serviço com ID {id} não encontrado.");
         }
 
-        // Verificar duplicidade: mesmo nome e categoria globalmente para outro serviço
         var servicoDuplicado = await _context.Servicos
             .AsNoTracking()
             .AnyAsync(s => s.Id != id 
@@ -87,5 +85,20 @@ public class ServicoService
         await _context.SaveChangesAsync();
 
         return servico.Adapt<ServicoResponse>();
+    }
+
+    public virtual async Task InactivateAsync(int id)
+    {
+        var servico = await _context.Servicos.FindAsync(id);
+        if (servico == null)
+        {
+            throw new NotFoundException($"Serviço com ID {id} não encontrado.");
+        }
+
+        if (servico.Ativo)
+        {
+            servico.Ativo = false;
+            await _context.SaveChangesAsync();
+        }
     }
 }

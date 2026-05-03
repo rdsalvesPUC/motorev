@@ -8,4 +8,5 @@ public class Servico
     public required string Nome { get; set; }
     public required CategoriaServico Categoria { get; set; }
     public int TempoEstimado { get; set; } // em minutos
+    public bool Ativo { get; set; } = true;
 }

@@ -20,6 +20,10 @@ public class ServicoConfiguration : IEntityTypeConfiguration<Servico>
         builder.Property(s => s.TempoEstimado)
             .IsRequired();
 
+        builder.Property(s => s.Ativo)
+            .IsRequired()
+            .HasDefaultValue(true);
+
         // Índice único para evitar duplicidade e otimizar buscas por Categoria e Nome
         builder.HasIndex(s => new { s.Categoria, s.Nome })
             .IsUnique();

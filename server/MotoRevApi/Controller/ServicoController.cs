@@ -90,4 +90,27 @@ public class ServicoController : ControllerBase
         var response = await _servicoService.UpdateAsync(id, request);
         return Ok(response);
     }
+
+    /// <summary>
+    /// Inativar um serviço existente.
+    /// </summary>
+    /// <remarks>
+    /// Endpoint disponível apenas para Concessionárias. Marca o serviço como inativo (exclusão lógica).
+    /// </remarks>
+    /// <param name="id">ID do serviço a ser inativado.</param>
+    /// <response code="204">Operação concluída com sucesso (sem conteúdo de retorno).</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão (não é concessionária).</response>
+    /// <response code="404">Se o serviço não for encontrado.</response>
+    [HttpPatch("{id}/inativar")]
+    [Authorize(Roles = "Concessionaria")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Inactivate(int id)
+    {
+        await _servicoService.InactivateAsync(id);
+        return NoContent();
+    }
 }
