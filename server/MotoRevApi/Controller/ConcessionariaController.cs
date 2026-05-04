@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MotoRevApi.Authorization;
 using MotoRevApi.Dto.Request;
@@ -105,6 +104,33 @@ public class ConcessionariaController : ControllerBase
         [FromQuery] string? cidade)
     {
         var response = await _concessionariaService.BuscarConcessionariasAsync(termoBusca, cidade);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Atualizar os dados cadastrais (Razão Social e E-mail) da concessionária logada.
+    /// </summary>
+    /// <param name="request">Novos dados da concessionária.</param>
+    /// <response code="200">Retorna os dados da concessionária atualizada.</response>
+    /// <response code="400">Se os dados fornecidos forem inválidos.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de 'Concessionaria'.</response>
+    /// <response code="404">Se a concessionária não for encontrada.</response>
+    [HttpPut("me")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(ConcessionariaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UpdateMe([FromBody] UpdateConcessionariaRequest request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return Unauthorized();
+
+        var concessionaria = await _concessionariaService.GetByUserIdAsync(userId);
+        
+        var response = await _concessionariaService.UpdateAsync(concessionaria.Id, request);
         return Ok(response);
     }
 

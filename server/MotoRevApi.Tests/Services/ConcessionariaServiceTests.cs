@@ -194,7 +194,7 @@ public class ConcessionariaServiceTests
         context.Concessionarias.Add(new Concessionaria { Id = 2, Nome = "Loja Y", Cnpj = "2", UsuarioId = "u2" });
         context.Concessionarias.Add(new Concessionaria { Id = 3, Nome = "Outra", Cnpj = "3", UsuarioId = "u3" });
         
-        // Adiciona endereço na Loja X para testar a flag PossuiEnderecos
+        // Adiciona endereço na Loja X
         context.Enderecos.Add(new Endereco { ConcessionariaId = 1, Cep = "123", Logradouro = "Rua", Numero = "1", Bairro = "B", Cidade = "C", Estado = "SP" });
         
         await context.SaveChangesAsync();
@@ -210,9 +210,9 @@ public class ConcessionariaServiceTests
         // Assert 1
         Assert.Equal(2, resultNome.Count);
         var lojaX = resultNome.First(r => r.Id == 1);
-        Assert.True(lojaX.PossuiEnderecos);
+        Assert.Single(lojaX.Enderecos);
         var lojaY = resultNome.First(r => r.Id == 2);
-        Assert.False(lojaY.PossuiEnderecos);
+        Assert.Empty(lojaY.Enderecos);
 
         // Assert 2
         Assert.Single(resultId);
@@ -240,7 +240,68 @@ public class ConcessionariaServiceTests
         // Assert
         Assert.Single(result);
         Assert.Equal("Loja 1", result.First().Nome);
-        Assert.Equal("São Paulo", result.First().Cidade);
-        Assert.Equal("SP", result.First().Estado);
+        Assert.Single(result.First().Enderecos);
+        Assert.Equal("São Paulo", result.First().Enderecos.First().Cidade);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DeveAtualizarNomeEEmail_QuandoConcessionariaExisteEDadosValidos()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var user = new Usuario { Id = "u1", Email = "antigo@email.com", UserName = "antigo@email.com" };
+        var concessionaria = new Concessionaria { Id = 1, Nome = "Nome Antigo", Cnpj = "12345678000190", UsuarioId = "u1", Usuario = user };
+        context.Concessionarias.Add(concessionaria);
+        await context.SaveChangesAsync();
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync("novo@email.com")).ReturnsAsync((Usuario?)null);
+        _mockUserManager.Setup(x => x.UpdateAsync(It.IsAny<Usuario>())).ReturnsAsync(IdentityResult.Success);
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new UpdateConcessionariaRequest("Novo Nome Fantasia", "novo@email.com");
+
+        // Act
+        var result = await service.UpdateAsync(1, request);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Novo Nome Fantasia", result.Nome);
+        Assert.Equal("novo@email.com", result.Email);
+
+        var concessionariaNoDb = await context.Concessionarias.Include(c => c.Usuario).FirstAsync(c => c.Id == 1);
+        Assert.Equal("Novo Nome Fantasia", concessionariaNoDb.Nome);
+        Assert.Equal("novo@email.com", concessionariaNoDb.Usuario.Email);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DeveLancarExcecao_QuandoEmailNovoJaExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var user = new Usuario { Id = "u1", Email = "antigo@email.com", UserName = "antigo@email.com" };
+        var concessionaria = new Concessionaria { Id = 1, Nome = "Nome Antigo", Cnpj = "12345678000190", UsuarioId = "u1", Usuario = user };
+        context.Concessionarias.Add(concessionaria);
+        await context.SaveChangesAsync();
+
+        var outroUsuario = new Usuario { Id = "u2", Email = "novo@email.com" };
+        _mockUserManager.Setup(x => x.FindByEmailAsync("novo@email.com")).ReturnsAsync(outroUsuario);
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new UpdateConcessionariaRequest("Novo Nome Fantasia", "novo@email.com");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.UpdateAsync(1, request));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DeveLancarExcecao_QuandoConcessionariaNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new UpdateConcessionariaRequest("Qualquer Nome", "qualquer@email.com");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateAsync(99, request));
     }
 }

@@ -85,6 +85,7 @@ public class ConcessionariaService
     public virtual async Task<ConcessionariaResponse> GetByIdAsync(int id)
     {
         var concessionaria = await _context.Concessionarias
+            .Include(c => c.Usuario) // Carrega o usuário para pegar o e-mail
             .Include(c => c.Enderecos) // Carrega os endereços
             .FirstOrDefaultAsync(c => c.Id == id);
 
@@ -101,6 +102,7 @@ public class ConcessionariaService
     public virtual async Task<ConcessionariaResponse> GetByUserIdAsync(string userId)
     {
         var concessionaria = await _context.Concessionarias
+            .Include(c => c.Usuario) // Carrega o usuário para pegar o e-mail
             .Include(c => c.Enderecos) // Carrega os endereços
             .FirstOrDefaultAsync(c => c.UsuarioId == userId);
 
@@ -136,28 +138,51 @@ public class ConcessionariaService
             query = query.Where(c => c.Enderecos.Any(e => e.Cidade.Contains(cidade)));
         }
 
-        // O ToListAsync aqui carrega os dados com os endereços incluídos
         var concessionariasData = await query.ToListAsync();
 
-        // Fazemos a projeção na memória usando LINQ
-        var result = concessionariasData.Select(c => 
+        return concessionariasData.Adapt<List<ConcessionariaListResponse>>();
+    }
+
+    /// <summary>
+    /// Atualiza os dados cadastrais de uma concessionária.
+    /// </summary>
+    public virtual async Task<ConcessionariaResponse> UpdateAsync(int id, UpdateConcessionariaRequest request)
+    {
+        var concessionaria = await _context.Concessionarias
+            .Include(c => c.Usuario)
+            .Include(c => c.Enderecos)
+            .FirstOrDefaultAsync(c => c.Id == id);
+
+        if (concessionaria == null)
         {
-            // Pega a primeira cidade/estado, preferencialmente a que deu match na busca, se existir.
-            // Do contrário, pega o do primeiro endereço da lista (se houver endereços).
-            var enderecoPrincipal = !string.IsNullOrWhiteSpace(cidade) 
-                ? c.Enderecos.FirstOrDefault(e => e.Cidade.Contains(cidade)) ?? c.Enderecos.FirstOrDefault()
-                : c.Enderecos.FirstOrDefault();
+            throw new NotFoundException($"Concessionária com ID {id} não encontrada.");
+        }
 
-            return new ConcessionariaListResponse
+        // Se o email está sendo alterado, verifica se já existe outro usuário com esse email
+        if (concessionaria.Usuario.Email != request.Email)
+        {
+            var emailJaExiste = await _userManager.FindByEmailAsync(request.Email);
+            if (emailJaExiste != null)
             {
-                Id = c.Id,
-                Nome = c.Nome,
-                PossuiEnderecos = c.Enderecos.Any(),
-                Cidade = enderecoPrincipal?.Cidade,
-                Estado = enderecoPrincipal?.Estado
-            };
-        }).ToList();
+                throw new DuplicateDataException($"O email {request.Email} já está em uso.");
+            }
+            
+            // Atualiza o e-mail e username
+            concessionaria.Usuario.Email = request.Email;
+            concessionaria.Usuario.UserName = request.Email;
+            
+            var updateResult = await _userManager.UpdateAsync(concessionaria.Usuario);
+            if (!updateResult.Succeeded)
+            {
+                throw new Exception("Falha ao atualizar o e-mail no provedor de autenticação.");
+            }
+        }
 
-        return result;
+        // Atualiza a Razão Social
+        concessionaria.Nome = request.Nome;
+
+        await _context.SaveChangesAsync();
+
+        return concessionaria.Adapt<ConcessionariaResponse>();
     }
 }

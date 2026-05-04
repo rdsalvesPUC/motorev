@@ -10,6 +10,7 @@ public static class MapsterConfig
     {
         TypeAdapterConfig<Concessionaria, ConcessionariaResponse>
             .NewConfig()
+            .Map(dest => dest.Email, src => src.Usuario.Email) // Mapeia o e-mail do Identity para o DTO
             .Map(dest => dest.Enderecos, src => src.Enderecos);
     }
 }

@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Linq;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -96,7 +95,7 @@ public class ConcessionariaControllerTests
         // Arrange
         var list = new List<ConcessionariaListResponse>
         {
-            new ConcessionariaListResponse { Id = 1, Nome = "Conc Teste", PossuiEnderecos = true, Cidade = "São Paulo", Estado = "SP" }
+            new ConcessionariaListResponse { Id = 1, Nome = "Conc Teste", Enderecos = new List<EnderecoResponse>() }
         };
         _concessionariaServiceMock.Setup(s => s.BuscarConcessionariasAsync("Teste", "São Paulo")).ReturnsAsync(list);
 
@@ -107,6 +106,31 @@ public class ConcessionariaControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
         Assert.Equal(list, okResult.Value);
+    }
+
+    [Fact]
+    public async Task UpdateMe_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var userId = "user-123";
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock"));
+        _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
+
+        var concessionariaAtual = new ConcessionariaResponse { Id = 1, Nome = "Nome Antigo", Email = "antigo@email.com", Cnpj = "12345678000190" };
+        _concessionariaServiceMock.Setup(s => s.GetByUserIdAsync(userId)).ReturnsAsync(concessionariaAtual);
+
+        var request = new UpdateConcessionariaRequest("Novo Nome Fantasia", "novo@email.com");
+        var responseEsperada = new ConcessionariaResponse { Id = 1, Nome = "Novo Nome Fantasia", Email = "novo@email.com", Cnpj = "12345678000190" };
+        
+        _concessionariaServiceMock.Setup(s => s.UpdateAsync(1, request)).ReturnsAsync(responseEsperada);
+
+        // Act
+        var result = await _controller.UpdateMe(request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(responseEsperada, okResult.Value);
     }
 
     [Fact]
@@ -158,7 +182,7 @@ public class ConcessionariaControllerTests
     [Fact]
     public void Atributos_MetodosRestritos_DevemTerRoleConcessionaria()
     {
-        var metodosParaChecar = new[] { nameof(ConcessionariaController.GetMe), nameof(ConcessionariaController.AdicionarEndereco), nameof(ConcessionariaController.RemoverEndereco) };
+        var metodosParaChecar = new[] { nameof(ConcessionariaController.GetMe), nameof(ConcessionariaController.UpdateMe), nameof(ConcessionariaController.AdicionarEndereco), nameof(ConcessionariaController.RemoverEndereco) };
 
         foreach (var nomeMetodo in metodosParaChecar)
         {

@@ -4,6 +4,7 @@ public record ConcessionariaResponse
 {
     public int Id { get; init; }
     public string Nome { get; init; }
+    public string Email { get; init; } // Adicionando o email no retorno
     private string _cnpj;
     
     public string Cnpj 
