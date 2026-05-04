@@ -10,19 +10,33 @@ using MotoRevApi.Model;
 
 namespace MotoRevApi.Services;
 
+/// <summary>
+/// Serviço de gerenciamento de Concessionárias.
+/// </summary>
 public class ConcessionariaService
 {
+#pragma warning disable CS8618
     private readonly AppDbContext _context;
     private readonly UserManager<Usuario> _userManager;
 
+    /// <summary>
+    /// Construtor vazio utilizado para Mocks em testes unitários.
+    /// </summary>
     public ConcessionariaService() { } // Construtor para Moq
+#pragma warning restore CS8618
 
+    /// <summary>
+    /// Construtor principal.
+    /// </summary>
     public ConcessionariaService(AppDbContext context, UserManager<Usuario> userManager)
     {
         _context = context;
         _userManager = userManager;
     }
 
+    /// <summary>
+    /// Realiza o cadastro de uma nova concessionária com validações de unicidade.
+    /// </summary>
     public virtual async Task<ConcessionariaResponse> RegisterAsync(RegisterConcessionariaRequest request)
     {
         if (await _userManager.FindByEmailAsync(request.Email) != null)
@@ -65,22 +79,85 @@ public class ConcessionariaService
         }
     }
 
+    /// <summary>
+    /// Obtém uma concessionária específica pelo ID.
+    /// </summary>
     public virtual async Task<ConcessionariaResponse> GetByIdAsync(int id)
     {
         var concessionaria = await _context.Concessionarias
-            .ProjectToType<ConcessionariaResponse>()
-            .FirstOrDefaultAsync();
+            .Include(c => c.Enderecos) // Carrega os endereços
+            .FirstOrDefaultAsync(c => c.Id == id);
 
-        return concessionaria ?? throw new NotFoundException($"Concessionária com ID {id} não encontrada.");
+        if (concessionaria == null)
+            throw new NotFoundException($"Concessionária com ID {id} não encontrada.");
+
+        var response = concessionaria.Adapt<ConcessionariaResponse>();
+        return response;
     }
     
+    /// <summary>
+    /// Obtém os dados da concessionária logada através do ID do usuário Identity.
+    /// </summary>
     public virtual async Task<ConcessionariaResponse> GetByUserIdAsync(string userId)
     {
         var concessionaria = await _context.Concessionarias
-            .Where(c => c.UsuarioId == userId)
-            .ProjectToType<ConcessionariaResponse>()
-            .FirstOrDefaultAsync();
+            .Include(c => c.Enderecos) // Carrega os endereços
+            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
 
-        return concessionaria ?? throw new NotFoundException($"Concessionária não encontrada.");
+        if (concessionaria == null)
+            throw new NotFoundException($"Concessionária não encontrada.");
+
+        return concessionaria.Adapt<ConcessionariaResponse>();
+    }
+
+    /// <summary>
+    /// Lista e filtra concessionárias por nome, id e/ou cidade.
+    /// </summary>
+    public virtual async Task<List<ConcessionariaListResponse>> BuscarConcessionariasAsync(string? termoBusca, string? cidade)
+    {
+        var query = _context.Concessionarias.Include(c => c.Enderecos).AsQueryable();
+
+        // Filtro por Nome ou ID
+        if (!string.IsNullOrWhiteSpace(termoBusca))
+        {
+            if (int.TryParse(termoBusca, out int idBusca))
+            {
+                query = query.Where(c => c.Id == idBusca || c.Nome.Contains(termoBusca));
+            }
+            else
+            {
+                query = query.Where(c => c.Nome.Contains(termoBusca));
+            }
+        }
+
+        // Filtro adicional por Cidade (que está dentro dos Enderecos)
+        if (!string.IsNullOrWhiteSpace(cidade))
+        {
+            query = query.Where(c => c.Enderecos.Any(e => e.Cidade.Contains(cidade)));
+        }
+
+        // O ToListAsync aqui carrega os dados com os endereços incluídos
+        var concessionariasData = await query.ToListAsync();
+
+        // Fazemos a projeção na memória usando LINQ
+        var result = concessionariasData.Select(c => 
+        {
+            // Pega a primeira cidade/estado, preferencialmente a que deu match na busca, se existir.
+            // Do contrário, pega o do primeiro endereço da lista (se houver endereços).
+            var enderecoPrincipal = !string.IsNullOrWhiteSpace(cidade) 
+                ? c.Enderecos.FirstOrDefault(e => e.Cidade.Contains(cidade)) ?? c.Enderecos.FirstOrDefault()
+                : c.Enderecos.FirstOrDefault();
+
+            return new ConcessionariaListResponse
+            {
+                Id = c.Id,
+                Nome = c.Nome,
+                PossuiEnderecos = c.Enderecos.Any(),
+                Cidade = enderecoPrincipal?.Cidade,
+                Estado = enderecoPrincipal?.Estado
+            };
+        }).ToList();
+
+        return result;
     }
 }

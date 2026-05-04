@@ -23,7 +23,7 @@ public class ConcessionariaServiceTests
             .Options;
 
         var userStoreMock = new Mock<IUserStore<Usuario>>();
-        _mockUserManager = new Mock<UserManager<Usuario>>(userStoreMock.Object, null, null, null, null, null, null, null, null);
+        _mockUserManager = new Mock<UserManager<Usuario>>(userStoreMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
     }
 
     private AppDbContext CreateContext() => new AppDbContext(_dbContextOptions);
@@ -36,7 +36,7 @@ public class ConcessionariaServiceTests
         var service = new ConcessionariaService(context, _mockUserManager.Object);
         var request = new RegisterConcessionariaRequest("contato@top.com", "Password123", "Concessionaria Top", "12345678000190");
 
-        _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario)null);
+        _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario?)null);
         _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<Usuario>(), It.IsAny<string>())).ReturnsAsync(IdentityResult.Success);
         _mockUserManager.Setup(x => x.AddToRoleAsync(It.IsAny<Usuario>(), It.IsAny<string>())).ReturnsAsync(IdentityResult.Success);
 
@@ -77,7 +77,7 @@ public class ConcessionariaServiceTests
         context.Concessionarias.Add(new Concessionaria { Nome = "Existente", Cnpj = cnpj, UsuarioId = "u-old" });
         await context.SaveChangesAsync();
         
-        _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario)null);
+        _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario?)null);
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);
         var request = new RegisterConcessionariaRequest("novo@email.com", "Password123", "Nova Conc", cnpj);
@@ -95,7 +95,7 @@ public class ConcessionariaServiceTests
         var service = new ConcessionariaService(context, _mockUserManager.Object);
         var request = new RegisterConcessionariaRequest("teste@email.com", "Password123", "Conc", "12345678000190");
 
-        _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario)null);
+        _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync((Usuario?)null);
         _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<Usuario>(), It.IsAny<string>()))
             .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Erro" }));
 
@@ -108,18 +108,21 @@ public class ConcessionariaServiceTests
     {
         // Arrange
         using var context = CreateContext();
-        var concessionaria = new Concessionaria { Id = 1, Nome = "Teste", Cnpj = "123", UsuarioId = "u1" };
-        context.Concessionarias.Add(concessionaria);
+        var concessionaria1 = new Concessionaria { Id = 1, Nome = "Teste 1", Cnpj = "123", UsuarioId = "u1" };
+        var concessionaria2 = new Concessionaria { Id = 2, Nome = "Teste 2", Cnpj = "456", UsuarioId = "u2" };
+        context.Concessionarias.Add(concessionaria1);
+        context.Concessionarias.Add(concessionaria2);
         await context.SaveChangesAsync();
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);
 
         // Act
-        var result = await service.GetByIdAsync(1);
+        var result = await service.GetByIdAsync(2); // Buscando a ID 2 especificamente
 
         // Assert
         Assert.NotNull(result);
-        Assert.Equal("Teste", result.Nome);
+        Assert.Equal("Teste 2", result.Nome);
+        Assert.Equal(2, result.Id);
     }
 
     [Fact]
@@ -162,5 +165,82 @@ public class ConcessionariaServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetByUserIdAsync("invalido"));
+    }
+
+    [Fact]
+    public async Task BuscarConcessionariasAsync_DeveRetornarTodas_QuandoFiltrosNulos()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(new Concessionaria { Id = 1, Nome = "A", Cnpj = "1", UsuarioId = "u1" });
+        context.Concessionarias.Add(new Concessionaria { Id = 2, Nome = "B", Cnpj = "2", UsuarioId = "u2" });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act
+        var result = await service.BuscarConcessionariasAsync(null, null);
+
+        // Assert
+        Assert.Equal(2, result.Count);
+    }
+
+    [Fact]
+    public async Task BuscarConcessionariasAsync_DeveFiltrarPorNomeOuId_QuandoTermoInformado()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(new Concessionaria { Id = 1, Nome = "Loja X", Cnpj = "1", UsuarioId = "u1" });
+        context.Concessionarias.Add(new Concessionaria { Id = 2, Nome = "Loja Y", Cnpj = "2", UsuarioId = "u2" });
+        context.Concessionarias.Add(new Concessionaria { Id = 3, Nome = "Outra", Cnpj = "3", UsuarioId = "u3" });
+        
+        // Adiciona endereço na Loja X para testar a flag PossuiEnderecos
+        context.Enderecos.Add(new Endereco { ConcessionariaId = 1, Cep = "123", Logradouro = "Rua", Numero = "1", Bairro = "B", Cidade = "C", Estado = "SP" });
+        
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act 1: Busca por nome parcial
+        var resultNome = await service.BuscarConcessionariasAsync("Loja", null);
+        
+        // Act 2: Busca por ID
+        var resultId = await service.BuscarConcessionariasAsync("3", null);
+
+        // Assert 1
+        Assert.Equal(2, resultNome.Count);
+        var lojaX = resultNome.First(r => r.Id == 1);
+        Assert.True(lojaX.PossuiEnderecos);
+        var lojaY = resultNome.First(r => r.Id == 2);
+        Assert.False(lojaY.PossuiEnderecos);
+
+        // Assert 2
+        Assert.Single(resultId);
+        Assert.Equal("Outra", resultId.First().Nome);
+    }
+
+    [Fact]
+    public async Task BuscarConcessionariasAsync_DeveFiltrarPorCidade()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(new Concessionaria { Id = 1, Nome = "Loja 1", Cnpj = "1", UsuarioId = "u1" });
+        context.Concessionarias.Add(new Concessionaria { Id = 2, Nome = "Loja 2", Cnpj = "2", UsuarioId = "u2" });
+        
+        context.Enderecos.Add(new Endereco { ConcessionariaId = 1, Cep = "123", Logradouro = "R", Numero = "1", Bairro = "B", Cidade = "São Paulo", Estado = "SP" });
+        context.Enderecos.Add(new Endereco { ConcessionariaId = 2, Cep = "456", Logradouro = "R", Numero = "2", Bairro = "B", Cidade = "Campinas", Estado = "SP" });
+        
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act
+        var result = await service.BuscarConcessionariasAsync(null, "Paulo");
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Loja 1", result.First().Nome);
+        Assert.Equal("São Paulo", result.First().Cidade);
+        Assert.Equal("SP", result.First().Estado);
     }
 }

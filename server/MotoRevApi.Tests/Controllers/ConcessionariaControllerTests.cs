@@ -91,6 +91,25 @@ public class ConcessionariaControllerTests
     }
 
     [Fact]
+    public async Task ListarOuBuscarConcessionarias_DeveRetornarOkComLista()
+    {
+        // Arrange
+        var list = new List<ConcessionariaListResponse>
+        {
+            new ConcessionariaListResponse { Id = 1, Nome = "Conc Teste", PossuiEnderecos = true, Cidade = "São Paulo", Estado = "SP" }
+        };
+        _concessionariaServiceMock.Setup(s => s.BuscarConcessionariasAsync("Teste", "São Paulo")).ReturnsAsync(list);
+
+        // Act
+        var result = await _controller.ListarOuBuscarConcessionarias("Teste", "São Paulo");
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(list, okResult.Value);
+    }
+
+    [Fact]
     public async Task AdicionarEndereco_DeveRetornarCreated_QuandoSucesso()
     {
         // Arrange
@@ -116,7 +135,7 @@ public class ConcessionariaControllerTests
     }
 
     [Fact]
-    public async Task RemoverEndereco_DeveRetornarNoContent_QuandoSucesso()
+    public async Task RemoverEndereco_DeveRetornarOk_QuandoSucesso()
     {
         // Arrange
         var userId = "user-123";
@@ -132,8 +151,8 @@ public class ConcessionariaControllerTests
         var result = await _controller.RemoverEndereco(99);
 
         // Assert
-        var noContentResult = Assert.IsType<NoContentResult>(result);
-        Assert.Equal(204, noContentResult.StatusCode);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
     }
 
     [Fact]

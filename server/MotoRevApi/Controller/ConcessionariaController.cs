@@ -90,6 +90,25 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
+    /// Listar ou buscar concessionárias.
+    /// </summary>
+    /// <remarks>
+    /// Pode ser utilizado para listar todas as concessionárias ou buscar por ID, Nome (Razão Social) ou Cidade.
+    /// </remarks>
+    /// <param name="termoBusca">Opcional. ID ou parte do nome da concessionária.</param>
+    /// <param name="cidade">Opcional. Parte do nome da cidade onde a concessionária possui endereço.</param>
+    /// <response code="200">Retorna uma lista resumida de concessionárias correspondentes.</response>
+    [HttpGet("listar")]
+    [ProducesResponseType(typeof(List<ConcessionariaListResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> ListarOuBuscarConcessionarias(
+        [FromQuery] string? termoBusca, 
+        [FromQuery] string? cidade)
+    {
+        var response = await _concessionariaService.BuscarConcessionariasAsync(termoBusca, cidade);
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Adicionar um novo endereço ao perfil da concessionária logada.
     /// </summary>
     /// <param name="request">Dados do endereço.</param>

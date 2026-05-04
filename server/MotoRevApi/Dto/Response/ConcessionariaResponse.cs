@@ -12,7 +12,7 @@ public record ConcessionariaResponse
         init => _cnpj = value; 
     }
 
-    public List<EnderecoResponse> Enderecos { get; init; } = new();
+    public List<EnderecoResponse> Enderecos { get; init; }
 
     private static string FormatCnpj(string cnpj)
     {
