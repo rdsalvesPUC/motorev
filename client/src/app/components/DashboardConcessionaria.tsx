@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router';
 import DashboardLayout from './DashboardLayout';
 import { Typography } from 'antd';
+import { PATHS } from '../paths';
 
 const { Title, Paragraph } = Typography;
 
@@ -24,7 +25,7 @@ export default function DashboardConcessionaria() {
     >
       <Routes>
         <Route index element={<DashboardHome />} />
-        <Route path="*" element={<Navigate to="/dashboard/concessionaria" replace />} />
+        <Route path="*" element={<Navigate to={PATHS.DASHBOARD_CONCESSIONARIA} replace />} />
       </Routes>
     </DashboardLayout>
   );

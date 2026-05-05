@@ -1,3 +1,19 @@
+export const PATH_SEGMENTS = {
+  CLIENTE_MOTOS: 'motos',
+  CLIENTE_AGENDAMENTOS: 'agendamentos',
+  CLIENTE_REVISOES: 'revisoes',
+  CLIENTE_CONCESSIONARIAS: 'concessionarias',
+  
+  CONCESSIONARIA_DASHBOARD: 'dashboard',
+  CONCESSIONARIA_LOJAS: 'lojas',
+  CONCESSIONARIA_AGENDAMENTOS: 'agendamentos',
+  CONCESSIONARIA_CATALOGOS: 'catalogos',
+  CONCESSIONARIA_CATALOGOS_MOTOS: 'catalogos-motos',
+  CONCESSIONARIA_CATALOGOS_REVISOES: 'catalogos-revisoes',
+  CONCESSIONARIA_CATALOGOS_PECAS: 'catalogos-pecas',
+  CONCESSIONARIA_CATALOGOS_SERVICOS: 'catalogos-servicos',
+};
+
 export const PATHS = {
   HOME: '/',
   LOGIN: '/login',
@@ -5,23 +21,20 @@ export const PATHS = {
   DASHBOARD_CLIENTE: '/dashboard/cliente',
   DASHBOARD_CONCESSIONARIA: '/dashboard/concessionaria',
   
-  // --- Rotas futuras (placeholders) ---
   ESQUECI_SENHA: '/esqueci-senha',
   PERFIL_USUARIO: '/perfil',
 
-  // --- Rotas do Cliente ---
-  CLIENTE_MOTOS: '/dashboard/cliente/motos',
-  CLIENTE_AGENDAMENTOS: '/dashboard/cliente/agendamentos',
-  CLIENTE_REVISOES: '/dashboard/cliente/revisoes',
-  CLIENTE_CONCESSIONARIAS: '/dashboard/cliente/concessionarias',
+  CLIENTE_MOTOS: `/dashboard/cliente/${PATH_SEGMENTS.CLIENTE_MOTOS}`,
+  CLIENTE_AGENDAMENTOS: `/dashboard/cliente/${PATH_SEGMENTS.CLIENTE_AGENDAMENTOS}`,
+  CLIENTE_REVISOES: `/dashboard/cliente/${PATH_SEGMENTS.CLIENTE_REVISOES}`,
+  CLIENTE_CONCESSIONARIAS: `/dashboard/cliente/${PATH_SEGMENTS.CLIENTE_CONCESSIONARIAS}`,
 
-  // --- Rotas da Concessionária ---
-  CONCESSIONARIA_DASHBOARD: '/dashboard/concessionaria/dashboard',
-  CONCESSIONARIA_LOJAS: '/dashboard/concessionaria/lojas',
-  CONCESSIONARIA_AGENDAMENTOS: '/dashboard/concessionaria/agendamentos',
-  CONCESSIONARIA_CATALOGOS: '/dashboard/concessionaria/catalogos',
-  CONCESSIONARIA_CATALOGOS_MOTOS: '/dashboard/concessionaria/catalogos-motos',
-  CONCESSIONARIA_CATALOGOS_REVISOES: '/dashboard/concessionaria/catalogos-revisoes',
-  CONCESSIONARIA_CATALOGOS_PECAS: '/dashboard/concessionaria/catalogos-pecas',
-  CONCESSIONARIA_CATALOGOS_SERVICOS: '/dashboard/concessionaria/catalogos-servicos',
+  CONCESSIONARIA_DASHBOARD: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_DASHBOARD}`,
+  CONCESSIONARIA_LOJAS: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_LOJAS}`,
+  CONCESSIONARIA_AGENDAMENTOS: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_AGENDAMENTOS}`,
+  CONCESSIONARIA_CATALOGOS: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS}`,
+  CONCESSIONARIA_CATALOGOS_MOTOS: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_MOTOS}`,
+  CONCESSIONARIA_CATALOGOS_REVISOES: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_REVISOES}`,
+  CONCESSIONARIA_CATALOGOS_PECAS: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_PECAS}`,
+  CONCESSIONARIA_CATALOGOS_SERVICOS: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_SERVICOS}`,
 };

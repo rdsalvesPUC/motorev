@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router';
 import DashboardLayout from './DashboardLayout';
 import { Typography } from 'antd';
+import { PATHS, PATH_SEGMENTS } from '../paths';
 
 const { Title, Paragraph } = Typography;
 
@@ -23,8 +24,8 @@ export default function DashboardCliente() {
     >
       <Routes>
         <Route index element={<DashboardHome />} />
-        <Route path="motos" element={<DashboardHome />} />
-        <Route path="*" element={<Navigate to="/dashboard/cliente" replace />} />
+        <Route path={PATH_SEGMENTS.CLIENTE_MOTOS} element={<DashboardHome />} />
+        <Route path="*" element={<Navigate to={PATHS.DASHBOARD_CLIENTE} replace />} />
       </Routes>
     </DashboardLayout>
   );
