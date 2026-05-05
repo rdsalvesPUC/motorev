@@ -35,7 +35,7 @@ public class ServicoController : ControllerBase
     /// <response code="401">Se o usuário não estiver autenticado.</response>
     /// <response code="403">Se o usuário não tiver permissão (não é concessionária).</response>
     /// <response code="404">Se a concessionária não for encontrada.</response>
-    /// <response code="409">Se já existir um serviço com o mesmo nome e categoria.</response>
+    /// <response code="409">Se já existir um serviço com o mesmo código ou com o mesmo nome e categoria.</response>
     [HttpPost]
     [Authorize(Roles = "Concessionaria")]
     [ProducesResponseType(typeof(ServicoResponse), StatusCodes.Status201Created)]
@@ -92,7 +92,7 @@ public class ServicoController : ControllerBase
     /// <response code="401">Se o usuário não estiver autenticado.</response>
     /// <response code="403">Se o usuário não tiver permissão (não é concessionária).</response>
     /// <response code="404">Se o serviço não for encontrado.</response>
-    /// <response code="409">Se já existir outro serviço com o mesmo nome e categoria.</response>
+    /// <response code="409">Se já existir outro serviço com o mesmo código ou com o mesmo nome e categoria.</response>
     [HttpPut("{id}")]
     [Authorize(Roles = "Concessionaria")]
     [ProducesResponseType(typeof(ServicoResponse), StatusCodes.Status200OK)]
