@@ -13,14 +13,21 @@ const { Title, Text, Link } = Typography;
 
 export default function Cadastro() {
   const navigate = useNavigate();
+  const [formCliente] = Form.useForm();
+  const [formConcessionaria] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [, forceUpdate] = useState({});
 
   useEffect(() => {
-    const handleLangChange = () => forceUpdate({});
+    const handleLangChange = () => {
+      forceUpdate({});
+      // Re-valida campos que já foram tocados para atualizar as mensagens de tradução
+      formCliente.validateFields().catch(() => {});
+      formConcessionaria.validateFields().catch(() => {});
+    };
     window.addEventListener('languagechange', handleLangChange);
     return () => window.removeEventListener('languagechange', handleLangChange);
-  }, []);
+  }, [formCliente, formConcessionaria]);
 
   const handleClienteCadastro = async (values: any) => {
     try {
@@ -71,6 +78,7 @@ export default function Cadastro() {
   const clienteTab = (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Form
+        form={formCliente}
         name="cliente_cadastro"
         onFinish={handleClienteCadastro}
         layout="vertical"
@@ -116,7 +124,11 @@ export default function Cadastro() {
           name="senha"
           rules={[
             { required: true, message: t('cadastro.senha.required') },
-            { min: 6, message: t('cadastro.senha.min') }
+            { min: 6, message: t('cadastro.senha.min') },
+            { pattern: /[A-Z]/, message: t('cadastro.senha.uppercase') },
+            { pattern: /[a-z]/, message: t('cadastro.senha.lowercase') },
+            { pattern: /[0-9]/, message: t('cadastro.senha.number') },
+            { pattern: /[^A-Za-z0-9]/, message: t('cadastro.senha.special') }
           ]}
         >
           <Input.Password prefix={<LockOutlined />} placeholder={t('cadastro.senha.placeholder')} />
@@ -153,6 +165,7 @@ export default function Cadastro() {
   const concessionariaTab = (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Form
+        form={formConcessionaria}
         name="concessionaria_cadastro"
         onFinish={handleConcessionariaCadastro}
         layout="vertical"
@@ -198,7 +211,11 @@ export default function Cadastro() {
           name="senha"
           rules={[
             { required: true, message: t('cadastro.senha.required') },
-            { min: 6, message: t('cadastro.senha.min') }
+            { min: 6, message: t('cadastro.senha.min') },
+            { pattern: /[A-Z]/, message: t('cadastro.senha.uppercase') },
+            { pattern: /[a-z]/, message: t('cadastro.senha.lowercase') },
+            { pattern: /[0-9]/, message: t('cadastro.senha.number') },
+            { pattern: /[^A-Za-z0-9]/, message: t('cadastro.senha.special') }
           ]}
         >
           <Input.Password prefix={<LockOutlined />} placeholder={t('cadastro.senha.placeholder')} />

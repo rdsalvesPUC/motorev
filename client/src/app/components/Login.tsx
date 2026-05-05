@@ -13,14 +13,18 @@ const { Title, Text, Link } = Typography;
 
 export default function Login() {
   const navigate = useNavigate();
+  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [, forceUpdate] = useState({});
 
   useEffect(() => {
-    const handleLangChange = () => forceUpdate({});
+    const handleLangChange = () => {
+      forceUpdate({});
+      form.validateFields().catch(() => {});
+    };
     window.addEventListener('languagechange', handleLangChange);
     return () => window.removeEventListener('languagechange', handleLangChange);
-  }, []);
+  }, [form]);
 
   const handleLogin = async (values: any) => {
     try {
@@ -50,6 +54,7 @@ export default function Login() {
   const loginForm = (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Form
+        form={form}
         name="login"
         onFinish={handleLogin}
         layout="vertical"
