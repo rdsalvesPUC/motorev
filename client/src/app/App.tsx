@@ -6,7 +6,7 @@ import DashboardCliente from './components/DashboardCliente';
 import DashboardConcessionaria from './components/DashboardConcessionaria';
 import AccessDenied from './components/AccessDenied'; // Importa AccessDenied
 import { AntdThemeProvider } from './theme';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, Spin } from 'antd';
 import { useEffect, useState } from 'react';
 import { getLocale } from './i18n';
 import ptBR from 'antd/locale/pt_BR';
@@ -25,6 +25,7 @@ const antdLocales: Record<string, any> = {
 
 export default function App() {
   const [locale, setLocale] = useState(antdLocales[getLocale()]);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
     const handleLanguageChange = () => {
@@ -45,12 +46,25 @@ export default function App() {
           console.error('Session validation failed:', error);
         }
       }
+      setInitializing(false);
     };
 
     validateSession();
 
     return () => window.removeEventListener('languagechange', handleLanguageChange);
   }, []);
+
+  if (initializing) {
+    return (
+      <AntdThemeProvider>
+        <ConfigProvider locale={locale}>
+          <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            <Spin size="large" />
+          </div>
+        </ConfigProvider>
+      </AntdThemeProvider>
+    );
+  }
 
   return (
     <AntdThemeProvider>
