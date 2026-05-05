@@ -48,20 +48,24 @@ export const tokenManager = {
       });
     }
 
-    const refreshToken = tokenManager.getRefreshToken();
-    const accessToken = tokenManager.getAccessToken();
-
-    if (!refreshToken || !accessToken) {
-      tokenManager.clearTokens();
-      if (typeof window !== 'undefined') {
-        window.location.href = PATHS.LOGIN;
-      }
-      return null;
-    }
-
     isRefreshing = true;
 
     try {
+      const refreshToken = tokenManager.getRefreshToken();
+      const accessToken = tokenManager.getAccessToken();
+
+      if (!refreshToken || !accessToken) {
+        tokenManager.clearTokens();
+        if (typeof window !== 'undefined') {
+          window.location.href = PATHS.LOGIN;
+        }
+        
+        // Importante: resetar flag e processar fila com erro antes de retornar
+        isRefreshing = false;
+        processQueue(new Error('Missing tokens'));
+        return null;
+      }
+
       const data = await authService.refreshToken(accessToken, refreshToken);
       const newAccessToken: string | null = data.token;
       const newRefreshToken: string | null = data.refreshToken;
