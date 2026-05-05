@@ -28,8 +28,13 @@ export default function App() {
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
+    const currentLang = getLocale();
+    document.documentElement.lang = currentLang;
+
     const handleLanguageChange = () => {
-      setLocale(antdLocales[getLocale()]);
+      const newLang = getLocale();
+      setLocale(antdLocales[newLang]);
+      document.documentElement.lang = newLang;
     };
     window.addEventListener('languagechange', handleLanguageChange);
 
