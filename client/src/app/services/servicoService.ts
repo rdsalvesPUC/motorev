@@ -40,8 +40,8 @@ export const servicoService = {
   },
 
   delete: async (id: number): Promise<void> => {
-    const response = await apiFetch(`${SERVICE_URL}/${id}`, {
-      method: 'DELETE',
+    const response = await apiFetch(`${SERVICE_URL}/${id}/inativar`, {
+      method: 'PATCH',
     });
     return handleResponse(response, t('error.deleteService'));
   },

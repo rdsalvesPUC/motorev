@@ -106,6 +106,7 @@
   "error.serviceNotFound": "Service not found.",
   "error.createService": "Error creating the service.",
   "error.serviceConflict": "A service with this code or name already exists.",
+  "error.methodNotAllowed": "Operation not allowed by the server.",
 
   "serviceCreatedSuccess": "Service created successfully!",
   "serviceUpdatedSuccess": "Service updated successfully!",
