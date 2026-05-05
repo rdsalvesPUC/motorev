@@ -1,5 +1,5 @@
 import { Select, Space } from 'antd';
-import { getLocale, setLocale } from '../i18n';
+import { getLocale, setLocale, t } from '../i18n';
 import { GlobalOutlined } from '@ant-design/icons';
 
 export default function LanguageSelector() {
@@ -7,8 +7,9 @@ export default function LanguageSelector() {
 
   return (
     <Space>
-      <GlobalOutlined />
+      <GlobalOutlined aria-hidden="true" />
       <Select
+        aria-label={t('language.selector.label')}
         value={currentLocale}
         onChange={setLocale}
         options={[

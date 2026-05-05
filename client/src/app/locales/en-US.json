@@ -97,5 +97,6 @@
   "dashboard.userType.dealership": "Dealership",
   "dashboard.logout.error": "Logout failed. Please try again.",
   "auth.sessionExpired": "Session expired. Please log in again.",
-  "auth.invalidToken": "Invalid token. New authentication is required."
+  "auth.invalidToken": "Invalid token. New authentication is required.",
+  "language.selector.label": "Select language"
 }
