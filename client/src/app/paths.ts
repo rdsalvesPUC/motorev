@@ -18,6 +18,7 @@ export const PATHS = {
   HOME: '/',
   LOGIN: '/login',
   CADASTRO: '/cadastro',
+  ACCESS_DENIED: '/access-denied',
   DASHBOARD_CLIENTE: '/dashboard/cliente',
   DASHBOARD_CONCESSIONARIA: '/dashboard/concessionaria',
   

@@ -2,15 +2,16 @@ import { Routes, Route, Navigate } from 'react-router';
 import DashboardLayout from './DashboardLayout';
 import { Typography } from 'antd';
 import { PATHS } from '../paths';
+import { t } from '../i18n';
 
 const { Title, Paragraph } = Typography;
 
 function DashboardHome() {
   return (
     <>
-      <Title level={2}>Bem-vindo ao MotoRev</Title>
+      <Title level={2}>{t('dashboard.welcome')}</Title>
       <Paragraph>
-        Esta é a área da concessionária. Use o menu lateral para navegar pelas funcionalidades.
+        {t('dashboard.dealershipAreaInfo')}
       </Paragraph>
     </>
   );

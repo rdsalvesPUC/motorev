@@ -2,15 +2,16 @@ import { Routes, Route, Navigate } from 'react-router';
 import DashboardLayout from './DashboardLayout';
 import { Typography } from 'antd';
 import { PATHS, PATH_SEGMENTS } from '../paths';
+import { t } from '../i18n';
 
 const { Title, Paragraph } = Typography;
 
 function DashboardHome() {
   return (
     <>
-      <Title level={2}>Bem-vindo ao MotoRev</Title>
+      <Title level={2}>{t('dashboard.welcome')}</Title>
       <Paragraph>
-        Esta é a área do cliente. Use o menu lateral para navegar pelas funcionalidades.
+        {t('dashboard.clientAreaInfo')}
       </Paragraph>
     </>
   );

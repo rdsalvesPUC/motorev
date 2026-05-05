@@ -63,5 +63,29 @@
   "cadastro.error.validation": "Validation error in the submitted data.",
   "cadastro.hasAccount": "Already have an account?",
   "cadastro.login": "Log in",
-  "cadastro.back": "Back to home page"
+  "cadastro.back": "Back to home page",
+
+  "accessDenied.title": "Access Denied",
+  "accessDenied.subTitle": "You do not have permission to access this page.",
+  "accessDenied.backHome": "Back to Home",
+
+  "dashboard.welcome": "Welcome to MotoRev",
+  "dashboard.clientAreaInfo": "This is the client area. Use the side menu to navigate through the features.",
+  "dashboard.dealershipAreaInfo": "This is the dealership area. Use the side menu to navigate through the features.",
+  "dashboard.menu.motos": "Motorcycles",
+  "dashboard.menu.agendamentos": "Schedules",
+  "dashboard.menu.revisoes": "Reviews",
+  "dashboard.menu.concessionarias": "Dealerships",
+  "dashboard.menu.dashboard": "Dashboard",
+  "dashboard.menu.lojas": "Stores",
+  "dashboard.menu.catalogos": "Catalogs",
+  "dashboard.menu.catalogosMotos": "Motorcycle Catalog",
+  "dashboard.menu.catalogosRevisoes": "Review Catalog",
+  "dashboard.menu.catalogosPecas": "Parts Catalog",
+  "dashboard.menu.catalogosServicos": "Service Catalog",
+  "dashboard.userMenu.myProfile": "My Profile",
+  "dashboard.userMenu.logout": "Logout",
+  "dashboard.userType.client": "Client",
+  "dashboard.userType.dealership": "Dealership",
+  "dashboard.logout.error": "Logout failed. Please try again."
 }

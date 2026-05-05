@@ -63,5 +63,29 @@
   "cadastro.error.validation": "Erro de validação nos dados enviados.",
   "cadastro.hasAccount": "Já tem uma conta?",
   "cadastro.login": "Entrar",
-  "cadastro.back": "Voltar para página inicial"
+  "cadastro.back": "Voltar para página inicial",
+
+  "accessDenied.title": "Acesso Negado",
+  "accessDenied.subTitle": "Você não tem permissão para acessar esta página.",
+  "accessDenied.backHome": "Voltar para a página inicial",
+
+  "dashboard.welcome": "Bem-vindo ao MotoRev",
+  "dashboard.clientAreaInfo": "Esta é a área do cliente. Use o menu lateral para navegar pelas funcionalidades.",
+  "dashboard.dealershipAreaInfo": "Esta é a área da concessionária. Use o menu lateral para navegar pelas funcionalidades.",
+  "dashboard.menu.motos": "Motos",
+  "dashboard.menu.agendamentos": "Agendamentos",
+  "dashboard.menu.revisoes": "Revisões",
+  "dashboard.menu.concessionarias": "Concessionárias",
+  "dashboard.menu.dashboard": "Dashboard",
+  "dashboard.menu.lojas": "Lojas",
+  "dashboard.menu.catalogos": "Catálogos",
+  "dashboard.menu.catalogosMotos": "Catálogo de Motos",
+  "dashboard.menu.catalogosRevisoes": "Catálogo de Revisões",
+  "dashboard.menu.catalogosPecas": "Catálogo de Peças",
+  "dashboard.menu.catalogosServicos": "Catálogo de Serviços",
+  "dashboard.userMenu.myProfile": "Meu Perfil",
+  "dashboard.userMenu.logout": "Sair",
+  "dashboard.userType.client": "Cliente",
+  "dashboard.userType.dealership": "Concessionária",
+  "dashboard.logout.error": "Falha ao fazer logout. Tente novamente."
 }

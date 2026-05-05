@@ -18,6 +18,7 @@ import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router';
 import { PATHS } from '../paths';
 import { authService } from '../services/authService';
+import { t } from '../i18n';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -54,7 +55,7 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
       await authService.logout();
       navigate(PATHS.LOGIN);
     } catch (error: any) {
-      message.error(error.message || 'Falha ao fazer logout. Tente novamente.');
+      message.error(error.message || t('dashboard.logout.error'));
       navigate(PATHS.LOGIN);
     }
   };
@@ -82,22 +83,22 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
     {
       key: PATHS.CLIENTE_MOTOS,
       icon: <CarOutlined />,
-      label: 'Motos',
+      label: t('dashboard.menu.motos'),
     },
     {
       key: PATHS.CLIENTE_AGENDAMENTOS,
       icon: <CalendarOutlined />,
-      label: 'Agendamentos',
+      label: t('dashboard.menu.agendamentos'),
     },
     {
       key: PATHS.CLIENTE_REVISOES,
       icon: <ToolOutlined />,
-      label: 'Revisões',
+      label: t('dashboard.menu.revisoes'),
     },
     {
       key: PATHS.CLIENTE_CONCESSIONARIAS,
       icon: <ShopOutlined />,
-      label: 'Concessionárias',
+      label: t('dashboard.menu.concessionarias'),
     },
   ];
 
@@ -105,38 +106,38 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
     {
       key: PATHS.CONCESSIONARIA_DASHBOARD,
       icon: <DashboardOutlined />,
-      label: 'Dashboard',
+      label: t('dashboard.menu.dashboard'),
     },
     {
       key: PATHS.CONCESSIONARIA_LOJAS,
       icon: <HomeOutlined />,
-      label: 'Lojas',
+      label: t('dashboard.menu.lojas'),
     },
     {
       key: PATHS.CONCESSIONARIA_AGENDAMENTOS,
       icon: <CalendarOutlined />,
-      label: 'Agendamentos',
+      label: t('dashboard.menu.agendamentos'),
     },
     {
       key: PATHS.CONCESSIONARIA_CATALOGOS,
       icon: <BookOutlined />,
-      label: 'Catálogos',
+      label: t('dashboard.menu.catalogos'),
       children: [
         {
           key: PATHS.CONCESSIONARIA_CATALOGOS_MOTOS,
-          label: 'Catálogo de Motos',
+          label: t('dashboard.menu.catalogosMotos'),
         },
         {
           key: PATHS.CONCESSIONARIA_CATALOGOS_REVISOES,
-          label: 'Catálogo de Revisões',
+          label: t('dashboard.menu.catalogosRevisoes'),
         },
         {
           key: PATHS.CONCESSIONARIA_CATALOGOS_PECAS,
-          label: 'Catálogo de Peças',
+          label: t('dashboard.menu.catalogosPecas'),
         },
         {
           key: PATHS.CONCESSIONARIA_CATALOGOS_SERVICOS,
-          label: 'Catálogo de Serviços',
+          label: t('dashboard.menu.catalogosServicos'),
         },
       ],
     },
@@ -148,7 +149,7 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
     {
       key: 'profile',
       icon: <SettingOutlined />,
-      label: 'Meu Perfil',
+      label: t('dashboard.userMenu.myProfile'),
       onClick: handleProfile,
     },
     {
@@ -157,7 +158,7 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: 'Sair',
+      label: t('dashboard.userMenu.logout'),
       onClick: handleLogout,
     },
   ];
@@ -194,7 +195,7 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                   <Text strong>{userName}</Text>
                   <Text type="secondary" style={{ fontSize: '12px' }}>
-                    {userType === 'cliente' ? 'Cliente' : 'Concessionária'}
+                    {userType === 'cliente' ? t('dashboard.userType.client') : t('dashboard.userType.dealership')}
                   </Text>
                 </div>
               )}
