@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router';
 import { PATHS } from '../paths';
+import { tokenManager } from '../services/tokenManager';
 
 interface PrivateRouteProps {
   children: React.ReactElement;
@@ -7,8 +8,8 @@ interface PrivateRouteProps {
 }
 
 export default function PrivateRoute({ children, allowedProfile }: PrivateRouteProps) {
-  const token = localStorage.getItem('token');
-  const userProfile = localStorage.getItem('perfil');
+  const token = tokenManager.getAccessToken();
+  const userProfile = tokenManager.getProfile();
 
   if (!token || !userProfile) {
     // Usuario não autenticado, redireciona para login

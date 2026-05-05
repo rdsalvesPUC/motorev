@@ -1,10 +1,9 @@
-import { BASE_URL, handleResponse } from './http';
+import { BASE_URL, handleResponse, apiFetch } from './http';
 
 export const concessionariaService = {
   async register(data: any) {
-    const response = await fetch(`${BASE_URL}/Concessionaria`, {
+    const response = await apiFetch(`${BASE_URL}/Concessionaria`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
     return handleResponse(response, 'Falha no cadastro');

@@ -87,5 +87,7 @@
   "dashboard.userMenu.logout": "Sair",
   "dashboard.userType.client": "Cliente",
   "dashboard.userType.dealership": "Concessionária",
-  "dashboard.logout.error": "Falha ao fazer logout. Tente novamente."
+  "dashboard.logout.error": "Falha ao fazer logout. Tente novamente.",
+  "auth.sessionExpired": "Sessão expirada. Por favor, faça login novamente.",
+  "auth.invalidToken": "Token inválido. É necessária uma nova autenticação."
 }

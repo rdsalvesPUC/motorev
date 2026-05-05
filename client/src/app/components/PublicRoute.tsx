@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { PATHS } from '../paths';
+import { tokenManager } from '../services/tokenManager';
 
 interface PublicRouteProps {
   children: React.ReactElement;
@@ -10,8 +11,8 @@ export default function PublicRoute({ children }: PublicRouteProps) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const perfil = localStorage.getItem('perfil');
+    const token = tokenManager.getAccessToken();
+    const perfil = tokenManager.getProfile();
 
     if (token && perfil) {
       const dashboardPath = perfil === 'Cliente' ? PATHS.DASHBOARD_CLIENTE : PATHS.DASHBOARD_CONCESSIONARIA;
@@ -19,7 +20,7 @@ export default function PublicRoute({ children }: PublicRouteProps) {
     }
   }, [navigate]);
 
-  const isAuthenticated = !!localStorage.getItem('token') && !!localStorage.getItem('perfil');
+  const isAuthenticated = !!tokenManager.getAccessToken() && !!tokenManager.getProfile();
 
   return isAuthenticated ? null : children;
 }

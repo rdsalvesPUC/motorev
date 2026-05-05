@@ -53,6 +53,7 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
   const handleLogout = async () => {
     try {
       await authService.logout();
+      // O logout já limpa os tokens via tokenManager.clearTokens() no finally
       navigate(PATHS.LOGIN);
     } catch (error: any) {
       message.error(error.message || t('dashboard.logout.error'));

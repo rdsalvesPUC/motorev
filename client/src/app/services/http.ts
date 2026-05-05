@@ -1,3 +1,5 @@
+import { tokenManager } from './tokenManager';
+
 export const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:5262/api';
 
 export class ApiError extends Error {
@@ -35,4 +37,34 @@ export async function handleResponse(response: Response, defaultErrorMessage: st
   } catch (e) {
       return text;
   }
+}
+
+export async function apiFetch(url: string, options: RequestInit = {}) {
+  const token = tokenManager.getAccessToken();
+
+  const headers = new Headers(options.headers || {});
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  if (!headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  options.headers = headers;
+
+  let response = await fetch(url, options);
+
+  // Não tenta renovar token se for a rota de login
+  const isLoginRoute = url.includes('/Auth/login');
+
+  if (response.status === 401 && !isLoginRoute) {
+    const newToken = await tokenManager.refreshAccessToken();
+    if (newToken) {
+      headers.set('Authorization', `Bearer ${newToken}`);
+      options.headers = headers;
+      response = await fetch(url, options);
+    }
+  }
+
+  return response;
 }

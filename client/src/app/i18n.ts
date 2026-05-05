@@ -6,7 +6,7 @@ const translations: Record<string, Record<string, string>> = {
   'pt-BR': ptBR,
 };
 
-let currentLocale = 'pt-BR'; // Default
+let currentLocale = 'pt-BR'; // Padrão
 
 export const setLocale = (locale: string) => {
   if (translations[locale]) {

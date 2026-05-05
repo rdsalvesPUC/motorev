@@ -2,6 +2,7 @@ import { Form, Input, Button, Layout, Typography, Card, Space, Flex, message } f
 import { MailOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
+import { tokenManager } from '../services/tokenManager';
 import { authService } from '../services/authService';
 import { t } from '../i18n';
 import LanguageSelector from './LanguageSelector';
@@ -26,10 +27,7 @@ export default function Login() {
       setLoading(true);
       const data = await authService.login({ email: values.email, password: values.senha });
       
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('refreshToken', data.refreshToken);
-      localStorage.setItem('user', JSON.stringify(data.usuario));
-      localStorage.setItem('perfil', data.perfil);
+      tokenManager.setTokens(data.token, data.refreshToken, data.usuario, data.perfil);
 
       message.success(t('login.success'));
       
