@@ -20,7 +20,15 @@ export default function Login() {
   useEffect(() => {
     const handleLangChange = () => {
       forceUpdate({});
-      form.validateFields().catch(() => {});
+
+      const touchedFieldNames = form
+        .getFieldsError()
+        .map((field) => field.name)
+        .filter((name) => form.isFieldTouched(name));
+
+      if (touchedFieldNames.length > 0) {
+        form.validateFields(touchedFieldNames).catch(() => {});
+      }
     };
     window.addEventListener('languagechange', handleLangChange);
     return () => window.removeEventListener('languagechange', handleLangChange);
