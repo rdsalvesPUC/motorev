@@ -20,12 +20,23 @@ export default function Cadastro() {
   const [loading, setLoading] = useState(false);
   const [, forceUpdate] = useState({});
 
+  const revalidateTouchedFields = (form: any) => {
+    const touchedFieldNames = form
+      .getFieldsError()
+      .map(({ name }: { name: (string | number)[] }) => name)
+      .filter((name: (string | number)[]) => form.isFieldTouched(name));
+
+    if (touchedFieldNames.length > 0) {
+      form.validateFields(touchedFieldNames).catch(() => {});
+    }
+  };
+
   useEffect(() => {
     const handleLangChange = () => {
       forceUpdate({});
       // Re-valida campos que já foram tocados para atualizar as mensagens de tradução
-      formCliente.validateFields().catch(() => {});
-      formConcessionaria.validateFields().catch(() => {});
+      revalidateTouchedFields(formCliente);
+      revalidateTouchedFields(formConcessionaria);
     };
     window.addEventListener('languagechange', handleLangChange);
     return () => window.removeEventListener('languagechange', handleLangChange);
