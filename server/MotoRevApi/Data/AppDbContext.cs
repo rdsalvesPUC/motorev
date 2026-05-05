@@ -46,6 +46,13 @@ public class AppDbContext : IdentityDbContext<Usuario>
             .HasForeignKey(e => e.ConcessionariaId)
             .OnDelete(DeleteBehavior.Cascade); // Apagar concessionária apaga os endereços
 
+        // Global Query Filters para Soft Delete (Ignorar registros inativos em qualquer busca)
+        modelBuilder.Entity<Concessionaria>().HasQueryFilter(c => c.Ativo);
+        modelBuilder.Entity<Endereco>().HasQueryFilter(e => e.Ativo);
+        modelBuilder.Entity<Usuario>().HasQueryFilter(u => u.Ativo);
+        // Aplica o global filter para as outras entidades que tem a propriedade Ativo
+        modelBuilder.Entity<ModeloMoto>().HasQueryFilter(m => m.Ativo);
+
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }
 }

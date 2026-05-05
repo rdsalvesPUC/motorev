@@ -45,7 +45,7 @@ public class ConcessionariaService
         }
 
         // Nova verificação: Validar se o CNPJ já está cadastrado
-        var cnpjExiste = await _context.Concessionarias.AnyAsync(c => c.Cnpj == request.Cnpj);
+        var cnpjExiste = await _context.Concessionarias.IgnoreQueryFilters().AnyAsync(c => c.Cnpj == request.Cnpj);
         if (cnpjExiste)
         {
             throw new DuplicateDataException($"O CNPJ {request.Cnpj} já está cadastrado no sistema.");
@@ -184,5 +184,58 @@ public class ConcessionariaService
         await _context.SaveChangesAsync();
 
         return concessionaria.Adapt<ConcessionariaResponse>();
+    }
+
+    /// <summary>
+    /// Inativa a concessionária logada, realizando um soft delete nela, em seus endereços e no usuário.
+    /// </summary>
+    public virtual async Task InativarAsync(string userId)
+    {
+        var concessionaria = await _context.Concessionarias
+            .Include(c => c.Usuario)
+            .Include(c => c.Enderecos)
+            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+        if (concessionaria == null)
+            throw new NotFoundException("Concessionária não encontrada.");
+
+        // TODO: Quando o módulo de agendamento for implementado, descomentar e ajustar o código abaixo:
+        // var possuiAgendamentoPendente = await _context.Agendamentos
+        //     .AnyAsync(a => a.ConcessionariaId == concessionaria.Id && (a.Status == "Pendente" || a.Status == "Em Andamento"));
+        // if (possuiAgendamentoPendente)
+        // {
+        //     throw new InvalidOperationException("Não é possível excluir a conta pois existem agendamentos pendentes ou em andamento.");
+        // }
+
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            // Inativar Concessionaria
+            concessionaria.Ativo = false;
+
+            // Inativar Endereços associados
+            foreach (var endereco in concessionaria.Enderecos)
+            {
+                endereco.Ativo = false;
+            }
+
+            // Inativar Usuário (Identity)
+            if (concessionaria.Usuario != null)
+            {
+                concessionaria.Usuario.Ativo = false;
+                
+                // Opcional: Você pode querer invalidar tokens ativos também
+                concessionaria.Usuario.RefreshToken = null;
+                concessionaria.Usuario.RefreshTokenExpiryTime = null;
+            }
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }

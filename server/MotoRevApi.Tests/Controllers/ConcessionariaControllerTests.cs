@@ -134,6 +134,43 @@ public class ConcessionariaControllerTests
     }
 
     [Fact]
+    public async Task DeleteMe_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var userId = "user-123";
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock"));
+        _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
+
+        _concessionariaServiceMock.Setup(s => s.InativarAsync(userId)).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.DeleteMe();
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteMe_DeveRetornarBadRequest_QuandoExistemAgendamentosPendentes()
+    {
+        // Arrange
+        var userId = "user-123";
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock"));
+        _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
+
+        _concessionariaServiceMock.Setup(s => s.InativarAsync(userId))
+            .ThrowsAsync(new InvalidOperationException("Não é possível excluir a conta pois existem agendamentos pendentes ou em andamento."));
+
+        // Act
+        var result = await _controller.DeleteMe();
+
+        // Assert
+        var badRequestResult = Assert.IsType<BadRequestObjectResult>(result);
+        Assert.Equal(400, badRequestResult.StatusCode);
+    }
+
+    [Fact]
     public async Task AdicionarEndereco_DeveRetornarCreated_QuandoSucesso()
     {
         // Arrange
@@ -182,7 +219,13 @@ public class ConcessionariaControllerTests
     [Fact]
     public void Atributos_MetodosRestritos_DevemTerRoleConcessionaria()
     {
-        var metodosParaChecar = new[] { nameof(ConcessionariaController.GetMe), nameof(ConcessionariaController.UpdateMe), nameof(ConcessionariaController.AdicionarEndereco), nameof(ConcessionariaController.RemoverEndereco) };
+        var metodosParaChecar = new[] { 
+            nameof(ConcessionariaController.GetMe), 
+            nameof(ConcessionariaController.UpdateMe), 
+            nameof(ConcessionariaController.DeleteMe), 
+            nameof(ConcessionariaController.AdicionarEndereco), 
+            nameof(ConcessionariaController.RemoverEndereco) 
+        };
 
         foreach (var nomeMetodo in metodosParaChecar)
         {

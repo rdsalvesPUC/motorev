@@ -11,6 +11,9 @@ public class Endereco
     public required string Cidade { get; set; }
     public required string Estado { get; set; } // UF
     
+    // Controle de Soft Delete
+    public bool Ativo { get; set; } = true;
+    
     // Relacionamento com Concessionaria (1:N)
     public int ConcessionariaId { get; set; }
     public virtual Concessionaria Concessionaria { get; set; } = null!;

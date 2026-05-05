@@ -304,4 +304,45 @@ public class ConcessionariaServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.UpdateAsync(99, request));
     }
+
+    [Fact]
+    public async Task InativarAsync_DeveInativarConcessionariaUsuarioEEnderecos_QuandoSucesso()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var user = new Usuario { Id = "u1", Email = "teste@email.com", Ativo = true };
+        var concessionaria = new Concessionaria { Id = 1, Nome = "Loja X", Cnpj = "123", UsuarioId = "u1", Usuario = user, Ativo = true };
+        context.Concessionarias.Add(concessionaria);
+        
+        var endereco = new Endereco { Id = 1, ConcessionariaId = 1, Cep = "123", Logradouro = "Rua", Numero = "1", Bairro = "B", Cidade = "C", Estado = "SP", Ativo = true };
+        context.Enderecos.Add(endereco);
+        
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act
+        await service.InativarAsync("u1");
+
+        // Assert - A busca direta precisa ignorar o filtro global para enxergar o registro modificado
+        var concessionariaInativada = await context.Concessionarias.IgnoreQueryFilters().FirstAsync(c => c.Id == 1);
+        Assert.False(concessionariaInativada.Ativo);
+
+        var usuarioInativado = await context.Users.IgnoreQueryFilters().FirstAsync(u => u.Id == "u1");
+        Assert.False(usuarioInativado.Ativo);
+
+        var enderecoInativado = await context.Enderecos.IgnoreQueryFilters().FirstAsync(e => e.Id == 1);
+        Assert.False(enderecoInativado.Ativo);
+    }
+
+    [Fact]
+    public async Task InativarAsync_DeveLancarExcecao_QuandoConcessionariaNaoEncontrada()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => service.InativarAsync("u-inexistente"));
+    }
 }

@@ -135,6 +135,41 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
+    /// Inativa a concessionária logada (Soft Delete).
+    /// </summary>
+    /// <remarks>
+    /// A inativação só será concluída se a concessionária não possuir agendamentos pendentes ou em andamento.
+    /// A ação também inativa o usuário (login) e todos os endereços vinculados.
+    /// </remarks>
+    /// <response code="200">Conta inativada com sucesso.</response>
+    /// <response code="400">Existem agendamentos pendentes/em andamento impedindo a inativação.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de 'Concessionaria'.</response>
+    /// <response code="404">Se a concessionária não for encontrada.</response>
+    [HttpDelete("me")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteMe()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null) return Unauthorized();
+
+        try
+        {
+            await _concessionariaService.InativarAsync(userId);
+            return Ok(new { message = "Conta inativada com sucesso." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Adicionar um novo endereço ao perfil da concessionária logada.
     /// </summary>
     /// <param name="request">Dados do endereço.</param>
