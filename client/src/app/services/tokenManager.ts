@@ -77,10 +77,10 @@ export const tokenManager = {
       isRefreshing = false;
       processQueue(null, newAccessToken);
       
-      // Atualiza os tokens no armazenamento
-      const userData = tokenManager.getUserData();
-      const profile = tokenManager.getProfile();
-      tokenManager.setTokens(newAccessToken, newRefreshToken, userData, profile!);
+      // Atualiza os tokens no armazenamento com os dados mais recentes do backend
+      const userData = data.usuario;
+      const profile = data.perfil;
+      tokenManager.setTokens(newAccessToken, newRefreshToken, userData, profile);
 
       return newAccessToken;
     } catch (error) {
