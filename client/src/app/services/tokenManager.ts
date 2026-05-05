@@ -2,6 +2,7 @@ import { authService } from './authService';
 import { PATHS } from '../paths';
 import { t } from '../i18n';
 import { message } from 'antd';
+import { BASE_URL, handleResponse } from './http';
 
 let isRefreshing = false;
 let failedQueue: { resolve: (token: string | null) => void; reject: (reason?: any) => void }[] = [];
@@ -47,24 +48,23 @@ export const tokenManager = {
       });
     }
 
-    isRefreshing = true;
-
     const refreshToken = tokenManager.getRefreshToken();
     const accessToken = tokenManager.getAccessToken();
 
     if (!refreshToken || !accessToken) {
       tokenManager.clearTokens();
-      // Verificamos se estamos no browser antes de redirecionar para evitar erros em SSR (se aplicável)
       if (typeof window !== 'undefined') {
         window.location.href = PATHS.LOGIN;
       }
       return null;
     }
 
+    isRefreshing = true;
+
     try {
-      const response = await authService.refreshToken(accessToken, refreshToken);
-      const newAccessToken: string | null = response.token;
-      const newRefreshToken: string | null = response.refreshToken;
+      const data = await authService.refreshToken(accessToken, refreshToken);
+      const newAccessToken: string | null = data.token;
+      const newRefreshToken: string | null = data.refreshToken;
 
       if (!newAccessToken || !newRefreshToken) {
         throw new Error('Invalid token response');
@@ -82,10 +82,12 @@ export const tokenManager = {
     } catch (error) {
       isRefreshing = false;
       processQueue(error);
+      tokenManager.clearTokens();
+      
       message.error(t('auth.sessionExpired'));
-      await authService.logout();
+      
       if (typeof window !== 'undefined') {
-        window.location.href = PATHS.LOGIN; // Garante o redirecionamento após limpar os dados
+        window.location.href = PATHS.LOGIN;
       }
       return null;
     }

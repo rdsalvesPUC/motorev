@@ -44,6 +44,9 @@ export default function App() {
           await tokenManager.refreshAccessToken();
         } catch (error) {
           console.error('Session validation failed:', error);
+          // Em caso de erro, garantimos que a inicialização termine para que o roteamento aconteça
+          setInitializing(false);
+          return;
         }
       }
       setInitializing(false);

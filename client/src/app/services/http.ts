@@ -54,10 +54,10 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
 
   let response = await fetch(url, options);
 
-  // Não tenta renovar token se for a rota de login
-  const isLoginRoute = url.includes('/Auth/login');
+  // Não tenta renovar token se for a rota de login, refresh ou logout
+  const isAuthRoute = url.includes('/Auth/login') || url.includes('/Auth/refresh') || url.includes('/Auth/logout');
 
-  if (response.status === 401 && !isLoginRoute) {
+  if (response.status === 401 && !isAuthRoute) {
     const newToken = await tokenManager.refreshAccessToken();
     if (newToken) {
       headers.set('Authorization', `Bearer ${newToken}`);
