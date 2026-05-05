@@ -24,13 +24,12 @@ public class ServicoService
     {
         var servicoDuplicado = await _context.Servicos
             .AsNoTracking()
-            .AnyAsync(s => s.Nome == request.Nome
-                && s.Categoria == request.Categoria);
+            .AnyAsync(s => s.Ativo && (s.Nome == request.Nome || s.Codigo == request.Codigo));
 
         if (servicoDuplicado)
         {
             throw new DuplicateDataException(
-                $"Já existe um serviço com o nome '{request.Nome}' e categoria '{request.Categoria}'.");
+                $"Já existe um serviço ativo com o nome '{request.Nome}' ou código '{request.Codigo}'.");
         }
 
         var servico = request.Adapt<Servico>();
@@ -82,19 +81,21 @@ public class ServicoService
 
         var servicoDuplicado = await _context.Servicos
             .AsNoTracking()
-            .AnyAsync(s => s.Id != id 
-                && s.Nome == request.Nome
-                && s.Categoria == request.Categoria);
+            .AnyAsync(s => s.Id != id && s.Ativo 
+                && (s.Nome == request.Nome || s.Codigo == request.Codigo));
 
         if (servicoDuplicado)
         {
             throw new DuplicateDataException(
-                $"Já existe outro serviço com o nome '{request.Nome}' e categoria '{request.Categoria}'.");
+                $"Já existe outro serviço ativo com o nome '{request.Nome}' ou código '{request.Codigo}'.");
         }
 
+        servico.Codigo = request.Codigo;
         servico.Nome = request.Nome;
+        servico.Descricao = request.Descricao;
         servico.Categoria = request.Categoria;
         servico.TempoEstimado = request.TempoEstimado;
+        servico.Custo = request.Custo;
 
         await _context.SaveChangesAsync();
 

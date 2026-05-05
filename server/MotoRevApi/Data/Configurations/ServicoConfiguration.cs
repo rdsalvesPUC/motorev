@@ -24,6 +24,9 @@ public class ServicoConfiguration : IEntityTypeConfiguration<Servico>
             .IsRequired()
             .HasDefaultValue(true);
 
+        builder.Property(s => s.Custo)
+            .HasColumnType("decimal(18,2)");
+
         // Índice único para evitar duplicidade e otimizar buscas por Categoria e Nome
         builder.HasIndex(s => new { s.Categoria, s.Nome })
             .IsUnique();

@@ -4,7 +4,10 @@ namespace MotoRevApi.Dto.Response;
 
 public record ServicoResponse(
     int Id,
+    string Codigo,
     string Nome,
+    string Descricao,
     CategoriaServico Categoria,
-    int TempoEstimado
+    int TempoEstimado,
+    decimal Custo
 );

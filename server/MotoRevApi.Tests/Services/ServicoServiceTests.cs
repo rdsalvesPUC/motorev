@@ -28,7 +28,7 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        var request = new ServicoRequest("Troca de Óleo", CategoriaServico.Troca, 30);
+        var request = new ServicoRequest("COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100);
 
         // Act
         var response = await service.CreateAsync(request);
@@ -46,35 +46,32 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        var request = new ServicoRequest("Limpeza Geral", CategoriaServico.Limpeza, 60);
+        var request1 = new ServicoRequest("COD002", "Limpeza Geral", "Desc", CategoriaServico.Limpeza, 60, 150);
+        var request2 = new ServicoRequest("COD002", "Outra Limpeza", "Desc", CategoriaServico.Troca, 30, 100);
 
         // Criar primeiro serviço
-        await service.CreateAsync(request);
+        await service.CreateAsync(request1);
 
-        // Act & Assert - tentar criar um serviço duplicado
+        // Act & Assert - tentar criar um serviço com mesmo código em categoria diferente
         await Assert.ThrowsAsync<DuplicateDataException>(
-            () => service.CreateAsync(request));
+            () => service.CreateAsync(request2));
     }
 
     [Fact]
-    public async Task CreateAsync_DevePermitirServicosDiferentesPorCategoria()
+    public async Task CreateAsync_DeveRetornarErroParaMesmoNomeMesmoEmCategoriasDiferentes()
     {
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        var request1 = new ServicoRequest("Troca de Óleo", CategoriaServico.Troca, 30);
-        var request2 = new ServicoRequest("Troca de Óleo", CategoriaServico.Verificacao, 15);
+        var request1 = new ServicoRequest("COD003", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100);
+        var request2 = new ServicoRequest("COD004", "Troca de Óleo", "Desc", CategoriaServico.Verificacao, 15, 50);
 
-        // Act
-        var response1 = await service.CreateAsync(request1);
-        var response2 = await service.CreateAsync(request2);
+        // Criar primeiro serviço
+        await service.CreateAsync(request1);
 
-        // Assert
-        Assert.NotNull(response1);
-        Assert.NotNull(response2);
-        Assert.Equal(request1.Nome, response1.Nome);
-        Assert.Equal(request2.Nome, response2.Nome);
-        Assert.NotEqual(response1.Categoria, response2.Categoria);
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(
+            () => service.CreateAsync(request2));
     }
 
     [Theory]
@@ -87,7 +84,7 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        var request = new ServicoRequest("Serviço Categoria", categoria, 45);
+        var request = new ServicoRequest("COD_CAT", "Serviço Categoria", "Desc", categoria, 45, 80);
 
         // Act
         var response = await service.CreateAsync(request);
@@ -117,8 +114,8 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        await service.CreateAsync(new ServicoRequest("Ajuste Corrente", CategoriaServico.Ajuste, 10));
-        await service.CreateAsync(new ServicoRequest("Troca Pneu", CategoriaServico.Troca, 45));
+        await service.CreateAsync(new ServicoRequest("COD005", "Ajuste Corrente", "Desc", CategoriaServico.Ajuste, 10, 20));
+        await service.CreateAsync(new ServicoRequest("COD006", "Troca Pneu", "Desc", CategoriaServico.Troca, 45, 200));
 
         // Act
         var response = await service.GetAllAsync();
@@ -134,9 +131,9 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        await service.CreateAsync(new ServicoRequest("Ajuste Corrente", CategoriaServico.Ajuste, 10));
-        await service.CreateAsync(new ServicoRequest("Ajuste Embreagem", CategoriaServico.Ajuste, 15));
-        await service.CreateAsync(new ServicoRequest("Troca Pneu", CategoriaServico.Troca, 45));
+        await service.CreateAsync(new ServicoRequest("COD007", "Ajuste Corrente", "Desc", CategoriaServico.Ajuste, 10, 20));
+        await service.CreateAsync(new ServicoRequest("COD008", "Ajuste Embreagem", "Desc", CategoriaServico.Ajuste, 15, 30));
+        await service.CreateAsync(new ServicoRequest("COD009", "Troca Pneu", "Desc", CategoriaServico.Troca, 45, 200));
 
         // Act
         var response = await service.GetAllAsync(CategoriaServico.Ajuste);
@@ -156,9 +153,9 @@ public class ServicoServiceTests
         using var context = CreateContext();
         var service = new ServicoService(context);
         
-        var servicoAtivo1 = await service.CreateAsync(new ServicoRequest("Ajuste Corrente", CategoriaServico.Ajuste, 10));
-        var servicoInativo = await service.CreateAsync(new ServicoRequest("Ajuste Embreagem", CategoriaServico.Ajuste, 15));
-        var servicoAtivo2 = await service.CreateAsync(new ServicoRequest("Troca Pneu", CategoriaServico.Troca, 45));
+        var servicoAtivo1 = await service.CreateAsync(new ServicoRequest("COD010", "Ajuste Corrente", "Desc", CategoriaServico.Ajuste, 10, 20));
+        var servicoInativo = await service.CreateAsync(new ServicoRequest("COD011", "Ajuste Embreagem", "Desc", CategoriaServico.Ajuste, 15, 30));
+        var servicoAtivo2 = await service.CreateAsync(new ServicoRequest("COD012", "Troca Pneu", "Desc", CategoriaServico.Troca, 45, 200));
 
         await service.InactivateAsync(servicoInativo.Id);
 
@@ -181,7 +178,7 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        var servicoCriado = await service.CreateAsync(new ServicoRequest("Ajuste Corrente", CategoriaServico.Ajuste, 10));
+        var servicoCriado = await service.CreateAsync(new ServicoRequest("COD013", "Ajuste Corrente", "Desc", CategoriaServico.Ajuste, 10, 20));
 
         // Act
         var response = await service.GetByIdAsync(servicoCriado.Id);
@@ -213,7 +210,7 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        var servicoCriado = await service.CreateAsync(new ServicoRequest("Ajuste Corrente", CategoriaServico.Ajuste, 10));
+        var servicoCriado = await service.CreateAsync(new ServicoRequest("COD014", "Ajuste Corrente", "Desc", CategoriaServico.Ajuste, 10, 20));
         await service.InactivateAsync(servicoCriado.Id);
 
         // Act & Assert
@@ -229,10 +226,10 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        var createRequest = new ServicoRequest("Troca de Óleo", CategoriaServico.Troca, 30);
+        var createRequest = new ServicoRequest("COD015", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100);
         var servicoCriado = await service.CreateAsync(createRequest);
 
-        var updateRequest = new ServicoUpdateRequest("Troca de Óleo Sintético", CategoriaServico.Troca, 45);
+        var updateRequest = new ServicoUpdateRequest("COD015-U", "Troca de Óleo Sintético", "Nova Desc", CategoriaServico.Troca, 45, 120);
 
         // Act
         var response = await service.UpdateAsync(servicoCriado.Id, updateRequest);
@@ -256,7 +253,7 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        var updateRequest = new ServicoUpdateRequest("Serviço Inexistente", CategoriaServico.Troca, 30);
+        var updateRequest = new ServicoUpdateRequest("COD_OFF", "Serviço Inexistente", "Desc", CategoriaServico.Troca, 30, 100);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
@@ -272,17 +269,17 @@ public class ServicoServiceTests
         using var context = CreateContext();
         var service = new ServicoService(context);
         
-        await service.CreateAsync(new ServicoRequest("Serviço A", CategoriaServico.Troca, 30));
-        var servico2 = await service.CreateAsync(new ServicoRequest("Serviço B", CategoriaServico.Troca, 45));
+        await service.CreateAsync(new ServicoRequest("COD_A", "Serviço A", "Desc A", CategoriaServico.Troca, 30, 100));
+        var servico2 = await service.CreateAsync(new ServicoRequest("COD_B", "Serviço B", "Desc B", CategoriaServico.Troca, 45, 150));
 
         // Tenta atualizar o serviço 2 com o nome e categoria do serviço 1
-        var updateRequest = new ServicoUpdateRequest("Serviço A", CategoriaServico.Troca, 60);
+        var updateRequest = new ServicoUpdateRequest("COD_A", "Serviço A", "Desc A", CategoriaServico.Troca, 60, 100);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DuplicateDataException>(
             () => service.UpdateAsync(servico2.Id, updateRequest));
             
-        Assert.Contains("Já existe outro serviço com o nome", exception.Message);
+        Assert.Contains("Já existe outro serviço ativo com o nome", exception.Message);
     }
 
     [Fact]
@@ -291,7 +288,7 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        var createRequest = new ServicoRequest("Troca de Óleo", CategoriaServico.Troca, 30);
+        var createRequest = new ServicoRequest("COD016", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100);
         var servicoCriado = await service.CreateAsync(createRequest);
 
         // Act
@@ -309,7 +306,7 @@ public class ServicoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ServicoService(context);
-        var createRequest = new ServicoRequest("Troca de Óleo", CategoriaServico.Troca, 30);
+        var createRequest = new ServicoRequest("COD017", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100);
         var servicoCriado = await service.CreateAsync(createRequest);
         await service.InactivateAsync(servicoCriado.Id); // Primeira inativação
 

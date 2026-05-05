@@ -1,19 +1,19 @@
-import { useState } from 'react';
-import { Typography, Input, Select, Button, Table, Space, Flex, Form, Popconfirm } from 'antd';
-import { ToolOutlined, SearchOutlined, EditOutlined, DeleteOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
+
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
+import { Typography, Input, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, InputNumber } from 'antd';
+import { ToolOutlined, SearchOutlined, EditOutlined, DeleteOutlined, SaveOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnType } from 'antd/es/table';
 import DashboardBreadcrumb from '../common/DashboardBreadcrumb';
+import { servicoService } from '../../services/servicoService';
+import { Servico } from '../../models/Servico';
+import { t } from '../../i18n';
+import { ApiError } from '../../services/http';
 
 const { Title } = Typography;
 
-interface ServicoData {
+interface ServicoData extends Servico {
   key: string;
-  codigo: string;
-  nome: string;
-  categoria: string;
-  tempoEstimado: string;
-  preco: string;
-  descricao: string;
 }
 
 interface CatalogoServicosProps {
@@ -30,6 +30,7 @@ interface EditableCellProps {
   cellTitle: any;
   record: ServicoData;
   children: React.ReactNode;
+  form: any;
 }
 
 const EditableCell: React.FC<EditableCellProps> = ({
@@ -37,27 +38,54 @@ const EditableCell: React.FC<EditableCellProps> = ({
   dataIndex,
   cellTitle,
   children,
+  form,
   ...restProps
 }) => {
-  let inputNode = <Input />;
-
-  if (dataIndex === 'descricao') {
-    inputNode = <Input.TextArea rows={2} />;
-  } else if (dataIndex === 'categoria') {
-    inputNode = (
+  const inputNodeMap: Record<string, React.ReactNode> = {
+    codigo: (
+      <Input
+        style={{ textTransform: 'uppercase' }}
+        onChange={(e) => {
+          form.setFieldsValue({ codigo: e.target.value.toUpperCase() });
+        }}
+      />
+    ),
+    descricao: <Input.TextArea rows={2} />,
+    tempoEstimado: (
+      <InputNumber
+        min={1}
+        max={480}
+        style={{ width: '100%' }}
+        parser={(value) => value?.replace(/[^\d]/g, '') as any}
+      />
+    ),
+    custo: (
+      <InputNumber
+        min={0}
+        max={100000}
+        style={{ width: '100%' }}
+        decimalSeparator=","
+        precision={2}
+        parser={(value) => value?.replace(/[^\d,]/g, '').replace(',', '.') as any}
+        formatter={(value) =>
+          value ? `${value}`.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''
+        }
+      />
+    ),
+    categoria: (
       <Select
         style={{ width: '100%' }}
         options={[
-          { value: 'Manutenção', label: 'Manutenção' },
-          { value: 'Suspensão', label: 'Suspensão' },
-          { value: 'Freios', label: 'Freios' },
-          { value: 'Motor', label: 'Motor' },
-          { value: 'Elétrica', label: 'Elétrica' },
-          { value: 'Transmissão', label: 'Transmissão' },
+          { value: 'Verificacao', label: t('serviceCatalog.category.verificacao') },
+          { value: 'Ajuste', label: t('serviceCatalog.category.ajuste') },
+          { value: 'Limpeza', label: t('serviceCatalog.category.limpeza') },
+          { value: 'Troca', label: t('serviceCatalog.category.troca') },
         ]}
       />
-    );
-  }
+    ),
+  };
+
+  const inputNode = inputNodeMap[dataIndex] || <Input />;
 
   return (
     <td {...restProps}>
@@ -68,7 +96,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
           rules={[
             {
               required: true,
-              message: `Por favor, insira ${cellTitle}!`,
+              message: t('serviceCatalog.enterField', { field: cellTitle }),
             },
           ]}
         >
@@ -83,58 +111,64 @@ const EditableCell: React.FC<EditableCellProps> = ({
 
 export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosProps) {
   const [form] = Form.useForm();
+  const navigate = useNavigate();
   const [editingKey, setEditingKey] = useState('');
+  const [data, setData] = useState<ServicoData[]>([]);
+  const [filteredData, setFilteredData] = useState<ServicoData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
 
-  const [data, setData] = useState<ServicoData[]>([
-    {
-      key: '1',
-      codigo: 'S001',
-      nome: 'Troca de Óleo',
-      categoria: 'Manutenção',
-      tempoEstimado: '30 min',
-      preco: 'R$ 80,00',
-      descricao: 'Troca completa do óleo do motor',
-    },
-    {
-      key: '2',
-      codigo: 'S002',
-      nome: 'Alinhamento',
-      categoria: 'Suspensão',
-      tempoEstimado: '1h',
-      preco: 'R$ 120,00',
-      descricao: 'Alinhamento e balanceamento',
-    },
-    {
-      key: '3',
-      codigo: 'S003',
-      nome: 'Regulagem de Freios',
-      categoria: 'Freios',
-      tempoEstimado: '45 min',
-      preco: 'R$ 100,00',
-      descricao: 'Regulagem completa do sistema de freios',
-    },
-    {
-      key: '4',
-      codigo: 'S004',
-      nome: 'Limpeza de Carburador',
-      categoria: 'Motor',
-      tempoEstimado: '2h',
-      preco: 'R$ 250,00',
-      descricao: 'Desmontagem e limpeza completa',
-    },
-  ]);
+  useEffect(() => {
+    const fetchServicos = async () => {
+      try {
+        setLoading(true);
+        const servicos = await servicoService.getAll();
+        const mappedData = servicos.map(s => ({ ...s, key: s.id.toString() }));
+        setData(mappedData);
+        setFilteredData(mappedData);
+      } catch (error) {
+        if (error instanceof ApiError) {
+          message.error(t('error.apiError'));
+        } else {
+          message.error(t('error.unexpected'));
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServicos();
+  }, []);
+
+  const handleApplyFilters = () => {
+    let filtered = [...data];
+
+    if (searchText) {
+      const lowerSearch = searchText.toLowerCase();
+      filtered = filtered.filter(item => 
+        item.nome.toLowerCase().includes(lowerSearch) || 
+        item.codigo.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    if (categoryFilter) {
+      filtered = filtered.filter(item => item.categoria === categoryFilter);
+    }
+
+    setFilteredData(filtered);
+  };
+
+  const handleClearFilters = () => {
+    setSearchText('');
+    setCategoryFilter(undefined);
+    setFilteredData(data);
+  };
 
   const isEditing = (record: ServicoData) => record.key === editingKey;
 
   const edit = (record: ServicoData) => {
-    form.setFieldsValue({
-      codigo: record.codigo,
-      nome: record.nome,
-      categoria: record.categoria,
-      tempoEstimado: record.tempoEstimado,
-      preco: record.preco,
-      descricao: record.descricao,
-    });
+    form.setFieldsValue({ ...record });
     setEditingKey(record.key);
   };
 
@@ -153,6 +187,8 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
         newData.splice(index, 1, { ...item, ...row });
         setData(newData);
         setEditingKey('');
+        // Aqui você chamaria o serviço de update
+        message.success(t('serviceUpdatedSuccess'));
       }
     } catch (errInfo) {
       console.log('Validate Failed:', errInfo);
@@ -160,51 +196,60 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
   };
 
   const handleDelete = (key: string) => {
+    // Aqui você chamaria o serviço de delete
     const newData = data.filter((item) => item.key !== key);
     setData(newData);
+    message.success(t('serviceDeletedSuccess'));
+  };
+
+  const showDetails = (id: number) => {
+    navigate(`/dashboard/concessionaria/catalogos-servicos/${id}`);
   };
 
   const columns: EditableColumn[] = [
     {
-      title: 'Código',
+      title: t('serviceCatalog.code'),
       dataIndex: 'codigo',
       key: 'codigo',
       editable: true,
     },
     {
-      title: 'Nome do Serviço',
+      title: t('serviceCatalog.serviceName'),
       dataIndex: 'nome',
       key: 'nome',
       editable: true,
     },
     {
-      title: 'Categoria',
+      title: t('serviceCatalog.category'),
       dataIndex: 'categoria',
       key: 'categoria',
       editable: true,
+      render: (categoria: string) => <Tag>{t(`serviceCatalog.category.${categoria.toLowerCase()}`)}</Tag>,
     },
     {
-      title: 'Tempo Estimado',
+      title: t('serviceCatalog.estimatedTime'),
       dataIndex: 'tempoEstimado',
       key: 'tempoEstimado',
       editable: true,
+      render: (tempo: number) => `${tempo} ${t('minutes')}`,
     },
     {
-      title: 'Preço',
-      dataIndex: 'preco',
-      key: 'preco',
+      title: t('serviceCatalog.price'),
+      dataIndex: 'custo',
+      key: 'custo',
       editable: true,
+      render: (custo: number) => `R$ ${custo.toFixed(2)}`,
     },
     {
-      title: 'Descrição',
+      title: t('serviceCatalog.description'),
       dataIndex: 'descricao',
       key: 'descricao',
       editable: true,
     },
     {
-      title: 'Ações',
+      title: t('serviceCatalog.actions'),
       key: 'actions',
-      width: 150,
+      width: 180,
       render: (_: any, record: ServicoData) => {
         const editable = isEditing(record);
         return editable ? (
@@ -214,31 +259,38 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
               icon={<SaveOutlined />}
               onClick={() => save(record.key)}
             >
-              Salvar
+              {t('serviceCatalog.save')}
             </Button>
             <Button
               type="link"
               icon={<CloseOutlined />}
               onClick={cancel}
             >
-              Cancelar
+              {t('serviceCatalog.cancel')}
             </Button>
           </Space>
         ) : (
           <Space size="small">
             <Button
               type="link"
+              icon={<EyeOutlined />}
+              onClick={() => showDetails(record.id)}
+            >
+              {t('serviceCatalog.details')}
+            </Button>
+            <Button
+              type="link"
               icon={<EditOutlined />}
               disabled={editingKey !== ''}
               onClick={() => edit(record)}
             >
-              Editar
+              {t('serviceCatalog.edit')}
             </Button>
             <Popconfirm
-              title="Tem certeza que deseja excluir?"
+              title={t('confirmDelete')}
               onConfirm={() => handleDelete(record.key)}
-              okText="Sim"
-              cancelText="Não"
+              okText={t('yes')}
+              cancelText={t('no')}
             >
               <Button
                 type="link"
@@ -246,7 +298,7 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
                 icon={<DeleteOutlined />}
                 disabled={editingKey !== ''}
               >
-                Excluir
+                {t('serviceCatalog.delete')}
               </Button>
             </Popconfirm>
           </Space>
@@ -267,6 +319,7 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
         dataIndex: col.dataIndex,
         cellTitle: col.title,
         editing: isEditing(record),
+        form: form,
       }),
     };
   });
@@ -278,88 +331,73 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
           userType="concessionaria"
           items={[
             {
-              title: 'Catálogo de Serviços',
+              title: t('serviceCatalog.title'),
               icon: <ToolOutlined />,
             },
           ]}
         />
 
         <Title level={2} style={{ margin: 0 }}>
-          Catálogo de Serviços
+          {t('serviceCatalog.title')}
         </Title>
 
         <Flex gap="middle" align="center" wrap="wrap">
           <Input
-            placeholder="Buscar serviços..."
+            placeholder={t('serviceCatalog.searchPlaceholder')}
             prefix={<SearchOutlined />}
             style={{ width: 300 }}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onPressEnter={handleApplyFilters}
           />
 
           <Select
-            placeholder="Categoria"
+            placeholder={t('serviceCatalog.category')}
             style={{ width: 150 }}
+            value={categoryFilter}
+            onChange={(value) => setCategoryFilter(value)}
+            allowClear
             options={[
-              { value: 'manutencao', label: 'Manutenção' },
-              { value: 'suspensao', label: 'Suspensão' },
-              { value: 'freios', label: 'Freios' },
-              { value: 'motor', label: 'Motor' },
-              { value: 'eletrica', label: 'Elétrica' },
-            ]}
-          />
-
-          <Select
-            placeholder="Tempo"
-            style={{ width: 150 }}
-            options={[
-              { value: '30min', label: 'Até 30 min' },
-              { value: '1h', label: 'Até 1h' },
-              { value: '2h', label: 'Até 2h' },
-              { value: 'mais', label: 'Mais de 2h' },
-            ]}
-          />
-
-          <Select
-            placeholder="Preço"
-            style={{ width: 150 }}
-            options={[
-              { value: 'ate100', label: 'Até R$ 100' },
-              { value: 'ate200', label: 'Até R$ 200' },
-              { value: 'ate500', label: 'Até R$ 500' },
-              { value: 'acima500', label: 'Acima de R$ 500' },
+              { value: 'Verificacao', label: t('serviceCatalog.category.verificacao') },
+              { value: 'Ajuste', label: t('serviceCatalog.category.ajuste') },
+              { value: 'Limpeza', label: t('serviceCatalog.category.limpeza') },
+              { value: 'Troca', label: t('serviceCatalog.category.troca') },
             ]}
           />
 
           <Flex gap="small" style={{ marginLeft: 'auto' }}>
-            <Button>Limpar</Button>
-            <Button type="primary">Aplicar</Button>
+            <Button onClick={handleClearFilters}>{t('serviceCatalog.clear')}</Button>
+            <Button type="primary" onClick={handleApplyFilters}>{t('serviceCatalog.apply')}</Button>
           </Flex>
         </Flex>
       </Space>
 
       <div style={{ background: '#fff', padding: '24px', borderRadius: '8px' }}>
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <Flex justify="space-between" align="center">
-            <span>Total: {data.length} serviços</span>
-            <Button type="primary" onClick={onNavigateToForm}>
-              Adicionar Serviço
-            </Button>
-          </Flex>
+        <Spin spinning={loading}>
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Flex justify="space-between" align="center">
+              <span>Total: {filteredData.length} serviços</span>
+              <Button type="primary" onClick={onNavigateToForm}>
+                Adicionar Serviço
+              </Button>
+            </Flex>
 
-          <Form form={form} component={false}>
-            <Table
-              components={{
-                body: {
-                  cell: EditableCell,
-                },
-              }}
-              columns={mergedColumns as ColumnType<ServicoData>[]}
-              dataSource={data}
-              pagination={{
-                onChange: cancel,
-              }}
-            />
-          </Form>
-        </Space>
+            <Form form={form} component={false}>
+              <Table
+                components={{
+                  body: {
+                    cell: EditableCell,
+                  },
+                }}
+                columns={mergedColumns as ColumnType<ServicoData>[]}
+                dataSource={filteredData}
+                pagination={{
+                  onChange: cancel,
+                }}
+              />
+            </Form>
+          </Space>
+        </Spin>
       </div>
     </Space>
   );

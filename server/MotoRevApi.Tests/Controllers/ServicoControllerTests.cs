@@ -25,8 +25,8 @@ public class ServicoControllerTests
     public async Task Create_DeveRetornarCreatedAtAction_QuandoDadosValidos()
     {
         // Arrange
-        var request = new ServicoRequest("Troca de Óleo", CategoriaServico.Troca, 30);
-        var response = new ServicoResponse(1, "Troca de Óleo", CategoriaServico.Troca, 30);
+        var request = new ServicoRequest("COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100);
+        var response = new ServicoResponse(1, "COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100);
 
         _servicoServiceMock.Setup(s => s.CreateAsync(request))
             .ReturnsAsync(response);
@@ -48,7 +48,7 @@ public class ServicoControllerTests
         var categoria = CategoriaServico.Troca;
         var servicos = new List<ServicoResponse>
         {
-            new ServicoResponse(1, "Troca de Óleo", CategoriaServico.Troca, 30)
+            new ServicoResponse(1, "COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100)
         };
 
         _servicoServiceMock.Setup(s => s.GetAllAsync(categoria))
@@ -70,9 +70,12 @@ public class ServicoControllerTests
         var servicoId = 1;
         var servicoResponse = new ServicoResponse(
             servicoId,
+            "COD001",
             "Troca de Óleo",
+            "Desc",
             CategoriaServico.Troca,
-            30
+            30,
+            100
         );
 
         _servicoServiceMock.Setup(s => s.GetByIdAsync(servicoId))
@@ -107,8 +110,8 @@ public class ServicoControllerTests
     {
         // Arrange
         var servicoId = 1;
-        var request = new ServicoUpdateRequest("Troca de Pneu", CategoriaServico.Troca, 60);
-        var response = new ServicoResponse(servicoId, "Troca de Pneu", CategoriaServico.Troca, 60);
+        var request = new ServicoUpdateRequest("COD002", "Troca de Pneu", "Desc Pneu", CategoriaServico.Troca, 60, 200);
+        var response = new ServicoResponse(servicoId, "COD002", "Troca de Pneu", "Desc Pneu", CategoriaServico.Troca, 60, 200);
 
         _servicoServiceMock.Setup(s => s.UpdateAsync(servicoId, request))
             .ReturnsAsync(response);
