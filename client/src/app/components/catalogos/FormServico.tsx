@@ -5,6 +5,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { servicoService } from '../../services/servicoService';
 import { ServicoRequest } from '../../models/ServicoRequest';
 import { ApiError } from '../../services/http';
+import { handleApiError } from '../../utils/errorHandler';
 import { t } from '../../i18n';
 import { useState } from 'react';
 
@@ -35,15 +36,7 @@ export default function FormServico({ onCancel }: FormServicoProps) {
       reset();
       onCancel(); // Navigate back to the list
     } catch (error) {
-      if (error instanceof ApiError) {
-        if (error.status === 409) {
-          message.error(t('error.serviceConflict'));
-        } else {
-          message.error(t('error.apiError'));
-        }
-      } else {
-        message.error(t('error.unexpected'));
-      }
+      handleApiError(error);
     } finally {
       setLoading(false);
     }

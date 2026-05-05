@@ -9,6 +9,7 @@ import { servicoService } from '../../services/servicoService';
 import { Servico } from '../../models/Servico';
 import { t } from '../../i18n';
 import { ApiError } from '../../services/http';
+import { handleApiError } from '../../utils/errorHandler';
 
 const { Title } = Typography;
 
@@ -128,11 +129,7 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
         setData(mappedData);
         setFilteredData(mappedData);
       } catch (error) {
-        if (error instanceof ApiError) {
-          message.error(t('error.apiError'));
-        } else {
-          message.error(t('error.unexpected'));
-        }
+        handleApiError(error, 'error.fetchServices');
       } finally {
         setLoading(false);
       }
@@ -184,22 +181,49 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
 
       if (index > -1) {
         const item = newData[index];
-        newData.splice(index, 1, { ...item, ...row });
+        const updatedItem = { ...item, ...row };
+        
+        setLoading(true);
+        await servicoService.update(item.id, row);
+        
+        newData.splice(index, 1, updatedItem);
         setData(newData);
         setEditingKey('');
-        // Aqui você chamaria o serviço de update
+        
+        // Update filtered data as well
+        const filteredIndex = filteredData.findIndex(item => item.key === key);
+        if (filteredIndex > -1) {
+          const newFilteredData = [...filteredData];
+          newFilteredData.splice(filteredIndex, 1, updatedItem);
+          setFilteredData(newFilteredData);
+        }
+
         message.success(t('serviceUpdatedSuccess'));
       }
     } catch (errInfo) {
-      console.log('Validate Failed:', errInfo);
+      handleApiError(errInfo);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = (key: string) => {
-    // Aqui você chamaria o serviço de delete
-    const newData = data.filter((item) => item.key !== key);
-    setData(newData);
-    message.success(t('serviceDeletedSuccess'));
+  const handleDelete = async (key: string) => {
+    const item = data.find(i => i.key === key);
+    if (!item) return;
+
+    try {
+      setLoading(true);
+      await servicoService.delete(item.id);
+      
+      const newData = data.filter((item) => item.key !== key);
+      setData(newData);
+      setFilteredData(filteredData.filter(item => item.key !== key));
+      message.success(t('serviceDeletedSuccess'));
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const showDetails = (id: number) => {

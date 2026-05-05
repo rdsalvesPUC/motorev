@@ -105,7 +105,7 @@
   "error.fetchServices": "Erro ao buscar a lista de serviços.",
   "error.serviceNotFound": "Serviço não encontrado.",
   "error.createService": "Erro ao criar o serviço.",
-  "error.serviceConflict": "Já existe um serviço com este nome.",
+  "error.serviceConflict": "Já existe um serviço com este código ou nome.",
 
   "serviceCreatedSuccess": "Serviço criado com sucesso!",
   "serviceUpdatedSuccess": "Serviço atualizado com sucesso!",

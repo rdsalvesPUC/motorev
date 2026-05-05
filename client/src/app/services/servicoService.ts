@@ -30,4 +30,19 @@ export const servicoService = {
     });
     return handleResponse(response, t('error.createService'));
   },
+
+  update: async (id: number, servico: ServicoRequest): Promise<Servico> => {
+    const response = await apiFetch(`${SERVICE_URL}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(servico),
+    });
+    return handleResponse(response, t('error.updateService'));
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const response = await apiFetch(`${SERVICE_URL}/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse(response, t('error.deleteService'));
+  },
 };
