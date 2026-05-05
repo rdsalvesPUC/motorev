@@ -49,7 +49,7 @@ public class AuthService
         var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, false);
         if (!result.Succeeded)
         {
-            throw new UnauthorizedAccessException("Email ou senha inválidos.");
+            throw new NotFoundException("Email ou senha inválidos.");
         }
 
         var roles = await _userManager.GetRolesAsync(user);
