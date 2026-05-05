@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
 import { clienteService } from '../services/clienteService';
 import { concessionariaService } from '../services/concessionariaService';
+import { formatCNPJ, formatCPF, formatPhone } from '../utils/formatters';
+import { validateCNPJ, validateCPF, CPF_REGEX, CNPJ_REGEX, PHONE_REGEX } from '../utils/validators';
 import { t } from '../i18n';
 import LanguageSelector from './LanguageSelector';
 import { PATHS } from '../paths';
@@ -95,7 +97,18 @@ export default function Cadastro() {
         <Form.Item
           label={t('cadastro.cliente.cpf.label')}
           name="cpf"
-          rules={[{ required: true, message: t('cadastro.cliente.cpf.required') }]}
+          normalize={formatCPF}
+          rules={[
+            { required: true, message: t('cadastro.cliente.cpf.required') },
+            {
+              validator: (_, value) => {
+                if (!value || (CPF_REGEX.test(value) && validateCPF(value))) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error(t('cadastro.cliente.cpf.invalid')));
+              }
+            }
+          ]}
         >
           <Input prefix={<IdcardOutlined />} placeholder={t('cadastro.cliente.cpf.placeholder')} />
         </Form.Item>
@@ -114,7 +127,11 @@ export default function Cadastro() {
         <Form.Item
           label={t('cadastro.celular.label')}
           name="cel"
-          rules={[{ required: true, message: t('cadastro.celular.required') }]}
+          normalize={formatPhone}
+          rules={[
+            { required: true, message: t('cadastro.celular.required') },
+            { pattern: PHONE_REGEX, message: t('cadastro.celular.invalid') }
+          ]}
         >
           <Input prefix={<PhoneOutlined />} placeholder={t('cadastro.celular.placeholder')} />
         </Form.Item>
@@ -182,7 +199,18 @@ export default function Cadastro() {
         <Form.Item
           label={t('cadastro.concessionaria.cnpj.label')}
           name="cnpj"
-          rules={[{ required: true, message: t('cadastro.concessionaria.cnpj.required') }]}
+          normalize={formatCNPJ}
+          rules={[
+            { required: true, message: t('cadastro.concessionaria.cnpj.required') },
+            {
+              validator: (_, value) => {
+                if (!value || (CNPJ_REGEX.test(value) && validateCNPJ(value))) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(new Error(t('cadastro.concessionaria.cnpj.invalid')));
+              }
+            }
+          ]}
         >
           <Input prefix={<IdcardOutlined />} placeholder={t('cadastro.concessionaria.cnpj.placeholder')} />
         </Form.Item>
@@ -190,7 +218,11 @@ export default function Cadastro() {
         <Form.Item
           label={t('cadastro.concessionaria.telefone.label')}
           name="tel"
-          rules={[{ required: true, message: t('cadastro.concessionaria.telefone.required') }]}
+          normalize={formatPhone}
+          rules={[
+            { required: true, message: t('cadastro.concessionaria.telefone.required') },
+            { pattern: PHONE_REGEX, message: t('cadastro.concessionaria.telefone.invalid') }
+          ]}
         >
           <Input prefix={<PhoneOutlined />} placeholder={t('cadastro.concessionaria.telefone.placeholder')} />
         </Form.Item>
