@@ -24,7 +24,6 @@ export default function DashboardConcessionaria() {
     >
       <Routes>
         <Route index element={<DashboardHome />} />
-        <Route path="dashboard" element={<DashboardHome />} />
         <Route path="*" element={<Navigate to="/dashboard/concessionaria" replace />} />
       </Routes>
     </DashboardLayout>

@@ -6,6 +6,7 @@ import { clienteService } from '../services/clienteService';
 import { concessionariaService } from '../services/concessionariaService';
 import { t } from '../i18n';
 import LanguageSelector from './LanguageSelector';
+import { PATHS } from '../paths';
 
 const { Content } = Layout;
 const { Title, Text, Link } = Typography;
@@ -30,7 +31,7 @@ export default function Cadastro() {
         password: values.senha
       });
       message.success(t('cadastro.cliente.success'));
-      navigate('/login');
+      navigate(PATHS.LOGIN);
     } catch (error: any) {
       if (error.status === 409) {
         message.error(t('cadastro.error.conflict'));
@@ -53,7 +54,7 @@ export default function Cadastro() {
         password: values.senha
       });
       message.success(t('cadastro.concessionaria.success'));
-      navigate('/login');
+      navigate(PATHS.LOGIN);
     } catch (error: any) {
       if (error.status === 409) {
         message.error(t('cadastro.error.conflict'));
@@ -263,9 +264,9 @@ export default function Cadastro() {
 
           <Space direction="vertical" size="small" style={{ width: '100%', textAlign: 'center' }}>
             <Text type="secondary">
-              {t('cadastro.hasAccount')} <Link onClick={() => navigate('/login')}>{t('cadastro.login')}</Link>
+              {t('cadastro.hasAccount')} <Link onClick={() => navigate(PATHS.LOGIN)}>{t('cadastro.login')}</Link>
             </Text>
-            <Link onClick={() => navigate('/')}>{t('cadastro.back')}</Link>
+            <Link onClick={() => navigate(PATHS.HOME)}>{t('cadastro.back')}</Link>
           </Space>
         </Space>
       </Content>

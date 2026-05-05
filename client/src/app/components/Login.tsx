@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { authService } from '../services/authService';
 import { t } from '../i18n';
 import LanguageSelector from './LanguageSelector';
+import { PATHS } from '../paths';
 
 const { Content } = Layout;
 const { Title, Text, Link } = Typography;
@@ -33,9 +34,9 @@ export default function Login() {
       message.success(t('login.success'));
       
       if (data.perfil === 'Cliente') {
-        navigate('/dashboard/cliente');
+        navigate(PATHS.DASHBOARD_CLIENTE);
       } else {
-        navigate('/dashboard/concessionaria');
+        navigate(PATHS.DASHBOARD_CONCESSIONARIA);
       }
     } catch (error: any) {
       if (error.status === 400 || error.status === 401 || error.status === 404) {
@@ -77,7 +78,7 @@ export default function Login() {
 
         <Form.Item>
           <Flex justify="space-between" align="center">
-            <Link>{t('login.forgotPassword')}</Link>
+            <Link onClick={() => navigate(PATHS.ESQUECI_SENHA)}>{t('login.forgotPassword')}</Link>
           </Flex>
         </Form.Item>
 
@@ -90,7 +91,7 @@ export default function Login() {
 
       <Space direction="vertical" size="small" style={{ width: '100%', textAlign: 'center' }}>
         <Text type="secondary">
-          {t('login.noAccount')} <Link onClick={() => navigate('/cadastro')}>{t('login.signUp')}</Link>
+          {t('login.noAccount')} <Link onClick={() => navigate(PATHS.CADASTRO)}>{t('login.signUp')}</Link>
         </Text>
       </Space>
     </Space>
@@ -114,7 +115,7 @@ export default function Login() {
           </Card>
 
           <Space direction="vertical" size="small" style={{ width: '100%', textAlign: 'center' }}>
-            <Link onClick={() => navigate('/')}>{t('login.back')}</Link>
+            <Link onClick={() => navigate(PATHS.HOME)}>{t('login.back')}</Link>
           </Space>
         </Space>
       </Content>

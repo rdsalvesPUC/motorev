@@ -10,6 +10,8 @@ import { useEffect, useState } from 'react';
 import { getLocale } from './i18n';
 import ptBR from 'antd/locale/pt_BR';
 import enUS from 'antd/locale/en_US';
+import PublicRoute from './components/PublicRoute';
+import { PATHS } from './paths';
 
 const antdLocales: Record<string, any> = {
   'pt-BR': ptBR,
@@ -32,11 +34,11 @@ export default function App() {
       <ConfigProvider locale={locale}>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<MotoRevLandingPage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/cadastro" element={<Cadastro />} />
-            <Route path="/dashboard/cliente/*" element={<DashboardCliente />} />
-            <Route path="/dashboard/concessionaria/*" element={<DashboardConcessionaria />} />
+            <Route path={PATHS.HOME} element={<MotoRevLandingPage />} />
+            <Route path={PATHS.LOGIN} element={<PublicRoute><Login /></PublicRoute>} />
+            <Route path={PATHS.CADASTRO} element={<PublicRoute><Cadastro /></PublicRoute>} />
+            <Route path={`${PATHS.DASHBOARD_CLIENTE}/*`} element={<DashboardCliente />} />
+            <Route path={`${PATHS.DASHBOARD_CONCESSIONARIA}/*`} element={<DashboardConcessionaria />} />
           </Routes>
         </BrowserRouter>
       </ConfigProvider>
