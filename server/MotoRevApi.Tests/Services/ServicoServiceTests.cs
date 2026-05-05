@@ -58,7 +58,7 @@ public class ServicoServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_DeveRetornarErroParaMesmoNomeMesmoEmCategoriasDiferentes()
+    public async Task CreateAsync_DevePermitirMesmoNomeEmCategoriasDiferentes()
     {
         // Arrange
         using var context = CreateContext();
@@ -69,9 +69,13 @@ public class ServicoServiceTests
         // Criar primeiro serviço
         await service.CreateAsync(request1);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<DuplicateDataException>(
-            () => service.CreateAsync(request2));
+        // Act
+        var response2 = await service.CreateAsync(request2);
+
+        // Assert
+        Assert.NotNull(response2);
+        Assert.Equal("Troca de Óleo", response2.Nome);
+        Assert.Equal(CategoriaServico.Verificacao, response2.Categoria);
     }
 
     [Theory]
@@ -263,7 +267,28 @@ public class ServicoServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_DeveRetornarErroParaDuplicidadeComOutroServico()
+    public async Task UpdateAsync_DevePermitirAlterarParaMesmoNomeEmCategoriaDiferente()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        
+        await service.CreateAsync(new ServicoRequest("COD_A", "Serviço A", "Desc A", CategoriaServico.Troca, 30, 100));
+        var servico2 = await service.CreateAsync(new ServicoRequest("COD_B", "Serviço B", "Desc B", CategoriaServico.Verificacao, 45, 150));
+
+        // Tenta atualizar o serviço 2 com o nome do serviço 1, mas mantendo categoria diferente
+        var updateRequest = new ServicoUpdateRequest("COD_B", "Serviço A", "Desc B", CategoriaServico.Verificacao, 60, 100);
+
+        // Act
+        var response = await service.UpdateAsync(servico2.Id, updateRequest);
+            
+        // Assert
+        Assert.Equal("Serviço A", response.Nome);
+        Assert.Equal(CategoriaServico.Verificacao, response.Categoria);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DeveRetornarErroParaMesmoNomeNaMesmaCategoria()
     {
         // Arrange
         using var context = CreateContext();
@@ -273,13 +298,13 @@ public class ServicoServiceTests
         var servico2 = await service.CreateAsync(new ServicoRequest("COD_B", "Serviço B", "Desc B", CategoriaServico.Troca, 45, 150));
 
         // Tenta atualizar o serviço 2 com o nome e categoria do serviço 1
-        var updateRequest = new ServicoUpdateRequest("COD_A", "Serviço A", "Desc A", CategoriaServico.Troca, 60, 100);
+        var updateRequest = new ServicoUpdateRequest("COD_B", "Serviço A", "Desc A", CategoriaServico.Troca, 60, 100);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<DuplicateDataException>(
             () => service.UpdateAsync(servico2.Id, updateRequest));
             
-        Assert.Contains("Já existe outro serviço ativo com o nome", exception.Message);
+        Assert.Contains("Já existe outro serviço ativo com o código", exception.Message);
     }
 
     [Fact]

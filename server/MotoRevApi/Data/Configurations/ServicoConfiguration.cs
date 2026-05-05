@@ -24,10 +24,19 @@ public class ServicoConfiguration : IEntityTypeConfiguration<Servico>
             .IsRequired()
             .HasDefaultValue(true);
 
+        builder.Property(s => s.Descricao)
+            .IsRequired()
+            .HasMaxLength(500);
+
+
         builder.Property(s => s.Custo)
             .HasColumnType("decimal(18,2)");
 
-        // Índice único para evitar duplicidade e otimizar buscas por Categoria e Nome
+        // Índice único para evitar duplicidade de código globalmente
+        builder.HasIndex(s => s.Codigo)
+            .IsUnique();
+
+        // Índice único para evitar duplicidade de nome dentro da mesma categoria
         builder.HasIndex(s => new { s.Categoria, s.Nome })
             .IsUnique();
     }
