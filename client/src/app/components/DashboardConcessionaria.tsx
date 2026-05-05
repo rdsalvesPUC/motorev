@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router';
 import DashboardLayout from './DashboardLayout';
 import { Typography } from 'antd';
+import { tokenManager } from '../services/tokenManager';
 import { PATHS } from '../paths';
 import { t } from '../i18n';
 
@@ -18,11 +19,12 @@ function DashboardHome() {
 }
 
 export default function DashboardConcessionaria() {
+  const user = tokenManager.getUserData();
 
   return (
     <DashboardLayout
       userType="concessionaria"
-      userName="Moto Center"
+      userName={user?.nome || 'Concessionária'}
     >
       <Routes>
         <Route index element={<DashboardHome />} />
