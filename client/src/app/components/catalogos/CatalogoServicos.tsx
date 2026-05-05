@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Typography, Input, Select, Button, Table, Space, Flex, Form, Popconfirm } from 'antd';
 import { ToolOutlined, SearchOutlined, EditOutlined, DeleteOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnType } from 'antd/es/table';
 import DashboardBreadcrumb from '../common/DashboardBreadcrumb';
 
 const { Title } = Typography;
@@ -20,10 +20,14 @@ interface CatalogoServicosProps {
   onNavigateToForm?: () => void;
 }
 
+interface EditableColumn extends ColumnType<ServicoData> {
+  editable?: boolean;
+}
+
 interface EditableCellProps {
   editing: boolean;
   dataIndex: string;
-  title: string;
+  cellTitle: any;
   record: ServicoData;
   children: React.ReactNode;
 }
@@ -31,7 +35,7 @@ interface EditableCellProps {
 const EditableCell: React.FC<EditableCellProps> = ({
   editing,
   dataIndex,
-  title,
+  cellTitle,
   children,
   ...restProps
 }) => {
@@ -64,7 +68,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
           rules={[
             {
               required: true,
-              message: `Por favor, insira ${title}!`,
+              message: `Por favor, insira ${cellTitle}!`,
             },
           ]}
         >
@@ -160,7 +164,7 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
     setData(newData);
   };
 
-  const columns: ColumnsType<ServicoData> = [
+  const columns: EditableColumn[] = [
     {
       title: 'Código',
       dataIndex: 'codigo',
@@ -255,13 +259,13 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
     if (!col.editable) {
       return col;
     }
-
+    const { editable, ...colWithoutEditable } = col;
     return {
-      ...col,
+      ...colWithoutEditable,
       onCell: (record: ServicoData) => ({
         record,
         dataIndex: col.dataIndex,
-        title: col.title,
+        cellTitle: col.title,
         editing: isEditing(record),
       }),
     };
@@ -348,7 +352,7 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
                   cell: EditableCell,
                 },
               }}
-              columns={mergedColumns}
+              columns={mergedColumns as ColumnType<ServicoData>[]}
               dataSource={data}
               pagination={{
                 onChange: cancel,
