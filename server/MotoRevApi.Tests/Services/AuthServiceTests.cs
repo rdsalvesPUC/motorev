@@ -191,7 +191,7 @@ public class AuthServiceTests
         var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
         // Act & Assert
-        await Assert.ThrowsAsync<UnauthorizedAccessException>(() => service.LoginAsync(request));
+        await Assert.ThrowsAsync<NotFoundException>(() => service.LoginAsync(request));
     }
 
     [Fact]
