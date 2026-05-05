@@ -1,99 +1,161 @@
-import { Form, Input, Button, Tabs, Layout, Typography, Card, Space } from 'antd';
-import { UserOutlined, LockOutlined, ShopOutlined, MailOutlined, PhoneOutlined, IdcardOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Tabs, Layout, Typography, Card, Space, message } from 'antd';
+import { UserOutlined, LockOutlined, ShopOutlined, MailOutlined, IdcardOutlined, PhoneOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
+import { useState, useEffect } from 'react';
+import { clienteService } from '../services/clienteService';
+import { concessionariaService } from '../services/concessionariaService';
+import { t } from '../i18n';
+import LanguageSelector from './LanguageSelector';
+import { PATHS } from '../paths';
 
 const { Content } = Layout;
 const { Title, Text, Link } = Typography;
 
 export default function Cadastro() {
   const navigate = useNavigate();
+  const [formCliente] = Form.useForm();
+  const [formConcessionaria] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [, forceUpdate] = useState({});
 
-  const handleClienteCadastro = (values: any) => {
-    console.log('Cliente Cadastro:', values);
-    navigate('/dashboard/cliente');
+  useEffect(() => {
+    const handleLangChange = () => {
+      forceUpdate({});
+      // Re-valida campos que já foram tocados para atualizar as mensagens de tradução
+      formCliente.validateFields().catch(() => {});
+      formConcessionaria.validateFields().catch(() => {});
+    };
+    window.addEventListener('languagechange', handleLangChange);
+    return () => window.removeEventListener('languagechange', handleLangChange);
+  }, [formCliente, formConcessionaria]);
+
+  const handleClienteCadastro = async (values: any) => {
+    try {
+      setLoading(true);
+      await clienteService.register({
+        nome: values.nomeProprietario,
+        email: values.email,
+        password: values.senha
+      });
+      message.success(t('cadastro.cliente.success'));
+      navigate(PATHS.LOGIN);
+    } catch (error: any) {
+      if (error.status === 409) {
+        message.error(t('cadastro.error.conflict'));
+      } else if (error.status === 400) {
+        message.error(t('cadastro.error.validation'));
+      } else {
+        message.error(t('cadastro.error'));
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleConcessionariaCadastro = (values: any) => {
-    console.log('Concessionária Cadastro:', values);
-    navigate('/dashboard/concessionaria');
+  const handleConcessionariaCadastro = async (values: any) => {
+    try {
+      setLoading(true);
+      await concessionariaService.register({
+        nome: values.nomeConcessionaria,
+        email: values.email,
+        password: values.senha
+      });
+      message.success(t('cadastro.concessionaria.success'));
+      navigate(PATHS.LOGIN);
+    } catch (error: any) {
+      if (error.status === 409) {
+        message.error(t('cadastro.error.conflict'));
+      } else if (error.status === 400) {
+        message.error(t('cadastro.error.validation'));
+      } else {
+        message.error(t('cadastro.error'));
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const clienteTab = (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Form
+        form={formCliente}
         name="cliente_cadastro"
         onFinish={handleClienteCadastro}
         layout="vertical"
         size="large"
       >
         <Form.Item
-          label="Nome Completo"
+          label={t('cadastro.cliente.nome.label')}
           name="nomeProprietario"
-          rules={[{ required: true, message: 'Por favor, insira seu nome completo' }]}
+          rules={[{ required: true, message: t('cadastro.cliente.nome.required') }]}
         >
-          <Input prefix={<UserOutlined />} placeholder="Nome completo" />
+          <Input prefix={<UserOutlined />} placeholder={t('cadastro.cliente.nome.placeholder')} />
         </Form.Item>
 
         <Form.Item
-          label="CPF"
+          label={t('cadastro.cliente.cpf.label')}
           name="cpf"
-          rules={[{ required: true, message: 'Por favor, insira seu CPF' }]}
+          rules={[{ required: true, message: t('cadastro.cliente.cpf.required') }]}
         >
-          <Input prefix={<IdcardOutlined />} placeholder="000.000.000-00" />
+          <Input prefix={<IdcardOutlined />} placeholder={t('cadastro.cliente.cpf.placeholder')} />
         </Form.Item>
 
         <Form.Item
-          label="Email"
+          label={t('cadastro.email.label')}
           name="email"
           rules={[
-            { required: true, message: 'Por favor, insira seu email' },
-            { type: 'email', message: 'Email inválido' }
+            { required: true, message: t('cadastro.email.required') },
+            { type: 'email', message: t('cadastro.email.invalid') }
           ]}
         >
-          <Input prefix={<MailOutlined />} placeholder="seu@email.com" />
+          <Input prefix={<MailOutlined />} placeholder={t('cadastro.email.placeholder')} />
         </Form.Item>
 
         <Form.Item
-          label="Celular"
+          label={t('cadastro.celular.label')}
           name="cel"
-          rules={[{ required: true, message: 'Por favor, insira seu celular' }]}
+          rules={[{ required: true, message: t('cadastro.celular.required') }]}
         >
-          <Input prefix={<PhoneOutlined />} placeholder="(00) 00000-0000" />
+          <Input prefix={<PhoneOutlined />} placeholder={t('cadastro.celular.placeholder')} />
         </Form.Item>
 
         <Form.Item
-          label="Senha"
+          label={t('cadastro.senha.label')}
           name="senha"
           rules={[
-            { required: true, message: 'Por favor, insira uma senha' },
-            { min: 6, message: 'A senha deve ter no mínimo 6 caracteres' }
+            { required: true, message: t('cadastro.senha.required') },
+            { min: 6, message: t('cadastro.senha.min') },
+            { pattern: /[A-Z]/, message: t('cadastro.senha.uppercase') },
+            { pattern: /[a-z]/, message: t('cadastro.senha.lowercase') },
+            { pattern: /[0-9]/, message: t('cadastro.senha.number') },
+            { pattern: /[^A-Za-z0-9]/, message: t('cadastro.senha.special') }
           ]}
         >
-          <Input.Password prefix={<LockOutlined />} placeholder="Senha" />
+          <Input.Password prefix={<LockOutlined />} placeholder={t('cadastro.senha.placeholder')} />
         </Form.Item>
 
         <Form.Item
-          label="Confirmar Senha"
+          label={t('cadastro.confirmarSenha.label')}
           name="confirmarSenha"
           dependencies={['senha']}
           rules={[
-            { required: true, message: 'Por favor, confirme sua senha' },
+            { required: true, message: t('cadastro.confirmarSenha.required') },
             ({ getFieldValue }) => ({
               validator(_, value) {
                 if (!value || getFieldValue('senha') === value) {
                   return Promise.resolve();
                 }
-                return Promise.reject(new Error('As senhas não coincidem'));
+                return Promise.reject(new Error(t('cadastro.confirmarSenha.match')));
               },
             }),
           ]}
         >
-          <Input.Password prefix={<LockOutlined />} placeholder="Confirme sua senha" />
+          <Input.Password prefix={<LockOutlined />} placeholder={t('cadastro.confirmarSenha.placeholder')} />
         </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" block size="large">
-            Cadastrar como Cliente
+          <Button type="primary" htmlType="submit" block size="large" loading={loading}>
+            {t('cadastro.cliente.submit')}
           </Button>
         </Form.Item>
       </Form>
@@ -103,68 +165,84 @@ export default function Cadastro() {
   const concessionariaTab = (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
       <Form
+        form={formConcessionaria}
         name="concessionaria_cadastro"
         onFinish={handleConcessionariaCadastro}
         layout="vertical"
         size="large"
       >
         <Form.Item
-          label="Nome da Concessionária"
+          label={t('cadastro.concessionaria.nome.label')}
           name="nomeConcessionaria"
-          rules={[{ required: true, message: 'Por favor, insira o nome da concessionária' }]}
+          rules={[{ required: true, message: t('cadastro.concessionaria.nome.required') }]}
         >
-          <Input prefix={<ShopOutlined />} placeholder="Nome da concessionária" />
+          <Input prefix={<ShopOutlined />} placeholder={t('cadastro.concessionaria.nome.placeholder')} />
         </Form.Item>
 
         <Form.Item
-          label="CNPJ"
+          label={t('cadastro.concessionaria.cnpj.label')}
           name="cnpj"
-          rules={[{ required: true, message: 'Por favor, insira o CNPJ' }]}
+          rules={[{ required: true, message: t('cadastro.concessionaria.cnpj.required') }]}
         >
-          <Input prefix={<IdcardOutlined />} placeholder="00.000.000/0000-00" />
+          <Input prefix={<IdcardOutlined />} placeholder={t('cadastro.concessionaria.cnpj.placeholder')} />
         </Form.Item>
 
         <Form.Item
-          label="Telefone"
+          label={t('cadastro.concessionaria.telefone.label')}
           name="tel"
-          rules={[{ required: true, message: 'Por favor, insira o telefone' }]}
+          rules={[{ required: true, message: t('cadastro.concessionaria.telefone.required') }]}
         >
-          <Input prefix={<PhoneOutlined />} placeholder="(00) 0000-0000" />
+          <Input prefix={<PhoneOutlined />} placeholder={t('cadastro.concessionaria.telefone.placeholder')} />
         </Form.Item>
 
         <Form.Item
-          label="Senha"
-          name="senha"
+          label={t('cadastro.email.label')}
+          name="email"
           rules={[
-            { required: true, message: 'Por favor, insira uma senha' },
-            { min: 6, message: 'A senha deve ter no mínimo 6 caracteres' }
+            { required: true, message: t('cadastro.email.required') },
+            { type: 'email', message: t('cadastro.email.invalid') }
           ]}
         >
-          <Input.Password prefix={<LockOutlined />} placeholder="Senha" />
+          <Input prefix={<MailOutlined />} placeholder={t('cadastro.concessionaria.email.placeholder')} />
         </Form.Item>
 
         <Form.Item
-          label="Confirmar Senha"
+          label={t('cadastro.senha.label')}
+          name="senha"
+          rules={[
+            { required: true, message: t('cadastro.senha.required') },
+            { min: 6, message: t('cadastro.senha.min') },
+            { pattern: /[A-Z]/, message: t('cadastro.senha.uppercase') },
+            { pattern: /[a-z]/, message: t('cadastro.senha.lowercase') },
+            { pattern: /[0-9]/, message: t('cadastro.senha.number') },
+            { pattern: /[^A-Za-z0-9]/, message: t('cadastro.senha.special') }
+          ]}
+        >
+          <Input.Password prefix={<LockOutlined />} placeholder={t('cadastro.senha.placeholder')} />
+        </Form.Item>
+
+        <Form.Item
+          label={t('cadastro.confirmarSenha.label')}
           name="confirmarSenha"
           dependencies={['senha']}
           rules={[
-            { required: true, message: 'Por favor, confirme sua senha' },
+            { required: true, message: t('cadastro.confirmarSenha.required') },
             ({ getFieldValue }) => ({
               validator(_, value) {
                 if (!value || getFieldValue('senha') === value) {
                   return Promise.resolve();
                 }
-                return Promise.reject(new Error('As senhas não coincidem'));
+                return Promise.reject(new Error(t('cadastro.confirmarSenha.match')));
               },
             }),
           ]}
         >
-          <Input.Password prefix={<LockOutlined />} placeholder="Confirme sua senha" />
+          <Input.Password prefix={<LockOutlined />} placeholder={t('cadastro.confirmarSenha.placeholder')} />
         </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" block size="large">
-            Cadastrar Concessionária
+          <Button type="primary" htmlType="submit" block size="large" loading={loading}>
+            {t('cadastro.concessionaria.submit')}
           </Button>
         </Form.Item>
       </Form>
@@ -174,23 +252,27 @@ export default function Cadastro() {
   const items = [
     {
       key: 'cliente',
-      label: 'Cliente',
+      label: t('cadastro.cliente.tab'),
       children: clienteTab,
     },
     {
       key: 'concessionaria',
-      label: 'Concessionária',
+      label: t('cadastro.concessionaria.tab'),
       children: concessionariaTab,
     },
   ];
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Content style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '24px' }}>
+      <Content style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '24px' }}>
+        <div style={{ position: 'absolute', top: 24, right: 24 }}>
+          <LanguageSelector />
+        </div>
+
         <Space direction="vertical" size="large" style={{ width: '100%', maxWidth: '480px' }}>
           <Space direction="vertical" size="small" style={{ width: '100%', textAlign: 'center' }}>
-            <Title level={2} style={{ margin: 0 }}>MotoRev</Title>
-            <Text type="secondary">Crie sua conta para começar a gerenciar suas revisões</Text>
+            <Title level={2} style={{ margin: 0 }}>{t('cadastro.title')}</Title>
+            <Text type="secondary">{t('cadastro.subtitle')}</Text>
           </Space>
 
           <Card>
@@ -199,9 +281,9 @@ export default function Cadastro() {
 
           <Space direction="vertical" size="small" style={{ width: '100%', textAlign: 'center' }}>
             <Text type="secondary">
-              Já tem uma conta? <Link onClick={() => navigate('/login')}>Entrar</Link>
+              {t('cadastro.hasAccount')} <Link onClick={() => navigate(PATHS.LOGIN)}>{t('cadastro.login')}</Link>
             </Text>
-            <Link onClick={() => navigate('/')}>Voltar para página inicial</Link>
+            <Link onClick={() => navigate(PATHS.HOME)}>{t('cadastro.back')}</Link>
           </Space>
         </Space>
       </Content>

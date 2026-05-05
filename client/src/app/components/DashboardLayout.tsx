@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Layout, Menu, Button, Typography, Dropdown, Avatar } from 'antd';
+import { Layout, Menu, Button, Typography, Dropdown, Avatar, message } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -16,6 +16,9 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router';
+import { PATHS } from '../paths';
+import { authService } from '../services/authService';
+import { t } from '../i18n';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -47,98 +50,95 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
   const navigate = useNavigate();
   const location = useLocation();
 
-  const handleLogout = () => {
-    console.log('Logout');
-    navigate('/login');
-  };
-
-  const handleProfile = () => {
-    navigate(`/dashboard/${userType}/perfil`);
-  };
-
-  const handleMenuClick = (key: string) => {
-    if (userType === 'concessionaria') {
-      navigate(`/dashboard/concessionaria/${key}`);
-    } else {
-      navigate(`/dashboard/cliente/${key}`);
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      // O logout já limpa os tokens via tokenManager.clearTokens() no finally
+      navigate(PATHS.LOGIN);
+    } catch (error: any) {
+      message.error(error.message || t('dashboard.logout.error'));
+      navigate(PATHS.LOGIN);
     }
   };
 
+  const handleProfile = () => {
+    const profilePath = userType === 'cliente' 
+      ? `${PATHS.DASHBOARD_CLIENTE}${PATHS.PERFIL_USUARIO}`
+      : `${PATHS.DASHBOARD_CONCESSIONARIA}${PATHS.PERFIL_USUARIO}`;
+    navigate(profilePath);
+  };
+
+  const handleMenuClick = (path: string) => {
+    navigate(path);
+  };
+
   const getSelectedKey = () => {
-    const path = location.pathname;
-    if (path.includes('/catalogos-motos')) return 'catalogos-motos';
-    if (path.includes('/catalogos-revisoes')) return 'catalogos-revisoes';
-    if (path.includes('/catalogos-pecas')) return 'catalogos-pecas';
-    if (path.includes('/catalogos-servicos')) return 'catalogos-servicos';
-    if (path.includes('/perfil')) return 'perfil';
-    if (path.includes('/dashboard')) return 'dashboard';
-    if (path.includes('/motos')) return 'motos';
-    if (path.includes('/agendamentos')) return 'agendamentos';
-    if (path.includes('/revisoes')) return 'revisoes';
-    if (path.includes('/concessionarias')) return 'concessionarias';
-    if (path.includes('/lojas')) return 'lojas';
-    return 'dashboard';
+    const { pathname } = location;
+    if (pathname === PATHS.DASHBOARD_CONCESSIONARIA) {
+      return PATHS.CONCESSIONARIA_DASHBOARD;
+    }
+    return pathname;
   };
 
   const clienteMenuItems: MenuProps['items'] = [
     {
-      key: 'motos',
+      key: PATHS.CLIENTE_MOTOS,
       icon: <CarOutlined />,
-      label: 'Motos',
+      label: t('dashboard.menu.motos'),
     },
     {
-      key: 'agendamentos',
+      key: PATHS.CLIENTE_AGENDAMENTOS,
       icon: <CalendarOutlined />,
-      label: 'Agendamentos',
+      label: t('dashboard.menu.agendamentos'),
     },
     {
-      key: 'revisoes',
+      key: PATHS.CLIENTE_REVISOES,
       icon: <ToolOutlined />,
-      label: 'Revisões',
+      label: t('dashboard.menu.revisoes'),
     },
     {
-      key: 'concessionarias',
+      key: PATHS.CLIENTE_CONCESSIONARIAS,
       icon: <ShopOutlined />,
-      label: 'Concessionárias',
+      label: t('dashboard.menu.concessionarias'),
     },
   ];
 
   const concessionariaMenuItems: MenuProps['items'] = [
     {
-      key: 'dashboard',
+      key: PATHS.CONCESSIONARIA_DASHBOARD,
       icon: <DashboardOutlined />,
-      label: 'Dashboard',
+      label: t('dashboard.menu.dashboard'),
     },
     {
-      key: 'lojas',
+      key: PATHS.CONCESSIONARIA_LOJAS,
       icon: <HomeOutlined />,
-      label: 'Lojas',
+      label: t('dashboard.menu.lojas'),
     },
     {
-      key: 'agendamentos',
+      key: PATHS.CONCESSIONARIA_AGENDAMENTOS,
       icon: <CalendarOutlined />,
-      label: 'Agendamentos',
+      label: t('dashboard.menu.agendamentos'),
     },
     {
-      key: 'catalogos',
+      key: PATHS.CONCESSIONARIA_CATALOGOS,
       icon: <BookOutlined />,
-      label: 'Catálogos',
+      label: t('dashboard.menu.catalogos'),
       children: [
         {
-          key: 'catalogos-motos',
-          label: 'Catálogo de Motos',
+          key: PATHS.CONCESSIONARIA_CATALOGOS_MOTOS,
+          label: t('dashboard.menu.catalogosMotos'),
         },
         {
-          key: 'catalogos-revisoes',
-          label: 'Catálogo de Revisões',
+          key: PATHS.CONCESSIONARIA_CATALOGOS_REVISOES,
+          label: t('dashboard.menu.catalogosRevisoes'),
         },
         {
-          key: 'catalogos-pecas',
-          label: 'Catálogo de Peças',
+          key: PATHS.CONCESSIONARIA_CATALOGOS_PECAS,
+          label: t('dashboard.menu.catalogosPecas'),
         },
         {
-          key: 'catalogos-servicos',
-          label: 'Catálogo de Serviços',
+          key: PATHS.CONCESSIONARIA_CATALOGOS_SERVICOS,
+          label: t('dashboard.menu.catalogosServicos'),
         },
       ],
     },
@@ -150,7 +150,7 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
     {
       key: 'profile',
       icon: <SettingOutlined />,
-      label: 'Meu Perfil',
+      label: t('dashboard.userMenu.myProfile'),
       onClick: handleProfile,
     },
     {
@@ -159,7 +159,7 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: 'Sair',
+      label: t('dashboard.userMenu.logout'),
       onClick: handleLogout,
     },
   ];
@@ -196,7 +196,7 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                   <Text strong>{userName}</Text>
                   <Text type="secondary" style={{ fontSize: '12px' }}>
-                    {userType === 'cliente' ? 'Cliente' : 'Concessionária'}
+                    {userType === 'cliente' ? t('dashboard.userType.client') : t('dashboard.userType.dealership')}
                   </Text>
                 </div>
               )}
