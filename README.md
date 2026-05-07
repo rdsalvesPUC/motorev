@@ -229,14 +229,14 @@ dotnet test --collect:"XPlat Code Coverage"
 ### Passos
 
 ```bash
+# Navegar até a API
+cd ../server/MotoRevApi
+
 # Subir infraestrutura
 docker compose up
 
 # Build do projeto
 dotnet build
-
-# Navegar até a API
-cd server/MotoRevApi
 
 # Executar API
 dotnet run
