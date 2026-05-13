@@ -156,8 +156,12 @@
   "serviceCatalog.descriptionLength": "Description cannot exceed 500 characters.",
   "serviceCatalog.estimatedTimeRange": "Estimated time must be between 1 and 480 minutes.",
   "serviceCatalog.priceRange": "Cost must be between 0 and 100,000.",
-  "serviceCatalog.enterField": "Please enter {field}!",
-
+  "serviceCatalog.totalServices": "Total: {{count}} services",
+  "serviceCatalog.addService": "Add Service",
+  "serviceCatalog.empty": "No services found",
+  "serviceCatalog.emptyDescription": "Register new services to see them here.",
+  "error.updateService": "Error updating service.",
+  "error.deleteService": "Error deleting service.",
   "serviceDetail.title": "Service Detail",
   "serviceDetail.sectionTitle": "Service Details"
 }

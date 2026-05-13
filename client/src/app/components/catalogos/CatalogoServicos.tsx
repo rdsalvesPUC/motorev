@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Typography, Input, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, InputNumber } from 'antd';
+import { Typography, Input, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, InputNumber, Empty } from 'antd';
 import { ToolOutlined, SearchOutlined, EditOutlined, DeleteOutlined, SaveOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnType } from 'antd/es/table';
 import DashboardBreadcrumb from '../common/DashboardBreadcrumb';
@@ -120,46 +120,41 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
   const [searchText, setSearchText] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
 
-  useEffect(() => {
-    const fetchServicos = async () => {
-      try {
-        setLoading(true);
-        const servicos = await servicoService.getAll();
-        const mappedData = servicos.map(s => ({ ...s, key: s.id.toString() }));
-        setData(mappedData);
-        setFilteredData(mappedData);
-      } catch (error) {
-        handleApiError(error, 'error.fetchServices');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchServicos = async (categoria?: string) => {
+    try {
+      setLoading(true);
+      const servicos = await servicoService.getAll(categoria);
+      const mappedData = servicos.map(s => ({ ...s, key: s.id.toString() }));
+      setData(mappedData);
 
+      if (searchText) {
+        const lowerSearch = searchText.toLowerCase();
+        setFilteredData(mappedData.filter(item => 
+          item.nome.toLowerCase().includes(lowerSearch) || 
+          item.codigo.toLowerCase().includes(lowerSearch)
+        ));
+      } else {
+        setFilteredData(mappedData);
+      }
+    } catch (error) {
+      handleApiError(error, 'error.fetchServices');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchServicos();
   }, []);
 
   const handleApplyFilters = () => {
-    let filtered = [...data];
-
-    if (searchText) {
-      const lowerSearch = searchText.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.nome.toLowerCase().includes(lowerSearch) || 
-        item.codigo.toLowerCase().includes(lowerSearch)
-      );
-    }
-
-    if (categoryFilter) {
-      filtered = filtered.filter(item => item.categoria === categoryFilter);
-    }
-
-    setFilteredData(filtered);
+    fetchServicos(categoryFilter);
   };
 
   const handleClearFilters = () => {
     setSearchText('');
     setCategoryFilter(undefined);
-    setFilteredData(data);
+    fetchServicos();
   };
 
   const isEditing = (record: ServicoData) => record.key === editingKey;
@@ -230,6 +225,16 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
     navigate(`/dashboard/concessionaria/catalogos-servicos/${id}`);
   };
 
+  const getCategoryColor = (categoria: string) => {
+    const colors: Record<string, string> = {
+      'Verificacao': 'blue',
+      'Ajuste': 'orange',
+      'Limpeza': 'green',
+      'Troca': 'red'
+    };
+    return colors[categoria] || 'default';
+  };
+
   const columns: EditableColumn[] = [
     {
       title: t('serviceCatalog.code'),
@@ -248,7 +253,11 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
       dataIndex: 'categoria',
       key: 'categoria',
       editable: true,
-      render: (categoria: string) => <Tag>{t(`serviceCatalog.category.${categoria.toLowerCase()}`)}</Tag>,
+      render: (categoria: string) => (
+        <Tag color={getCategoryColor(categoria)}>
+          {t(`serviceCatalog.category.${categoria.toLowerCase()}`)}
+        </Tag>
+      ),
     },
     {
       title: t('serviceCatalog.estimatedTime'),
@@ -400,9 +409,9 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
         <Spin spinning={loading}>
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
             <Flex justify="space-between" align="center">
-              <span>Total: {filteredData.length} serviços</span>
+              <span>{t('serviceCatalog.totalServices', { count: filteredData.length })}</span>
               <Button type="primary" onClick={onNavigateToForm}>
-                Adicionar Serviço
+                {t('serviceCatalog.addService')}
               </Button>
             </Flex>
 
@@ -417,6 +426,19 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
                 dataSource={filteredData}
                 pagination={{
                   onChange: cancel,
+                }}
+                locale={{
+                  emptyText: (
+                    <Empty
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      description={
+                        <span>
+                          {t('serviceCatalog.empty')}<br />
+                          <small>{t('serviceCatalog.emptyDescription')}</small>
+                        </span>
+                      }
+                    />
+                  )
                 }}
               />
             </Form>

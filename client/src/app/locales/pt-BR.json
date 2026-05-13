@@ -156,8 +156,12 @@
   "serviceCatalog.descriptionLength": "A descrição não pode exceder 500 caracteres.",
   "serviceCatalog.estimatedTimeRange": "O tempo estimado deve estar entre 1 e 480 minutos.",
   "serviceCatalog.priceRange": "O custo deve estar entre 0 e 100.000.",
-  "serviceCatalog.enterField": "Por favor, insira {field}!",
-
+  "serviceCatalog.totalServices": "Total: {{count}} serviços",
+  "serviceCatalog.addService": "Adicionar Serviço",
+  "serviceCatalog.empty": "Nenhum serviço encontrado",
+  "serviceCatalog.emptyDescription": "Cadastre novos serviços para visualizá-los aqui.",
+  "error.updateService": "Erro ao atualizar o serviço.",
+  "error.deleteService": "Erro ao excluir o serviço.",
   "serviceDetail.title": "Detalhe do Serviço",
   "serviceDetail.sectionTitle": "Detalhes do Serviço"
 }
