@@ -53,8 +53,56 @@ public class ServicoServiceTests
         await service.CreateAsync(request1);
 
         // Act & Assert - tentar criar um serviço com mesmo código em categoria diferente
-        await Assert.ThrowsAsync<DuplicateDataException>(
+        var exception = await Assert.ThrowsAsync<DuplicateDataException>(
             () => service.CreateAsync(request2));
+            
+        Assert.Contains("Já existe um serviço ativo com o código 'COD002'", exception.Message);
+    }
+
+    [Fact]
+    public async Task CreateAsync_DevePermitirReutilizarCodigoDeServicoInativo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        
+        // Criar e inativar serviço
+        var res1 = await service.CreateAsync(new ServicoRequest("COD_REUSE", "Serviço 1", "Desc", CategoriaServico.Troca, 30, 100));
+        await service.InactivateAsync(res1.Id);
+
+        // Tentar criar novo serviço com mesmo código
+        var request2 = new ServicoRequest("COD_REUSE", "Serviço 2", "Desc", CategoriaServico.Limpeza, 60, 150);
+
+        // Act
+        var response2 = await service.CreateAsync(request2);
+
+        // Assert
+        Assert.NotNull(response2);
+        Assert.Equal("COD_REUSE", response2.Codigo);
+        Assert.NotEqual(res1.Id, response2.Id);
+    }
+
+    [Fact]
+    public async Task CreateAsync_DevePermitirReutilizarNomeECategoriaDeServicoInativo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        
+        // Criar e inativar serviço
+        var res1 = await service.CreateAsync(new ServicoRequest("COD1", "Nome Repetido", "Desc", CategoriaServico.Troca, 30, 100));
+        await service.InactivateAsync(res1.Id);
+
+        // Tentar criar novo serviço com mesmo nome e categoria, mas código diferente
+        var request2 = new ServicoRequest("COD2", "Nome Repetido", "Desc", CategoriaServico.Troca, 60, 150);
+
+        // Act
+        var response2 = await service.CreateAsync(request2);
+
+        // Assert
+        Assert.NotNull(response2);
+        Assert.Equal("Nome Repetido", response2.Nome);
+        Assert.Equal(CategoriaServico.Troca, response2.Categoria);
     }
 
     [Fact]
@@ -304,7 +352,70 @@ public class ServicoServiceTests
         var exception = await Assert.ThrowsAsync<DuplicateDataException>(
             () => service.UpdateAsync(servico2.Id, updateRequest));
             
-        Assert.Contains("Já existe outro serviço ativo com o código", exception.Message);
+        Assert.Contains("Já existe outro serviço ativo com o código 'COD_B' ou com o nome 'Serviço A' nesta categoria.", exception.Message);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DeveRetornarErroParaCodigoDuplicadoAtivo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        
+        await service.CreateAsync(new ServicoRequest("COD_EXISTENTE", "Serviço 1", "Desc", CategoriaServico.Troca, 30, 100));
+        var servico2 = await service.CreateAsync(new ServicoRequest("COD_B", "Serviço 2", "Desc", CategoriaServico.Limpeza, 45, 150));
+
+        // Tenta atualizar o serviço 2 com o código do serviço 1
+        var updateRequest = new ServicoUpdateRequest("COD_EXISTENTE", "Serviço 2", "Desc", CategoriaServico.Limpeza, 45, 150);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<DuplicateDataException>(
+            () => service.UpdateAsync(servico2.Id, updateRequest));
+            
+        Assert.Contains("Já existe outro serviço ativo com o código 'COD_EXISTENTE'", exception.Message);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DevePermitirReutilizarCodigoDeServicoInativo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        
+        var res1 = await service.CreateAsync(new ServicoRequest("COD_INATIVO", "Serviço 1", "Desc", CategoriaServico.Troca, 30, 100));
+        await service.InactivateAsync(res1.Id);
+
+        var servico2 = await service.CreateAsync(new ServicoRequest("COD_B", "Serviço 2", "Desc", CategoriaServico.Limpeza, 45, 150));
+
+        var updateRequest = new ServicoUpdateRequest("COD_INATIVO", "Serviço 2", "Desc", CategoriaServico.Limpeza, 45, 150);
+
+        // Act
+        var response = await service.UpdateAsync(servico2.Id, updateRequest);
+
+        // Assert
+        Assert.Equal("COD_INATIVO", response.Codigo);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DevePermitirReutilizarNomeECategoriaDeServicoInativo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        
+        var res1 = await service.CreateAsync(new ServicoRequest("COD1", "Nome Inativo", "Desc", CategoriaServico.Troca, 30, 100));
+        await service.InactivateAsync(res1.Id);
+
+        var servico2 = await service.CreateAsync(new ServicoRequest("COD2", "Nome Ativo", "Desc", CategoriaServico.Limpeza, 45, 150));
+
+        var updateRequest = new ServicoUpdateRequest("COD2", "Nome Inativo", "Desc", CategoriaServico.Troca, 45, 150);
+
+        // Act
+        var response = await service.UpdateAsync(servico2.Id, updateRequest);
+
+        // Assert
+        Assert.Equal("Nome Inativo", response.Nome);
+        Assert.Equal(CategoriaServico.Troca, response.Categoria);
     }
 
     [Fact]

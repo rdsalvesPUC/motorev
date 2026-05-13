@@ -34,10 +34,12 @@ public class ServicoConfiguration : IEntityTypeConfiguration<Servico>
 
         // Índice único para evitar duplicidade de código globalmente
         builder.HasIndex(s => s.Codigo)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[Ativo] = 1");
 
         // Índice único para evitar duplicidade de nome dentro da mesma categoria
         builder.HasIndex(s => new { s.Categoria, s.Nome })
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[Ativo] = 1");
     }
 }
