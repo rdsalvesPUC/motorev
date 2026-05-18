@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import { Typography, Input, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, InputNumber, Empty } from 'antd';
 import { ToolOutlined, SearchOutlined, EditOutlined, DeleteOutlined, SaveOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
@@ -115,10 +115,19 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
   const navigate = useNavigate();
   const [editingKey, setEditingKey] = useState('');
   const [data, setData] = useState<ServicoData[]>([]);
-  const [filteredData, setFilteredData] = useState<ServicoData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
+
+  const filteredData = useMemo(() => {
+    if (!searchText) return data;
+    
+    const lowerSearch = searchText.toLowerCase();
+    return data.filter(item => 
+      item.nome.toLowerCase().includes(lowerSearch) || 
+      item.codigo.toLowerCase().includes(lowerSearch)
+    );
+  }, [data, searchText]);
 
   const fetchServicos = async (categoria?: string) => {
     try {
@@ -126,16 +135,6 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
       const servicos = await servicoService.getAll(categoria);
       const mappedData = servicos.map(s => ({ ...s, key: s.id.toString() }));
       setData(mappedData);
-
-      if (searchText) {
-        const lowerSearch = searchText.toLowerCase();
-        setFilteredData(mappedData.filter(item => 
-          item.nome.toLowerCase().includes(lowerSearch) || 
-          item.codigo.toLowerCase().includes(lowerSearch)
-        ));
-      } else {
-        setFilteredData(mappedData);
-      }
     } catch (error) {
       handleApiError(error, 'error.fetchServices');
     } finally {
@@ -153,7 +152,7 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
 
   const handleClearFilters = () => {
     setSearchText('');
-    setCategoryFilter(undefined);
+    setCategoryFilter();
     fetchServicos();
   };
 
@@ -184,14 +183,6 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
         newData.splice(index, 1, updatedItem);
         setData(newData);
         setEditingKey('');
-        
-        // Update filtered data as well
-        const filteredIndex = filteredData.findIndex(item => item.key === key);
-        if (filteredIndex > -1) {
-          const newFilteredData = [...filteredData];
-          newFilteredData.splice(filteredIndex, 1, updatedItem);
-          setFilteredData(newFilteredData);
-        }
 
         message.success(t('serviceUpdatedSuccess'));
       }
@@ -212,7 +203,6 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
       
       const newData = data.filter((item) => item.key !== key);
       setData(newData);
-      setFilteredData(filteredData.filter(item => item.key !== key));
       message.success(t('serviceDeletedSuccess'));
     } catch (error) {
       handleApiError(error);
