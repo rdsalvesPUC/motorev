@@ -138,6 +138,7 @@
   "serviceCatalog.searchPlaceholder": "Buscar serviços...",
   "serviceCatalog.clear": "Limpar",
   "serviceCatalog.apply": "Aplicar",
+  "serviceCatalog.enterField": "Por favor, insira o campo {{field}}",
   "serviceCatalog.category.verificacao": "Verificação",
   "serviceCatalog.category.ajuste": "Ajuste",
   "serviceCatalog.category.limpeza": "Limpeza",
