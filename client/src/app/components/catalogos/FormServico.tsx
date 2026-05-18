@@ -57,7 +57,7 @@ export default function FormServico({ onCancel }: FormServicoProps) {
               {
                 title: t('serviceCatalog.title'),
                 icon: <ToolOutlined />,
-                path: '/dashboard/concessionaria/catalogos-servicos',
+                path: 'catalogos-servicos',
               },
               {
                 title: t('serviceCatalog.newService'),

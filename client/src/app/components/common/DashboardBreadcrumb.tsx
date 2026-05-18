@@ -24,14 +24,16 @@ export default function DashboardBreadcrumb({ userType, items }: DashboardBreadc
       const isLast = index === items.length - 1;
 
       if (item.path && !isLast) {
+        const fullPath = item.path.startsWith('/') ? item.path : `${basePath}${item.path}`;
+        
         return {
           title: item.icon ? (
-            <Link to={`${basePath}${item.path}`}>
+            <Link to={fullPath}>
               {item.icon}
               <span style={{ marginLeft: '4px' }}>{item.title}</span>
             </Link>
           ) : (
-            <Link to={`${basePath}${item.path}`}>{item.title}</Link>
+            <Link to={fullPath}>{item.title}</Link>
           ),
         };
       }

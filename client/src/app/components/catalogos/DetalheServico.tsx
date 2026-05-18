@@ -60,7 +60,7 @@ export default function DetalheServico() {
       <DashboardBreadcrumb
         userType="concessionaria"
         items={[
-          { title: t('serviceCatalog.title'), path: '/dashboard/concessionaria/catalogos-servicos', icon: <ToolOutlined /> },
+          { title: t('serviceCatalog.title'), path: 'catalogos-servicos', icon: <ToolOutlined /> },
           { title: servico ? servico.nome : t('serviceDetail.title') },
         ]}
       />
