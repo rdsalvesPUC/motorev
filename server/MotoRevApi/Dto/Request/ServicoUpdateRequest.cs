@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using MotoRevApi.Enums;
 
 namespace MotoRevApi.Dto.Request;
@@ -18,6 +19,8 @@ public record ServicoUpdateRequest
     public string Descricao { get; init; }
 
     [Required(ErrorMessage = "A categoria do serviço é obrigatória.")]
+    [EnumDataType(typeof(CategoriaServico), ErrorMessage = "Categoria de serviço inválida.")]
+    [JsonRequired]
     public CategoriaServico Categoria { get; init; }
 
     [Required(ErrorMessage = "O tempo estimado é obrigatório.")]
