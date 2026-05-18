@@ -41,7 +41,7 @@ public class ServicoServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_DeveRetornarErroParaDuplicidadeGlobally()
+    public async Task CreateAsync_DeveRetornarErroParaDuplicidadeGlobalmente()
     {
         // Arrange
         using var context = CreateContext();
@@ -146,7 +146,7 @@ public class ServicoServiceTests
     }
 
     [Fact]
-    public async Task GetAllAsync_DeveRetornarListaVaziaQuandoNaoHouverservicos()
+    public async Task GetAllAsync_DeveRetornarListaVaziaQuandoNaoHouverServicos()
     {
         // Arrange
         using var context = CreateContext();
