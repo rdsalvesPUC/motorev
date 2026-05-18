@@ -1,4 +1,5 @@
 using Mapster;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
@@ -36,7 +37,15 @@ public class ServicoService
         var servico = request.Adapt<Servico>();
 
         _context.Servicos.Add(servico);
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627))
+        {
+            throw new DuplicateDataException(
+                $"Já existe um serviço ativo com o código '{request.Codigo}' ou com o nome '{request.Nome}' nesta categoria.");
+        }
 
         return servico.Adapt<ServicoResponse>();
     }
@@ -98,7 +107,15 @@ public class ServicoService
         servico.TempoEstimado = request.TempoEstimado;
         servico.Custo = request.Custo;
 
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627))
+        {
+            throw new DuplicateDataException(
+                $"Já existe outro serviço ativo com o código '{request.Codigo}' ou com o nome '{request.Nome}' nesta categoria.");
+        }
 
         return servico.Adapt<ServicoResponse>();
     }
