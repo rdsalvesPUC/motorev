@@ -25,10 +25,12 @@ public record ServicoRequest
 
     [Required(ErrorMessage = "O tempo estimado é obrigatório.")]
     [Range(1, 480, ErrorMessage = "O tempo estimado deve estar entre 1 e 480 minutos.")]
+    [JsonRequired]
     public int TempoEstimado { get; init; }
 
     [Required(ErrorMessage = "O custo é obrigatório.")]
     [Range(0, 100000, ErrorMessage = "O custo deve ser um valor positivo.")]
+    [JsonRequired]
     public decimal Custo { get; init; }
 
     public ServicoRequest() { }

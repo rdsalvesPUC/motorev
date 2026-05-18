@@ -53,4 +53,19 @@ public class ServicoValidationTests
         
         Assert.Equal(expectedValid, isValid);
     }
+
+    [Theory]
+    [InlineData(-1, false)] // Negativo - Inválido
+    [InlineData(0, true)]   // Zero - Válido
+    [InlineData(100, true)] // Positivo - Válido
+    public void ServicoRequest_Custo_Validation(decimal custo, bool expectedValid)
+    {
+        var request = new ServicoRequest("S001", "Nome", "Desc", CategoriaServico.Troca, 30, custo);
+        var context = new ValidationContext(request);
+        var results = new List<ValidationResult>();
+
+        var isValid = Validator.TryValidateObject(request, context, results, true);
+
+        Assert.Equal(expectedValid, isValid);
+    }
 }
