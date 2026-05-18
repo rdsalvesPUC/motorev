@@ -18,7 +18,7 @@ export default function DashboardBreadcrumb({ userType, items }: DashboardBreadc
 
   const breadcrumbItems = [
     {
-      title: <Link to={basePath}><HomeOutlined /></Link>,
+      title: <Link to={basePath} aria-label="Home"><HomeOutlined /></Link>,
     },
     ...items.map((item, index) => {
       const isLast = index === items.length - 1;
