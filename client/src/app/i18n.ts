@@ -20,7 +20,15 @@ export const getLocale = () => {
     return localStorage.getItem('locale') || currentLocale;
 }
 
-export const t = (key: string): string => {
+export const t = (key: string, interpolations?: Record<string, string | number>): string => {
   const locale = getLocale();
-  return translations[locale]?.[key] || key;
+  let translation = translations[locale]?.[key] || key;
+
+  if (interpolations) {
+    Object.keys(interpolations).forEach((param) => {
+      translation = translation.replace(`{{${param}}}`, String(interpolations[param]));
+    });
+  }
+
+  return translation;
 };
