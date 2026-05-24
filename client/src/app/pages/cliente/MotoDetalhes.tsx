@@ -174,7 +174,7 @@ export default function MotoDetalhes() {
         <Col xs={24} md={16}>
           <Flex vertical gap="large">
             <Card title={t('motoDetalhes.section.vehicle')} bordered={false}>
-              <Descriptions column={{ xs: 1, sm: 2 }} bordered size="middle">
+              <Descriptions column={{ xs: 1, sm: 2, md: 2, lg: 2, xl: 2, xxl: 2 }} bordered size="middle">
                 <Descriptions.Item label={t('motoDetalhes.label.placa')}>
                   <Text strong style={{ letterSpacing: '1px' }}>{moto.placa}</Text>
                 </Descriptions.Item>
@@ -205,7 +205,7 @@ export default function MotoDetalhes() {
             </Card>
 
             <Card title={t('motoDetalhes.section.model')} bordered={false}>
-              <Descriptions column={{ xs: 1, sm: 2 }} bordered size="middle">
+              <Descriptions column={{ xs: 1, sm: 2, md: 2, lg: 2, xl: 2, xxl: 2 }} bordered size="middle">
                 <Descriptions.Item label={t('motoDetalhes.label.modelo')}>
                   {moto.nomeModelo}
                 </Descriptions.Item>
