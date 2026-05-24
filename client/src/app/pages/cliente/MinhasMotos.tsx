@@ -22,6 +22,7 @@ import {
   DashboardOutlined,
   CalendarOutlined,
   TagOutlined,
+  EyeOutlined,
 } from '@ant-design/icons';
 import {motoService} from "@/app/services/motoService";
 import {Moto} from "@/app/models/Moto";
@@ -50,10 +51,12 @@ const CORES_TAG: Record<string, string> = {
 
 function MotoCard({
                     moto,
+                    onViewDetails,
                     onEdit,
                     onDelete,
                   }: {
   moto: Moto;
+  onViewDetails: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -89,12 +92,20 @@ function MotoCard({
               ) : (
                   <CarOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />
               )}
-              <div style={{ position: 'absolute', top: 10, right: 10 }}>
+              <span style={{ position: 'absolute', top: 10, right: 10 }}>
                 <Tag color={CORES_TAG[moto.cor] ?? 'default'}>{moto.cor}</Tag>
-              </div>
+              </span>
             </Flex>
           }
           actions={[
+            <Button
+                key="detalhes"
+                type="link"
+                icon={<EyeOutlined />}
+                onClick={onViewDetails}
+            >
+              {t('minhasMotos.card.details')}
+            </Button>,
             <Button
                 key="editar"
                 type="link"
@@ -282,6 +293,7 @@ export default function MinhasMotos({ }: MinhasMotosProps) {
                   <div key={moto.id} style={{ width: 'calc(33.33% - 16px)', minWidth: 280 }}>
                     <MotoCard
                         moto={moto}
+                        onViewDetails={() => navigate(`${PATHS.CLIENTE_MOTOS_DETALHES}/${moto.id}`)}
                         onEdit={() => navigate(`${PATHS.CLIENTE_MOTOS_EDITAR}/${moto.id}`)}
                         onDelete={() => handleDelete(moto.id)}
                     />

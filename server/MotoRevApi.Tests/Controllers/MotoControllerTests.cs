@@ -6,6 +6,7 @@ using Moq;
 using MotoRevApi.Controller;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Exceptions;
 using MotoRevApi.Services;
 using Xunit;
 
@@ -151,5 +152,73 @@ public class MotoControllerTests
 
         // Assert
         Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task ObterMoto_DeveRetornarOk_QuandoMotoExisteEPertenceAoCliente()
+    {
+        // Arrange
+        var response = new MotoResponse(1, "ABC1234", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Vermelha", 0, DateTime.Now, "Linha", "100cc");
+        var userId = "user-id-123";
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId)
+        }, "mock"));
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        _motoServiceMock.Setup(s => s.GetByIdAsync(1, userId))
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.ObterMoto(1);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task ObterMoto_DeveRetornarUnauthorized_QuandoSemUserId()
+    {
+        // Arrange
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity()); // Sem NameIdentifier Claim
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        // Act
+        var result = await _controller.ObterMoto(1);
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task ObterMoto_DeveLancarNotFoundException_QuandoServiceLancaNotFound()
+    {
+        // Arrange
+        var userId = "user-id-123";
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId)
+        }, "mock"));
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        _motoServiceMock.Setup(s => s.GetByIdAsync(1, userId))
+            .ThrowsAsync(new NotFoundException("Moto não encontrada."));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => _controller.ObterMoto(1));
     }
 }

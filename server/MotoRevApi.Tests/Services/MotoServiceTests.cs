@@ -401,4 +401,95 @@ public class MotoServiceTests
         await Assert.ThrowsAsync<BusinessRuleException>(
             () => service.AtualizarMotoAsync(1, request, "user123"));
     }
+
+    [Fact]
+    public async Task GetByIdAsync_DeveRetornarMotoComSucesso_QuandoMotoExisteEPertenceAoCliente()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc", Ano = 2023 };
+        context.ModelosMotos.Add(modelo);
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        context.Motos.Add(new Moto
+        {
+            Id = 10,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ClienteId = 1,
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Preta",
+            KilometragemAtual = 5000,
+            DataVenda = new DateTime(2022, 1, 15)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+
+        // Act
+        var response = await service.GetByIdAsync(10, "user123");
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Equal(10, response.Id);
+        Assert.Equal("ABC1234", response.Placa);
+        Assert.Equal("CHASSI12345678901", response.Chassi);
+        Assert.Equal(1, response.ModeloMotoId);
+        Assert.Equal("CB 500F", response.NomeModelo);
+        Assert.Equal("Honda", response.Marca);
+        Assert.Equal(2023, response.Ano);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_DeveLancarNotFoundException_QuandoMotoNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => service.GetByIdAsync(999, "user123"));
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_DeveLancarNotFoundException_QuandoMotoPertenceAOutroCliente()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true };
+        context.ModelosMotos.Add(modelo);
+        var cliente1 = new Cliente { Id = 1, Nome = "Cliente 1", UsuarioId = "user1" };
+        var cliente2 = new Cliente { Id = 2, Nome = "Cliente 2", UsuarioId = "user2" };
+        context.Clientes.AddRange(cliente1, cliente2);
+        
+        // Moto cadastrada para cliente 2
+        context.Motos.Add(new Moto
+        {
+            Id = 10,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ClienteId = 2,
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Preta",
+            KilometragemAtual = 5000,
+            DataVenda = DateTime.Now
+        });
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+
+        // Act & Assert: Cliente 1 tenta acessar moto do Cliente 2, deve lançar NotFoundException
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => service.GetByIdAsync(10, "user1"));
+    }
 }

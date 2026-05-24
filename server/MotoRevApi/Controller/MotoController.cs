@@ -103,7 +103,7 @@ public class MotoController : ControllerBase
     [Authorize(Roles = Roles.Cliente)]
     [ProducesResponseType(typeof(MotoResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ObterMoto(int id)
     {
