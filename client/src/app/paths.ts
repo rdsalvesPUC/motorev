@@ -1,5 +1,6 @@
 export const PATH_SEGMENTS = {
   CLIENTE_MOTOS: 'motos',
+  CLIENTE_MOTOS_NOVA: 'motos/nova',
   CLIENTE_AGENDAMENTOS: 'agendamentos',
   CLIENTE_REVISOES: 'revisoes',
   CLIENTE_CONCESSIONARIAS: 'concessionarias',
@@ -26,6 +27,7 @@ export const PATHS = {
   PERFIL_USUARIO: '/perfil',
 
   CLIENTE_MOTOS: `/dashboard/cliente/${PATH_SEGMENTS.CLIENTE_MOTOS}`,
+  CLIENTE_MOTOS_NOVA: `/dashboard/cliente/${PATH_SEGMENTS.CLIENTE_MOTOS_NOVA}`,
   CLIENTE_AGENDAMENTOS: `/dashboard/cliente/${PATH_SEGMENTS.CLIENTE_AGENDAMENTOS}`,
   CLIENTE_REVISOES: `/dashboard/cliente/${PATH_SEGMENTS.CLIENTE_REVISOES}`,
   CLIENTE_CONCESSIONARIAS: `/dashboard/cliente/${PATH_SEGMENTS.CLIENTE_CONCESSIONARIAS}`,

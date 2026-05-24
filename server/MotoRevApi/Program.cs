@@ -133,6 +133,8 @@ app.UseCors("AllowReactApp");
 
 app.UseHttpsRedirection();
 
+app.UseStaticFiles();
+
 // Adiciona os middlewares de autenticação e autorização
 app.UseAuthentication();
 app.UseAuthorization();

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +18,7 @@ namespace MotoRevApi.Controller;
 [Route("api/[controller]")]
 [ApiController]
 [Tags("Modelos de Motos")]
-[Authorize(Roles = Roles.Concessionaria)] // ← Adicionado aqui em nível de classe
+[Authorize]
 public class ModeloMotoController : ControllerBase
 {
     private readonly ModeloMotoService _modeloMotoService;
@@ -37,6 +37,7 @@ public class ModeloMotoController : ControllerBase
     /// <response code="401">Usuário não autenticado.</response>
     /// <response code="403">Usuário não tem permissão para criar modelos de motos.</response>
     [HttpPost("criar")]
+    [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(ModeloMotoResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -102,6 +103,7 @@ public class ModeloMotoController : ControllerBase
     /// <response code="403">Usuário não tem permissão para atualizar modelos de motos.</response>
     /// <response code="404">Modelo de moto não encontrado.</response>
     [HttpPut("atualizar/{id}")]
+    [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(ModeloMotoResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -133,6 +135,7 @@ public class ModeloMotoController : ControllerBase
     /// <response code="403">Usuário não tem permissão para alternar status.</response>
     /// <response code="404">Modelo de moto não encontrado.</response>
     [HttpPatch("alternar-status/{id}")]
+    [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

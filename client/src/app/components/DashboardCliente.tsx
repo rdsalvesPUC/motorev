@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router';
 import DashboardLayout from './DashboardLayout';
+import MinhasMotos from './MinhasMotos';
+import MotoForm from './MotoForm';
 import { Typography } from 'antd';
 import { tokenManager } from '../services/tokenManager';
 import { PATHS, PATH_SEGMENTS } from '../paths';
@@ -28,7 +30,8 @@ export default function DashboardCliente() {
     >
       <Routes>
         <Route index element={<DashboardHome />} />
-        <Route path={PATH_SEGMENTS.CLIENTE_MOTOS} element={<DashboardHome />} />
+        <Route path={PATH_SEGMENTS.CLIENTE_MOTOS} element={<MinhasMotos />} />
+        <Route path={PATH_SEGMENTS.CLIENTE_MOTOS_NOVA} element={<MotoForm />} />
         <Route path="*" element={<Navigate to={PATHS.DASHBOARD_CLIENTE} replace />} />
       </Routes>
     </DashboardLayout>

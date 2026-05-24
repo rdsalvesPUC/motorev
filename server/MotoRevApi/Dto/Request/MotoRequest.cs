@@ -2,10 +2,34 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MotoRevApi.Dto.Request;
 
-public record MotoRequest(
-    [Required(ErrorMessage = "O modelo é obrigatório.")]
-    string Modelo,
-    string? Cor,
-    [Required(ErrorMessage = "O Ano de fabricação é obrigatório.")]
-    string Ano
-);
+public record MotoRequest
+{
+    [Required(ErrorMessage = "A placa é obrigatória.")]
+    [RegularExpression(@"^[a-zA-Z]{3}-?[0-9][a-zA-Z0-9][0-9]{2}$", 
+        ErrorMessage = "A placa deve estar no formato convencional (ABC-1234) ou Mercosul (ABC1D23).")]
+    public string Placa { get; init; } = null!;
+
+    [Required(ErrorMessage = "O chassi é obrigatório.")]
+    [RegularExpression(@"^[a-zA-Z0-9]{17}$", 
+        ErrorMessage = "O chassi deve conter exatamente 17 caracteres alfanuméricos.")]
+    public string Chassi { get; init; } = null!;
+
+    [Required(ErrorMessage = "O modelo da moto é obrigatório.")]
+    [Range(1, int.MaxValue, ErrorMessage = "Código do modelo inválido.")]
+    public int ModeloMotoId { get; init; }
+
+    public int? ConcessionariaId { get; init; }
+
+    public string? Foto { get; init; }
+
+    public MotoRequest() { }
+
+    public MotoRequest(string placa, string chassi, int modeloMotoId, int? concessionariaId = null, string? foto = null)
+    {
+        Placa = placa;
+        Chassi = chassi;
+        ModeloMotoId = modeloMotoId;
+        ConcessionariaId = concessionariaId;
+        Foto = foto;
+    }
+}

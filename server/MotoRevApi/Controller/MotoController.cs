@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.Security.Claims;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,11 +20,12 @@ namespace MotoRevApi.Controller;
 public class MotoController : ControllerBase
 {
     private readonly MotoService _motoService;
+
     public MotoController(MotoService motoService)
     {
         _motoService = motoService;
     }
-    
+
     /// <summary>
     /// Adicionar uma nova moto ao sistema.
     /// </summary>
@@ -34,42 +37,28 @@ public class MotoController : ControllerBase
     /// <response code="400">Dados de entrada inválidos.</response>
     /// <response code="401">Usuário não autenticado.</response>
     /// <response code="403">Usuário não tem permissão para criar motos.</response>
-    [HttpPost("criar")]
+    /// <response code="409">Veículo com esta placa ou chassi já cadastrado.</response>
+    [HttpPost]
     [Authorize(Roles = Roles.Cliente)]
     [ProducesResponseType(typeof(MotoResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public IActionResult AdicionarMoto([FromBody] MotoRequest request)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AdicionarMoto([FromBody] MotoRequest request)
     {
-        var response = _motoService.CadastrarMoto(request);
-        return CreatedAtAction(nameof(ObterMoto), new { id = response.Id }, response);
-    }
-    
-    /// <summary>
-    /// Obter os dados de uma moto específica pelo ID.
-    /// </summary>
-    /// <param name="id">O ID da moto a ser obtida.</param>
-    /// <response code="200">Retorna os dados da moto.</response>
-    /// <response code="404">Moto não encontrada.</response>
-    [HttpGet("id/{id}")]
-    [ProducesResponseType(typeof(MotoResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    public ActionResult<MotoResponse> ObterMoto(int id)
-    {
-        var response = _motoService.ObterMoto(id);
-        return Ok(response);
-    }
-    
-    /// <summary>
-    /// Listar todas as motos cadastradas no sistema.
-    /// </summary>
-    /// <response code="200">Retorna a lista de motos.</response>
-    [HttpGet("listar")]
-    [ProducesResponseType(typeof(List<MotoResponse>), StatusCodes.Status200OK)]
-    public ActionResult<List<MotoResponse>> ObterMotos()
-    {
-        var response = _motoService.ListarMotos();
-        return Ok(response);
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var response = await _motoService.CadastrarMotoAsync(request, userId);
+        return StatusCode(StatusCodes.Status201Created, response);
     }
 }
