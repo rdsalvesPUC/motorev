@@ -1,4 +1,4 @@
-import { tokenManager } from './tokenManager';
+import { tokenManager } from '@/app/services/tokenManager';
 
 export const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:5262/api';
 

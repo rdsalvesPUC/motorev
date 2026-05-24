@@ -10,5 +10,11 @@ public record MotoResponse(
     int ClienteId,
     int? ConcessionariaId,
     string? NomeConcessionaria,
-    string? Foto
+    string? Foto,
+    int Ano,
+    string Cor,
+    int KilometragemAtual,
+    DateTime DataVenda,
+    string Linha,
+    string Cilindrada
 );

@@ -1,21 +1,21 @@
 import { BrowserRouter, Routes, Route } from 'react-router';
-import MotoRevLandingPage from '../imports/MotoRevLandingPage';
-import Login from './components/Login';
-import Cadastro from './components/Cadastro';
-import DashboardCliente from './components/DashboardCliente';
-import DashboardConcessionaria from './components/DashboardConcessionaria';
-import AccessDenied from './components/AccessDenied'; // Importa AccessDenied
-import { AntdThemeProvider } from './theme';
+import MotoRevLandingPage from '@/imports/MotoRevLandingPage';
+import Login from '@/app/pages/auth/Login';
+import Cadastro from '@/app/pages/auth/Cadastro';
+import DashboardCliente from '@/app/pages/cliente/DashboardCliente';
+import DashboardConcessionaria from '@/app/pages/concessionaria/DashboardConcessionaria';
+import AccessDenied from '@/app/pages/auth/AccessDenied';
+import { AntdThemeProvider } from '@/app/theme';
 import { ConfigProvider, Spin } from 'antd';
 import { useEffect, useState } from 'react';
-import { getLocale } from './i18n';
+import { getLocale } from '@/app/i18n';
 import ptBR from 'antd/locale/pt_BR';
 import enUS from 'antd/locale/en_US';
-import PublicRoute from './components/PublicRoute';
-import PrivateRoute from './components/PrivateRoute';
-import { PATHS } from './paths';
-import { tokenManager } from './services/tokenManager';
-import { t } from './i18n';
+import PublicRoute from '@/app/components/auth/PublicRoute';
+import PrivateRoute from '@/app/components/auth/PrivateRoute';
+import { PATHS } from '@/app/paths';
+import { tokenManager } from '@/app/services/tokenManager';
+import { t } from '@/app/i18n';
 import { message } from 'antd';
 
 const antdLocales: Record<string, any> = {

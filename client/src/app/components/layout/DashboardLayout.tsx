@@ -16,9 +16,9 @@ import {
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router';
-import { PATHS } from '../paths';
-import { authService } from '../services/authService';
-import { t } from '../i18n';
+import { PATHS } from '@/app/paths';
+import { authService } from '@/app/services/authService';
+import { t } from '@/app/i18n';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;

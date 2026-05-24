@@ -1,11 +1,11 @@
 import { Routes, Route, Navigate } from 'react-router';
-import DashboardLayout from './DashboardLayout';
-import MinhasMotos from './MinhasMotos';
-import MotoForm from './MotoForm';
+import DashboardLayout from '@/app/components/layout/DashboardLayout';
+import MinhasMotos from '@/app/pages/cliente/MinhasMotos';
+import MotoForm from '@/app/pages/cliente/MotoForm';
 import { Typography } from 'antd';
-import { tokenManager } from '../services/tokenManager';
-import { PATHS, PATH_SEGMENTS } from '../paths';
-import { t } from '../i18n';
+import {tokenManager} from "@/app/services/tokenManager";
+import {PATH_SEGMENTS, PATHS} from "@/app/paths";
+import { t } from '@/app/i18n';
 
 const { Title, Paragraph } = Typography;
 
@@ -32,6 +32,7 @@ export default function DashboardCliente() {
         <Route index element={<DashboardHome />} />
         <Route path={PATH_SEGMENTS.CLIENTE_MOTOS} element={<MinhasMotos />} />
         <Route path={PATH_SEGMENTS.CLIENTE_MOTOS_NOVA} element={<MotoForm />} />
+        <Route path={`${PATH_SEGMENTS.CLIENTE_MOTOS_EDITAR}/:id`} element={<MotoForm />} />
         <Route path="*" element={<Navigate to={PATHS.DASHBOARD_CLIENTE} replace />} />
       </Routes>
     </DashboardLayout>

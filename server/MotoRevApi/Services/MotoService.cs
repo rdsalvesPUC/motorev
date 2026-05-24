@@ -23,6 +23,24 @@ public class MotoService
         _context = context;
     }
 
+    public virtual async Task<List<MotoResponse>> ListarMotosClienteAsync(string userId)
+    {
+        var cliente = await _context.Clientes
+            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+        if (cliente == null)
+        {
+            throw new NotFoundException("Cliente não encontrado.");
+        }
+
+        var motos = await _context.Motos
+            .Include(m => m.ModeloMoto)
+            .Include(m => m.Concessionaria)
+            .Where(m => m.ClienteId == cliente.Id && m.Ativo)
+            .ToListAsync();
+
+        return motos.Adapt<List<MotoResponse>>();
+    }
+
     public virtual async Task<MotoResponse> CadastrarMotoAsync(MotoRequest request, string userId)
     {
         var placaUpper = request.Placa.ToUpper().Replace("-", "");
@@ -90,5 +108,78 @@ public class MotoService
             await transaction.RollbackAsync();
             throw;
         }
+    }
+    public virtual async Task<MotoResponse> GetByIdAsync(int id, string userId)
+    {
+        var cliente = await _context.Clientes
+            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+        if (cliente == null)
+        {
+            throw new NotFoundException("Cliente não encontrado.");
+        }
+
+        var moto = await _context.Motos
+            .Include(m => m.ModeloMoto)
+            .Include(m => m.Concessionaria)
+            .FirstOrDefaultAsync(m => m.Id == id && m.ClienteId == cliente.Id && m.Ativo);
+
+        if (moto == null)
+        {
+            throw new NotFoundException("Moto não encontrada.");
+        }
+
+        return moto.Adapt<MotoResponse>();
+    }
+
+    public virtual async Task<MotoResponse> AtualizarMotoAsync(int id, MotoRequest request, string userId)
+    {
+        var cliente = await _context.Clientes
+            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+        if (cliente == null)
+        {
+            throw new NotFoundException("Cliente não encontrado.");
+        }
+
+        var moto = await _context.Motos
+            .FirstOrDefaultAsync(m => m.Id == id && m.ClienteId == cliente.Id && m.Ativo);
+
+        if (moto == null)
+        {
+            throw new NotFoundException("Moto não encontrada.");
+        }
+
+        var placaUpper = request.Placa.ToUpper().Replace("-", "");
+        var chassiUpper = request.Chassi.ToUpper();
+
+        // Validar se Placa ou Chassi já estão vinculados a outra moto ativa (exceto a atual)
+        var motoExistente = await _context.Motos
+            .AnyAsync(m => m.Ativo && m.Id != id && (m.Placa == placaUpper || m.Chassi == chassiUpper));
+
+        if (motoExistente)
+        {
+            throw new DuplicateDataException("Outro veículo com esta placa ou chassi já cadastrado.");
+        }
+
+        // Validar a existência do Modelo de Moto
+        var modelo = await _context.ModelosMotos
+            .FirstOrDefaultAsync(m => m.Id == request.ModeloMotoId && m.Ativo);
+        if (modelo == null)
+        {
+            throw new NotFoundException("Modelo de moto não encontrado.");
+        }
+
+        request.Adapt(moto);
+        moto.Placa = placaUpper;
+        moto.Chassi = chassiUpper;
+
+        _context.Motos.Update(moto);
+        await _context.SaveChangesAsync();
+
+        var updatedMoto = await _context.Motos
+            .Include(m => m.ModeloMoto)
+            .Include(m => m.Concessionaria)
+            .FirstAsync(m => m.Id == moto.Id);
+
+        return updatedMoto.Adapt<MotoResponse>();
     }
 }

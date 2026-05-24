@@ -1,5 +1,5 @@
-import { BASE_URL, handleResponse, apiFetch } from './http';
-import { Concessionaria } from '../models/Concessionaria';
+import { BASE_URL, handleResponse, apiFetch } from '@/app/services/http';
+import { Concessionaria } from '@/app/models/Concessionaria';
 
 export const concessionariaService = {
   async register(data: any) {

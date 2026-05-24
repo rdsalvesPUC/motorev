@@ -2,13 +2,13 @@ import { Form, Input, Button, Tabs, Layout, Typography, Card, Space, message } f
 import { UserOutlined, LockOutlined, ShopOutlined, MailOutlined, IdcardOutlined, PhoneOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
-import { clienteService } from '../services/clienteService';
-import { concessionariaService } from '../services/concessionariaService';
-import { formatCNPJ, formatCPF, formatPhone } from '../utils/formatters';
-import { validateCNPJ, validateCPF, CPF_REGEX, CNPJ_REGEX, PHONE_REGEX } from '../utils/validators';
-import { t } from '../i18n';
-import LanguageSelector from './LanguageSelector';
-import { PATHS } from '../paths';
+import { clienteService } from '@/app/services/clienteService';
+import { concessionariaService } from '@/app/services/concessionariaService';
+import { formatCNPJ, formatCPF, formatPhone } from '@/app/utils/formatters';
+import { validateCNPJ, validateCPF, CPF_REGEX, CNPJ_REGEX, PHONE_REGEX } from '@/app/utils/validators';
+import { t } from '@/app/i18n';
+import LanguageSelector from '@/app/components/layout/LanguageSelector';
+import { PATHS } from '@/app/paths';
 
 const { Content } = Layout;
 const { Title, Text, Link } = Typography;

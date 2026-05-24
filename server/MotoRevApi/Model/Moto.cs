@@ -17,4 +17,8 @@ public class Moto
 
     public bool Ativo { get; set; } = true;
     public string? Foto { get; set; }
+
+    public string Cor { get; set; } = null!;
+    public int KilometragemAtual { get; set; }
+    public DateTime DataVenda { get; set; }
 }

@@ -22,13 +22,35 @@ public record MotoRequest
 
     public string? Foto { get; init; }
 
+    [Required(ErrorMessage = "O ano é obrigatório.")]
+    public int Ano { get; init; }
+
+    [Required(ErrorMessage = "A cor é obrigatória.")]
+    public string Cor { get; init; } = null!;
+
+    [Required(ErrorMessage = "A quilometragem atual é obrigatória.")]
+    public int KilometragemAtual { get; init; }
+
+    [Required(ErrorMessage = "A data de venda é obrigatória.")]
+    public DateTime DataVenda { get; init; }
+
+    public string? Linha { get; init; }
+
+    public string? Cilindrada { get; init; }
+
     public MotoRequest() { }
 
-    public MotoRequest(string placa, string chassi, int modeloMotoId, int? concessionariaId = null, string? foto = null)
+    public MotoRequest(string placa, string chassi, int modeloMotoId, int ano, string cor, int kilometragemAtual, DateTime dataVenda, string? linha, string? cilindrada, int? concessionariaId = null, string? foto = null)
     {
         Placa = placa;
         Chassi = chassi;
         ModeloMotoId = modeloMotoId;
+        Ano = ano;
+        Cor = cor;
+        KilometragemAtual = kilometragemAtual;
+        DataVenda = dataVenda;
+        Linha = linha;
+        Cilindrada = cilindrada;
         ConcessionariaId = concessionariaId;
         Foto = foto;
     }

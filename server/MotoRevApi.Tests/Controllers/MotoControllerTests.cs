@@ -26,8 +26,8 @@ public class MotoControllerTests
     public async Task AdicionarMoto_DeveRetornarCreated_QuandoDadosValidos()
     {
         // Arrange
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, null);
-        var response = new MotoResponse(1, "ABC1234", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null);
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, 2023, "Vermelha", 0, DateTime.Now, null, null, null);
+        var response = new MotoResponse(1, "ABC1234", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Vermelha", 0, DateTime.Now, "Linha", "100cc");
         
         var userId = "user-id-123";
         var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
@@ -56,7 +56,7 @@ public class MotoControllerTests
     public async Task AdicionarMoto_DeveRetornarUnauthorized_QuandoSemUserId()
     {
         // Arrange
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, null);
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, 2023, "Vermelha", 0, DateTime.Now, null, null, null);
         var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity()); // Sem NameIdentifier Claim
 
         _controller.ControllerContext = new ControllerContext
@@ -69,5 +69,38 @@ public class MotoControllerTests
 
         // Assert
         Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task ListarMinhasMotos_DeveRetornarOk_ComListaDeMotos()
+    {
+        // Arrange
+        var userId = "user-id-123";
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId)
+        }, "mock"));
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        var motos = new List<MotoResponse>
+        {
+            new MotoResponse(1, "ABC1234", "CHASSI1", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Vermelha", 0, DateTime.Now, "Linha", "100cc"),
+            new MotoResponse(2, "XYZ9999", "CHASSI2", 1, "CG 160", "Honda", 1, null, null, null, 2022, "Azul", 5000, DateTime.Now.AddYears(-1), "Linha", "160cc")
+        };
+
+        _motoServiceMock.Setup(s => s.ListarMotosClienteAsync(userId))
+            .ReturnsAsync(motos);
+
+        // Act
+        var result = await _controller.ListarMinhasMotos();
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(motos, okResult.Value);
     }
 }

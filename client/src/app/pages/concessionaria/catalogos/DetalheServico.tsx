@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Typography, Spin, Alert, Card, Row, Col, Button, Tag, Space } from 'antd';
 import { ArrowLeftOutlined, ToolOutlined } from '@ant-design/icons';
-import { servicoService } from '../../services/servicoService';
-import { Servico } from '../../models/Servico';
-import { t } from '../../i18n';
-import DashboardBreadcrumb from '../common/DashboardBreadcrumb';
-import { ApiError } from '../../services/http';
+import { servicoService } from '@/app/services/servicoService';
+import { Servico } from '@/app/models/Servico';
+import { t } from '@/app/i18n';
+import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
+import { ApiError } from '@/app/services/http';
+import { PATH_SEGMENTS } from '@/app/paths';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -60,7 +61,7 @@ export default function DetalheServico() {
       <DashboardBreadcrumb
         userType="concessionaria"
         items={[
-          { title: t('serviceCatalog.title'), path: 'catalogos-servicos', icon: <ToolOutlined /> },
+          { title: t('serviceCatalog.title'), path: PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_SERVICOS, icon: <ToolOutlined /> },
           { title: servico ? servico.nome : t('serviceDetail.title') },
         ]}
       />

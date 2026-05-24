@@ -27,6 +27,30 @@ public class MotoController : ControllerBase
     }
 
     /// <summary>
+    /// Lista todas as motos do cliente autenticado.
+    /// </summary>
+    /// <remarks>
+    /// O filtro do cliente é feito internamente através do token JWT.
+    /// </remarks>
+    /// <response code="200">Lista de motos retornada com sucesso.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    [HttpGet]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(List<MotoResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> ListarMinhasMotos()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var response = await _motoService.ListarMotosClienteAsync(userId);
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Adicionar uma nova moto ao sistema.
     /// </summary>
     /// <remarks>
@@ -60,5 +84,52 @@ public class MotoController : ControllerBase
 
         var response = await _motoService.CadastrarMotoAsync(request, userId);
         return StatusCode(StatusCodes.Status201Created, response);
+    }
+
+    /// <summary>
+    /// Obter detalhes de uma moto específica.
+    /// </summary>
+    /// <param name="id">ID da moto.</param>
+    [HttpGet("{id}")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(MotoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ObterMoto(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var response = await _motoService.GetByIdAsync(id, userId);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Atualizar os dados de uma moto.
+    /// </summary>
+    /// <param name="id">ID da moto.</param>
+    /// <param name="request">Novos dados da moto.</param>
+    [HttpPut("{id}")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(MotoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AtualizarMoto(int id, [FromBody] MotoRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var response = await _motoService.AtualizarMotoAsync(id, request, userId);
+        return Ok(response);
     }
 }

@@ -4,12 +4,13 @@ import { useNavigate } from 'react-router';
 import { Typography, Input, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, InputNumber, Empty } from 'antd';
 import { ToolOutlined, SearchOutlined, EditOutlined, DeleteOutlined, SaveOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
 import type { ColumnType } from 'antd/es/table';
-import DashboardBreadcrumb from '../common/DashboardBreadcrumb';
-import { servicoService } from '../../services/servicoService';
-import { Servico } from '../../models/Servico';
-import { t } from '../../i18n';
-import { ApiError } from '../../services/http';
-import { handleApiError } from '../../utils/errorHandler';
+import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
+import { servicoService } from '@/app/services/servicoService';
+import { Servico } from '@/app/models/Servico';
+import { t } from '@/app/i18n';
+import { ApiError } from '@/app/services/http';
+import { handleApiError } from '@/app/utils/errorHandler';
+import { PATHS } from '@/app/paths';
 
 const { Title } = Typography;
 
@@ -212,7 +213,7 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
   };
 
   const showDetails = (id: number) => {
-    navigate(`/dashboard/concessionaria/catalogos-servicos/${id}`);
+    navigate(`${PATHS.CONCESSIONARIA_CATALOGOS_SERVICOS}/${id}`);
   };
 
   const getCategoryColor = (categoria: string) => {

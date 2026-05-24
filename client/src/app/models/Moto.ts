@@ -9,4 +9,10 @@ export interface Moto {
   concessionariaId?: number;
   nomeConcessionaria?: string;
   foto?: string;
+  cor: string;
+  kilometragemAtual: number;
+  dataVenda: string;
+  linha: string;
+  cilindrada: string;
+  ano: number;
 }

@@ -29,7 +29,7 @@ public class ModeloMotoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ModeloMotoService(context);
-        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva");
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva", "Ninja", "400cc", 2023);
 
         // Act
         var result = service.CadastrarModeloMoto(request);
@@ -104,10 +104,8 @@ public class ModeloMotoServiceTests
         using var context = CreateContext();
         var modelo = new ModeloMoto { NomeModelo = "R1", Marca = "Yamaha", Categoria = "Esportiva", Ativo = true };
         context.ModelosMotos.Add(modelo);
-        context.SaveChanges();
-
         var service = new ModeloMotoService(context);
-        var request = new ModeloMotoRequest("R1 M", "Yamaha", "Super Esportiva");
+        var request = new ModeloMotoRequest("R1 M", "Yamaha", "Super Esportiva", "YZF", "1000cc", 2024);
 
         // Act
         var result = service.AtualizarModeloMoto(modelo.Id, request);
@@ -128,7 +126,7 @@ public class ModeloMotoServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ModeloMotoService(context);
-        var request = new ModeloMotoRequest("R1 M", "Yamaha", "Super Esportiva");
+        var request = new ModeloMotoRequest("R1 M", "Yamaha", "Super Esportiva", null, null, null);
 
         // Act
         var result = service.AtualizarModeloMoto(999, request);

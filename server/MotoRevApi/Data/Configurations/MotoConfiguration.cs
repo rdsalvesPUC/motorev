@@ -25,11 +25,17 @@ public class MotoConfiguration : IEntityTypeConfiguration<Moto>
         builder.Property(m => m.Foto)
             .IsRequired(false);
 
+        builder.Property(m => m.Cor)
+            .IsRequired()
+            .HasMaxLength(30);
+
         // Relacionamentos
         builder.HasOne(m => m.Cliente)
             .WithMany()
             .HasForeignKey(m => m.ClienteId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(m => m.ClienteId); // Índice otimizado para ClienteId
 
         builder.HasOne(m => m.ModeloMoto)
             .WithMany()

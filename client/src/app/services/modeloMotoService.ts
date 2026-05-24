@@ -1,6 +1,6 @@
-import { apiFetch, handleResponse, BASE_URL } from './http';
-import { ModeloMoto } from '../models/ModeloMoto';
-import { t } from '../i18n';
+import { apiFetch, handleResponse, BASE_URL } from '@/app/services/http';
+import { ModeloMoto } from '@/app/models/ModeloMoto';
+import { t } from '@/app/i18n';
 
 const MODELO_MOTO_URL = `${BASE_URL}/ModeloMoto`;
 

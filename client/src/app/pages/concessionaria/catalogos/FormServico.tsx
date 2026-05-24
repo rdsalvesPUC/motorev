@@ -1,13 +1,14 @@
 import { Typography, Form, Input, InputNumber, Select, Button, Space, message, Card, Spin } from 'antd';
 import { ToolOutlined, ArrowLeftOutlined } from '@ant-design/icons';
-import DashboardBreadcrumb from '../common/DashboardBreadcrumb';
+import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { useForm, Controller } from 'react-hook-form';
-import { servicoService } from '../../services/servicoService';
-import { ServicoRequest } from '../../models/ServicoRequest';
-import { ApiError } from '../../services/http';
-import { handleApiError } from '../../utils/errorHandler';
-import { t } from '../../i18n';
+import { servicoService } from '@/app/services/servicoService';
+import { ServicoRequest } from '@/app/models/ServicoRequest';
+import { ApiError } from '@/app/services/http';
+import { handleApiError } from '@/app/utils/errorHandler';
+import { t } from '@/app/i18n';
 import { useState } from 'react';
+import { PATH_SEGMENTS } from '@/app/paths';
 
 const { Title } = Typography;
 
@@ -57,7 +58,7 @@ export default function FormServico({ onCancel }: FormServicoProps) {
               {
                 title: t('serviceCatalog.title'),
                 icon: <ToolOutlined />,
-                path: 'catalogos-servicos',
+                path: PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_SERVICOS,
               },
               {
                 title: t('serviceCatalog.newService'),

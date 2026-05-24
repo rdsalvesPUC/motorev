@@ -1,6 +1,6 @@
 import { message } from 'antd';
-import { ApiError } from '../services/http';
-import { t } from '../i18n';
+import { ApiError } from '@/app/services/http';
+import { t } from '@/app/i18n';
 
 export const handleApiError = (error: unknown, fallbackKey: string = 'error.unexpected') => {
   if (error instanceof ApiError) {

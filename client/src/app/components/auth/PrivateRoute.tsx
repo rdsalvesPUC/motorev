@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router';
-import { PATHS } from '../paths';
-import { tokenManager } from '../services/tokenManager';
+import { PATHS } from '@/app/paths';
+import { tokenManager } from '@/app/services/tokenManager';
 
 interface PrivateRouteProps {
   children: React.ReactElement;

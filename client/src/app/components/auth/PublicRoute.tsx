@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { PATHS } from '../paths';
-import { tokenManager } from '../services/tokenManager';
+import { PATHS } from '@/app/paths';
+import { tokenManager } from '@/app/services/tokenManager';
 
 interface PublicRouteProps {
   children: React.ReactElement;
