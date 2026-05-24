@@ -193,4 +193,212 @@ public class MotoServiceTests
         Assert.NotNull(result);
         Assert.Empty(result);
     }
+
+    [Fact]
+    public async Task AtualizarMotoAsync_DeveAtualizarPlacaECorComSucesso()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc", Ano = 2023 };
+        context.ModelosMotos.Add(modelo);
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        context.Motos.Add(new Moto
+        {
+            Id = 1,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ClienteId = 1,
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Preta",
+            KilometragemAtual = 1000,
+            DataVenda = DateTime.Now.AddYears(-1)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+        var request = new MotoUpdateRequest("XYZ-9999", "Azul", 1000);
+
+        // Act
+        var response = await service.AtualizarMotoAsync(1, request, "user123");
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Equal("XYZ9999", response.Placa);
+        Assert.Equal("Azul", response.Cor);
+        // Chassi deve permanecer inalterado
+        Assert.Equal("CHASSI12345678901", response.Chassi);
+        // ModeloMotoId deve permanecer inalterado
+        Assert.Equal(1, response.ModeloMotoId);
+    }
+
+    [Fact]
+    public async Task AtualizarMotoAsync_DeveLancarDuplicateDataException_QuandoPlacaJaEmUso()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc" };
+        context.ModelosMotos.Add(modelo);
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        context.Motos.Add(new Moto
+        {
+            Id = 1,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ClienteId = 1,
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Preta",
+            KilometragemAtual = 0,
+            DataVenda = DateTime.Now
+        });
+        // Segunda moto com outra placa
+        context.Motos.Add(new Moto
+        {
+            Id = 2,
+            Placa = "XYZ9999",
+            Chassi = "CHASSI99999999999",
+            ClienteId = 1,
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Azul",
+            KilometragemAtual = 0,
+            DataVenda = DateTime.Now
+        });
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+        // Tenta atualizar moto 1 com a placa da moto 2
+        var request = new MotoUpdateRequest("XYZ-9999", "Verde");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(
+            () => service.AtualizarMotoAsync(1, request, "user123"));
+    }
+
+    [Fact]
+    public async Task AtualizarMotoAsync_DeveLancarNotFoundException_QuandoMotoNaoEncontrada()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+        var request = new MotoUpdateRequest("ABC-1234", "Preta");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => service.AtualizarMotoAsync(999, request, "user123"));
+    }
+
+    [Fact]
+    public async Task AtualizarMotoAsync_DeveManter_ChassiModeloAnoImutaveis()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc", Ano = 2023 };
+        context.ModelosMotos.Add(modelo);
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        context.Motos.Add(new Moto
+        {
+            Id = 1,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ClienteId = 1,
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Preta",
+            KilometragemAtual = 5000,
+            DataVenda = new DateTime(2022, 1, 15)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+        // O DTO de update NÃO contém Chassi, ModeloMotoId nem Ano — garantia estrutural
+        var request = new MotoUpdateRequest("DEF-5678", "Branca", 5000);
+
+        // Act
+        var response = await service.AtualizarMotoAsync(1, request, "user123");
+
+        // Assert: apenas Placa e Cor mudam
+        Assert.Equal("DEF5678", response.Placa);
+        Assert.Equal("Branca", response.Cor);
+        Assert.Equal("CHASSI12345678901", response.Chassi);
+        Assert.Equal(1, response.ModeloMotoId);
+    }
+
+    [Fact]
+    public async Task AtualizarMotoAsync_DeveAtualizarKilometragem_QuandoValorMaiorOuIgual()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc", Ano = 2023 };
+        context.ModelosMotos.Add(modelo);
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        context.Motos.Add(new Moto
+        {
+            Id = 1,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ClienteId = 1,
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Preta",
+            KilometragemAtual = 5000,
+            DataVenda = new DateTime(2022, 1, 15)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+        var request = new MotoUpdateRequest("ABC-1234", "Preta", 6000);
+
+        // Act
+        var response = await service.AtualizarMotoAsync(1, request, "user123");
+
+        // Assert
+        Assert.Equal(6000, response.KilometragemAtual);
+    }
+
+    [Fact]
+    public async Task AtualizarMotoAsync_DeveLancarBusinessRuleException_QuandoValorMenor()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc", Ano = 2023 };
+        context.ModelosMotos.Add(modelo);
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        context.Motos.Add(new Moto
+        {
+            Id = 1,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ClienteId = 1,
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Preta",
+            KilometragemAtual = 5000,
+            DataVenda = new DateTime(2022, 1, 15)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+        var request = new MotoUpdateRequest("ABC-1234", "Preta", 4999);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.AtualizarMotoAsync(1, request, "user123"));
+    }
 }

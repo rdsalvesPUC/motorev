@@ -130,13 +130,13 @@ public class ModeloMotoController : ControllerBase
     /// Alterna o status (Ativo/Inativo) de um modelo de moto (Soft Delete).
     /// </summary>
     /// <param name="id">O ID do modelo de moto cujo status será alternado.</param>
-    /// <response code="200">Status do modelo de moto alternado com sucesso.</response>
+    /// <response code="200">Status do modelo de moto alternado com sucesso. Retorna uma mensagem e os dados do modelo atualizado.</response>
     /// <response code="401">Usuário não autenticado.</response>
     /// <response code="403">Usuário não tem permissão para alternar status.</response>
     /// <response code="404">Modelo de moto não encontrado.</response>
     [HttpPatch("alternar-status/{id}")]
     [Authorize(Roles = Roles.Concessionaria)]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ModeloMotoResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

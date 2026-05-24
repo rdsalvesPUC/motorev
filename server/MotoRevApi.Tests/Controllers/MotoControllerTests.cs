@@ -103,4 +103,53 @@ public class MotoControllerTests
         Assert.Equal(200, okResult.StatusCode);
         Assert.Equal(motos, okResult.Value);
     }
+
+    [Fact]
+    public async Task AtualizarMoto_DeveRetornarOk_QuandoDadosValidos()
+    {
+        // Arrange
+        var request = new MotoUpdateRequest("XYZ-9999", "Azul", 0);
+        var response = new MotoResponse(1, "XYZ9999", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Azul", 0, DateTime.Now, "Linha", "100cc");
+
+        var userId = "user-id-123";
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId)
+        }, "mock"));
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        _motoServiceMock.Setup(s => s.AtualizarMotoAsync(1, request, userId))
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.AtualizarMoto(1, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task AtualizarMoto_DeveRetornarUnauthorized_QuandoSemUserId()
+    {
+        // Arrange
+        var request = new MotoUpdateRequest("XYZ-9999", "Azul", 0);
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity()); // Sem NameIdentifier Claim
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        // Act
+        var result = await _controller.AtualizarMoto(1, request);
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
+    }
 }

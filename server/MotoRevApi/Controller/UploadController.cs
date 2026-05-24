@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace MotoRevApi.Controller;
 
+/// <summary>
+/// API controller para upload de arquivos de imagem.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Tags("Upload")]
@@ -17,12 +20,16 @@ public class UploadController : ControllerBase
     /// <summary>
     /// Realiza o upload de uma imagem e a armazena localmente no servidor de arquivos estáticos.
     /// </summary>
-    /// <param name="file">O arquivo de imagem a ser enviado.</param>
+    /// <remarks>
+    /// Aceita arquivos JPG, JPEG, PNG, WEBP e GIF. O arquivo é salvo em <c>wwwroot/uploads/</c>
+    /// com um nome único (GUID) e retorna a URL relativa para acesso público.
+    /// </remarks>
+    /// <param name="file">O arquivo de imagem a ser enviado (multipart/form-data).</param>
     /// <response code="200">Retorna a URL relativa do arquivo enviado.</response>
-    /// <response code="400">Se nenhum arquivo for enviado ou se a extensão não for permitida.</response>
+    /// <response code="400">Se nenhum arquivo for enviado, estiver vazio ou tiver extensão não permitida.</response>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UploadImage(IFormFile file)
     {
         if (file == null || file.Length == 0)

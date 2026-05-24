@@ -34,10 +34,12 @@ public class MotoController : ControllerBase
     /// </remarks>
     /// <response code="200">Lista de motos retornada com sucesso.</response>
     /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem a role 'Cliente'.</response>
     [HttpGet]
     [Authorize(Roles = Roles.Cliente)]
     [ProducesResponseType(typeof(List<MotoResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> ListarMinhasMotos()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -87,13 +89,22 @@ public class MotoController : ControllerBase
     }
 
     /// <summary>
-    /// Obter detalhes de uma moto específica.
+    /// Obter detalhes de uma moto específica do cliente autenticado.
     /// </summary>
+    /// <remarks>
+    /// Retorna somente motos que pertencem ao cliente identificado pelo token JWT.
+    /// </remarks>
     /// <param name="id">ID da moto.</param>
+    /// <response code="200">Dados da moto retornados com sucesso.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem a role 'Cliente'.</response>
+    /// <response code="404">Moto não encontrada ou não pertence ao cliente autenticado.</response>
     [HttpGet("{id}")]
     [Authorize(Roles = Roles.Cliente)]
     [ProducesResponseType(typeof(MotoResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> ObterMoto(int id)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -107,16 +118,31 @@ public class MotoController : ControllerBase
     }
 
     /// <summary>
-    /// Atualizar os dados de uma moto.
+    /// Atualizar os dados editáveis de uma moto do cliente autenticado.
     /// </summary>
-    /// <param name="id">ID da moto.</param>
-    /// <param name="request">Novos dados da moto.</param>
+    /// <remarks>
+    /// Os campos <c>Placa</c>, <c>Cor</c> e <c>KilometragemAtual</c> são atualizados.
+    /// Os campos <c>Chassi</c>, <c>ModeloMotoId</c> e <c>Ano</c> são imutáveis e ignorados nesta operação,
+    /// mesmo que sejam enviados no corpo da requisição.
+    /// A <c>KilometragemAtual</c> não pode ser inferior à quilometragem atual do veículo no banco de dados.
+    /// </remarks>
+    /// <param name="id">ID da moto a ser atualizada.</param>
+    /// <param name="request">Dados editáveis da moto (Placa, Cor e KilometragemAtual).</param>
+    /// <response code="200">Moto atualizada com sucesso.</response>
+    /// <response code="400">Dados de entrada inválidos.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="404">Moto não encontrada ou não pertence ao cliente.</response>
+    /// <response code="409">Placa já está em uso por outro veículo.</response>
+                                                                                /// <response code="422">A quilometragem não pode ser reduzida.</response>
     [HttpPut("{id}")]
     [Authorize(Roles = Roles.Cliente)]
     [ProducesResponseType(typeof(MotoResponse), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AtualizarMoto(int id, [FromBody] MotoRequest request)
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> AtualizarMoto(int id, [FromBody] MotoUpdateRequest request)
     {
         if (!ModelState.IsValid)
         {

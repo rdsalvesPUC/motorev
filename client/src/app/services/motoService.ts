@@ -1,6 +1,7 @@
 import { apiFetch, handleResponse, BASE_URL } from '@/app/services/http';
 import { Moto } from '@/app/models/Moto';
 import { MotoRequest } from '@/app/models/MotoRequest';
+import { MotoUpdateRequest } from '@/app/models/MotoUpdateRequest';
 import { t } from '@/app/i18n';
 
 const MOTO_URL = `${BASE_URL}/Moto`;
@@ -28,7 +29,7 @@ export const motoService = {
     return handleResponse(response, t('error.getMoto'));
   },
 
-  update: async (id: number, moto: MotoRequest): Promise<Moto> => {
+  update: async (id: number, moto: MotoUpdateRequest): Promise<Moto> => {
     const response = await apiFetch(`${MOTO_URL}/${id}`, {
       method: 'PUT',
       body: JSON.stringify(moto),

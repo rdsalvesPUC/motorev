@@ -25,6 +25,7 @@ import {
   ArrowLeftOutlined,
   PlusOutlined,
   InfoCircleOutlined,
+  LockOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router';
 import { PATHS, PATH_SEGMENTS } from '@/app/paths';
@@ -36,6 +37,7 @@ import { motoService } from '@/app/services/motoService';
 import { ModeloMoto } from '@/app/models/ModeloMoto';
 import { Concessionaria } from '@/app/models/Concessionaria';
 import { MotoRequest } from '@/app/models/MotoRequest';
+import { MotoUpdateRequest } from '@/app/models/MotoUpdateRequest';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { t } from '@/app/i18n';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
@@ -59,6 +61,7 @@ export default function MotoForm() {
   const [fileList, setFileList] = useState<any[]>([]);
 
   const [modeloSelecionado, setModeloSelecionado] = useState<ModeloMoto | null>(null);
+  const [originalKm, setOriginalKm] = useState<number>(0);
 
   const customUpload = async (options: any) => {
     const { onSuccess, onError, file } = options;
@@ -89,8 +92,9 @@ export default function MotoForm() {
 
   useEffect(() => {
     const loadFormData = async () => {
+      let modelsData: ModeloMoto[] = [];
       try {
-        const modelsData = await modeloMotoService.getAll();
+        modelsData = await modeloMotoService.getAll();
         setModelos(modelsData);
       } catch (error) {
         handleApiError(error, 'error.fetchModelosMotos');
@@ -114,6 +118,7 @@ export default function MotoForm() {
             ...moto,
             dataVenda: moto.dataVenda ? dayjs(moto.dataVenda) : undefined,
           });
+          setOriginalKm(moto.kilometragemAtual);
 
           // Buscar e setar o modelo selecionado para exibir as especificações
           if (modelsData.length > 0) {
@@ -157,21 +162,25 @@ export default function MotoForm() {
   const onFinish = async (values: any) => {
     setSubmitting(true);
     try {
-      const motoData: MotoRequest = {
-        placa: values.placa,
-        chassi: values.chassi,
-        modeloMotoId: values.modeloMotoId,
-        concessionariaId: values.concessionariaId,
-        foto: fotoUrl,
-        cor: values.cor,
-        kilometragemAtual: values.kilometragemAtual,
-        dataVenda: values.dataVenda.format('YYYY-MM-DD'),
-      };
-
       if (isEdit) {
-        await motoService.update(Number(id), motoData);
+        const updateData: MotoUpdateRequest = {
+          placa: values.placa,
+          cor: values.cor,
+          kilometragemAtual: values.kilometragemAtual,
+        };
+        await motoService.update(Number(id), updateData);
         message.success(t('moto.atualizacao.success'));
       } else {
+        const motoData: MotoRequest = {
+          placa: values.placa,
+          chassi: values.chassi,
+          modeloMotoId: values.modeloMotoId,
+          concessionariaId: values.concessionariaId,
+          foto: fotoUrl,
+          cor: values.cor,
+          kilometragemAtual: values.kilometragemAtual,
+          dataVenda: values.dataVenda.format('YYYY-MM-DD'),
+        };
         await motoService.create(motoData);
         message.success(t('moto.cadastro.success'));
       }
@@ -226,57 +235,96 @@ export default function MotoForm() {
             }
             style={{ marginBottom: 24 }}
           >
-            <Form.Item
-              label={t('motoForm.modelo.selecione')}
-              name="modeloMotoId"
-              rules={[{ required: true, message: t('motoForm.modelo.required') }]}
-              style={{ maxWidth: 520 }}
-            >
-              <Select
-                showSearch
-                placeholder={t('motoForm.modelo.placeholder')}
-                options={modeloOptions}
-                onChange={handleModeloChange}
-                filterOption={(input, option) =>
-                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-                }
-                notFoundContent={t('motoForm.emptyModelos')}
-              />
-            </Form.Item>
+            {isEdit ? (
+              /* No modo edição, o Modelo é exibido somente-leitura com as especificações */
+              <>
+                <Alert
+                  type="warning"
+                  icon={<LockOutlined />}
+                  showIcon
+                  message={t('motoForm.edit.readonlyInfo')}
+                  style={{ marginBottom: 16 }}
+                />
+                {modeloSelecionado && (
+                  <Descriptions
+                    size="small"
+                    bordered
+                    column={{ xs: 2, sm: 4 }}
+                  >
+                    <Descriptions.Item label={t('motoForm.marca')}>
+                      <span>{modeloSelecionado.marca}</span>
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t('motoForm.modelo')}>
+                      <span>{modeloSelecionado.nomeModelo}</span>
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t('motoForm.ano.label')}>
+                      <Tag>{modeloSelecionado.ano}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t('motoForm.cilindrada.label')}>
+                      <Tag color="purple">{modeloSelecionado.cilindrada}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t('motoForm.linha.label')} span={4}>
+                      <Tag color="blue">{modeloSelecionado.linha}</Tag>
+                    </Descriptions.Item>
+                  </Descriptions>
+                )}
+              </>
+            ) : (
+              /* No modo criação, o Select de Modelo é editável */
+              <>
+                <Form.Item
+                  label={t('motoForm.modelo.selecione')}
+                  name="modeloMotoId"
+                  rules={[{ required: true, message: t('motoForm.modelo.required') }]}
+                  style={{ maxWidth: 520 }}
+                >
+                  <Select
+                    showSearch
+                    placeholder={t('motoForm.modelo.placeholder')}
+                    options={modeloOptions}
+                    onChange={handleModeloChange}
+                    filterOption={(input, option) =>
+                      (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                    }
+                    notFoundContent={t('motoForm.emptyModelos')}
+                  />
+                </Form.Item>
 
-            {modeloSelecionado && (
-              <Descriptions
-                size="small"
-                bordered
-                column={{ xs: 2, sm: 4 }}
-                style={{ marginTop: 4 }}
-              >
-                <Descriptions.Item label={t('motoForm.marca')}>
-                  <Text strong>{modeloSelecionado.marca}</Text>
-                </Descriptions.Item>
-                <Descriptions.Item label={t('motoForm.modelo')}>
-                  <Text strong>{modeloSelecionado.nomeModelo}</Text>
-                </Descriptions.Item>
-                <Descriptions.Item label={t('motoForm.ano.label')}>
-                  <Tag>{modeloSelecionado.ano}</Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label={t('motoForm.cilindrada.label')}>
-                  <Tag color="purple">{modeloSelecionado.cilindrada}</Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label={t('motoForm.linha.label')}  span={4}>
-                  <Tag color="blue">{modeloSelecionado.linha}</Tag>
-                </Descriptions.Item>
-              </Descriptions>
-            )}
+                {modeloSelecionado && (
+                  <Descriptions
+                    size="small"
+                    bordered
+                    column={{ xs: 2, sm: 4 }}
+                    style={{ marginTop: 4 }}
+                  >
+                    <Descriptions.Item label={t('motoForm.marca')}>
+                      <span>{modeloSelecionado.marca}</span>
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t('motoForm.modelo')}>
+                      <span>{modeloSelecionado.nomeModelo}</span>
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t('motoForm.ano.label')}>
+                      <Tag>{modeloSelecionado.ano}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t('motoForm.cilindrada.label')}>
+                      <Tag color="purple">{modeloSelecionado.cilindrada}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label={t('motoForm.linha.label')} span={4}>
+                      <Tag color="blue">{modeloSelecionado.linha}</Tag>
+                    </Descriptions.Item>
+                  </Descriptions>
+                )}
 
-            {!modeloSelecionado && (
-              <Alert
-                type="info"
-                icon={<InfoCircleOutlined />}
-                showIcon
-                message={t('motoForm.modelo.especificacoes')}
-                style={{ marginTop: 4 }}
-              />
+                {!modeloSelecionado && (
+                  <Alert
+                    type="info"
+                    icon={<InfoCircleOutlined />}
+                    showIcon
+                    message={t('motoForm.modelo.especificacoes')}
+                    style={{ marginTop: 4 }}
+                  />
+                )}
+              </>
             )}
           </Card>
 
@@ -323,7 +371,7 @@ export default function MotoForm() {
               <Form.Item
                 label={t('motoForm.dataVenda.label')}
                 name="dataVenda"
-                rules={[{ required: true, message: t('motoForm.dataVenda.required') }]}
+                rules={[{ required: !isEdit, message: t('motoForm.dataVenda.required') }]}
                 style={{ flex: '1 1 180px' }}
               >
                 <DatePicker
@@ -331,6 +379,7 @@ export default function MotoForm() {
                   placeholder="DD/MM/AAAA"
                   style={{ width: '100%' }}
                   disabledDate={(d) => d.isAfter(dayjs())}
+                  disabled={isEdit}
                 />
               </Form.Item>
 
@@ -347,44 +396,56 @@ export default function MotoForm() {
                     label: c.nome,
                   }))}
                   notFoundContent={t('motoForm.emptyConcessionarias')}
+                  disabled={isEdit}
                 />
               </Form.Item>
             </Flex>
 
-            <Form.Item
-              label={t('motoForm.chassi.label')}
-              name="chassi"
-              rules={[
-                { required: true, message: t('motoForm.chassi.required') },
-                {
-                  pattern: /^[a-zA-Z0-9]{17}$/,
-                  message: t('motoForm.chassi.invalid'),
-                },
-              ]}
-              style={{ maxWidth: 340 }}
-            >
-              <Input
-                placeholder={t('motoForm.chassi.placeholder')}
-                style={{ textTransform: 'uppercase' }}
-                maxLength={17}
-              />
-            </Form.Item>
+              <Form.Item
+                label={t('motoForm.chassi.label')}
+                name="chassi"
+                rules={[
+                  { required: !isEdit, message: t('motoForm.chassi.required') },
+                  {
+                    pattern: /^[a-zA-Z0-9]{17}$/,
+                    message: t('motoForm.chassi.invalid'),
+                  },
+                ]}
+                style={{ maxWidth: 340 }}
+              >
+                <Input
+                  placeholder={t('motoForm.chassi.placeholder')}
+                  style={{ textTransform: 'uppercase' }}
+                  maxLength={17}
+                  disabled={isEdit}
+                />
+              </Form.Item>
 
-            <Form.Item
-              label={t('motoForm.kilometragem.label')}
-              name="kilometragemAtual"
-              rules={[{ required: true, message: t('motoForm.kilometragem.required') }]}
-              style={{ maxWidth: 220 }}
-            >
-              <InputNumber
-                placeholder={t('motoForm.kilometragem.placeholder')}
-                style={{ width: '100%' }}
-                min={0}
-                addonAfter="km"
-                formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-                parser={(v) => Number(v?.replace(/\./g, '') ?? 0)}
-              />
-            </Form.Item>
+              <Form.Item
+                label={t('motoForm.kilometragem.label')}
+                name="kilometragemAtual"
+                rules={[
+                  { required: true, message: t('motoForm.kilometragem.required') },
+                  {
+                    validator: (_, value) => {
+                      if (isEdit && value !== undefined && value !== null && value < originalKm) {
+                        return Promise.reject(new Error(t('motoForm.kilometragem.cannotDecrease', { current: originalKm })));
+                      }
+                      return Promise.resolve();
+                    }
+                  }
+                ]}
+                style={{ maxWidth: 220 }}
+              >
+                <InputNumber
+                  placeholder={t('motoForm.kilometragem.placeholder')}
+                  style={{ width: '100%' }}
+                  min={isEdit ? originalKm : 0}
+                  addonAfter="km"
+                  formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                  parser={(v) => Number(v?.replace(/\./g, '') ?? 0)}
+                />
+              </Form.Item>
 
             <Form.Item
               label={t('motoForm.foto.label')}
@@ -424,7 +485,7 @@ export default function MotoForm() {
               htmlType="submit"
               size="large"
               loading={submitting}
-              disabled={!modeloSelecionado}
+              disabled={!isEdit && !modeloSelecionado}
             >
               {isEdit ? t('motoForm.submitEdit') : t('motoForm.submit')}
             </Button>

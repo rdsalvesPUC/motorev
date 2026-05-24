@@ -52,6 +52,12 @@ public class GlobalExceptionHandler : IExceptionHandler
                 Title = "Dados Duplicados",
                 Detail = dupEx.Message
             },
+            BusinessRuleException ruleEx => new ProblemDetails
+            {
+                Status = StatusCodes.Status422UnprocessableEntity,
+                Title = "Regra de Negócio Violada",
+                Detail = ruleEx.Message
+            },
             DbUpdateException dbEx when dbEx.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627) => new ProblemDetails
             {
                 Status = StatusCodes.Status409Conflict,

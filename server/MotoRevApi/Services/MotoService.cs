@@ -131,7 +131,7 @@ public class MotoService
         return moto.Adapt<MotoResponse>();
     }
 
-    public virtual async Task<MotoResponse> AtualizarMotoAsync(int id, MotoRequest request, string userId)
+    public virtual async Task<MotoResponse> AtualizarMotoAsync(int id, MotoUpdateRequest request, string userId)
     {
         var cliente = await _context.Clientes
             .FirstOrDefaultAsync(c => c.UsuarioId == userId);
@@ -149,37 +149,46 @@ public class MotoService
         }
 
         var placaUpper = request.Placa.ToUpper().Replace("-", "");
-        var chassiUpper = request.Chassi.ToUpper();
 
-        // Validar se Placa ou Chassi já estão vinculados a outra moto ativa (exceto a atual)
-        var motoExistente = await _context.Motos
-            .AnyAsync(m => m.Ativo && m.Id != id && (m.Placa == placaUpper || m.Chassi == chassiUpper));
+        // Validar se a nova placa já está em uso por outra moto ativa (exceto a atual)
+        var placaEmUso = await _context.Motos
+            .AnyAsync(m => m.Ativo && m.Id != id && m.Placa == placaUpper);
 
-        if (motoExistente)
+        if (placaEmUso)
         {
-            throw new DuplicateDataException("Outro veículo com esta placa ou chassi já cadastrado.");
+            throw new DuplicateDataException("Outro veículo com esta placa já cadastrado.");
         }
 
-        // Validar a existência do Modelo de Moto
-        var modelo = await _context.ModelosMotos
-            .FirstOrDefaultAsync(m => m.Id == request.ModeloMotoId && m.Ativo);
-        if (modelo == null)
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
         {
-            throw new NotFoundException("Modelo de moto não encontrado.");
+            // Valida que a nova quilometragem não é inferior à atual
+            if (request.KilometragemAtual < moto.KilometragemAtual)
+            {
+                throw new BusinessRuleException(
+                    $"A quilometragem não pode ser reduzida. Valor atual: {moto.KilometragemAtual} km.");
+            }
+
+            // Atualiza apenas os campos editáveis (Chassi, ModeloMotoId e Ano são imutáveis)
+            moto.Placa = placaUpper;
+            moto.Cor = request.Cor;
+            moto.KilometragemAtual = request.KilometragemAtual;
+
+            _context.Motos.Update(moto);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            var updatedMoto = await _context.Motos
+                .Include(m => m.ModeloMoto)
+                .Include(m => m.Concessionaria)
+                .FirstAsync(m => m.Id == moto.Id);
+
+            return updatedMoto.Adapt<MotoResponse>();
         }
-
-        request.Adapt(moto);
-        moto.Placa = placaUpper;
-        moto.Chassi = chassiUpper;
-
-        _context.Motos.Update(moto);
-        await _context.SaveChangesAsync();
-
-        var updatedMoto = await _context.Motos
-            .Include(m => m.ModeloMoto)
-            .Include(m => m.Concessionaria)
-            .FirstAsync(m => m.Id == moto.Id);
-
-        return updatedMoto.Adapt<MotoResponse>();
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }
