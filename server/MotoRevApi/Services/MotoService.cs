@@ -191,4 +191,38 @@ public class MotoService
             throw;
         }
     }
+
+    public virtual Task<bool> TemAgendamentosPendentesAsync(int motoId)
+    {
+        // Como o fluxo de agendamentos ainda não foi implementado,
+        // retorna false por padrão.
+        return Task.FromResult(false);
+    }
+
+    public virtual async Task InativarMotoAsync(int id, string userId)
+    {
+        var cliente = await _context.Clientes
+            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+        if (cliente == null)
+        {
+            throw new NotFoundException("Cliente não encontrado.");
+        }
+
+        var moto = await _context.Motos
+            .FirstOrDefaultAsync(m => m.Id == id && m.ClienteId == cliente.Id && m.Ativo);
+
+        if (moto == null)
+        {
+            throw new NotFoundException("Moto não encontrada.");
+        }
+
+        if (await TemAgendamentosPendentesAsync(id))
+        {
+            throw new BusinessRuleException("Não é possível inativar uma moto com agendamentos pendentes.");
+        }
+
+        moto.Ativo = false;
+        _context.Motos.Update(moto);
+        await _context.SaveChangesAsync();
+    }
 }

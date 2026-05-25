@@ -12,6 +12,8 @@ import {
   Modal,
   Statistic,
   Skeleton,
+  message,
+  Popconfirm,
 } from 'antd';
 import {
   CarOutlined,
@@ -22,7 +24,6 @@ import {
   DashboardOutlined,
   CalendarOutlined,
   TagOutlined,
-  EyeOutlined,
 } from '@ant-design/icons';
 import {motoService} from "@/app/services/motoService";
 import {Moto} from "@/app/models/Moto";
@@ -30,6 +31,7 @@ import { t } from '@/app/i18n';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { PATHS } from '@/app/paths';
 import { getImageUrl } from '@/app/utils/imageUtils';
+import { ApiError } from '@/app/services/http';
 
 const { Title, Text } = Typography;
 
@@ -60,23 +62,13 @@ function MotoCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const handleDelete = () => {
-    Modal.confirm({
-      title: t('minhasMotos.remove.title'),
-      content: t('minhasMotos.remove.confirm', { nome: `${moto.marca} ${moto.nomeModelo} · ${moto.placa}` }),
-      okText: t('minhasMotos.remove.ok'),
-      okType: 'danger',
-      cancelText: t('minhasMotos.remove.cancel'),
-      onOk: onDelete,
-    });
-  };
-
   const dataVendaFormatada = new Date(moto.dataVenda).toLocaleDateString('pt-BR');
 
   return (
       <Card
           hoverable
           style={{ width: '100%' }}
+          onClick={onViewDetails}
           cover={
             <Flex
                 justify="center"
@@ -99,30 +91,38 @@ function MotoCard({
           }
           actions={[
             <Button
-                key="detalhes"
-                type="link"
-                icon={<EyeOutlined />}
-                onClick={onViewDetails}
-            >
-              {t('minhasMotos.card.details')}
-            </Button>,
-            <Button
                 key="editar"
                 type="link"
                 icon={<EditOutlined />}
-                onClick={onEdit}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
             >
               {t('minhasMotos.card.edit')}
             </Button>,
-            <Button
+            <Popconfirm
                 key="deletar"
-                type="link"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={handleDelete}
+                title={t('minhasMotos.remove.title')}
+                description={t('minhasMotos.remove.confirm', { nome: `${moto.marca} ${moto.nomeModelo} · ${moto.placa}` })}
+                onConfirm={(e) => {
+                  e?.stopPropagation();
+                  onDelete();
+                }}
+                onCancel={(e) => e?.stopPropagation()}
+                okText={t('minhasMotos.remove.ok')}
+                cancelText={t('minhasMotos.remove.cancel')}
+                okButtonProps={{ danger: true }}
             >
-              {t('minhasMotos.card.remove')}
-            </Button>,
+              <Button
+                  type="link"
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={(e) => e.stopPropagation()}
+              >
+                {t('minhasMotos.card.remove')}
+              </Button>
+            </Popconfirm>,
           ]}
       >
         <Flex vertical gap="small">
@@ -194,9 +194,20 @@ export default function MinhasMotos({ }: MinhasMotosProps) {
   );
 
   const handleDelete = async (id: number) => {
-    // Nota: O endpoint de deleção ainda não foi solicitado nas tasks, 
-    // mas o botão está na UI. Removendo localmente por enquanto.
-    setMotos((prev) => prev.filter((m) => m.id !== id));
+    try {
+      await motoService.delete(id);
+      message.success(t('motoDetalhes.remove.success'));
+      setMotos((prev) => prev.filter((m) => m.id !== id));
+    } catch (err: any) {
+      console.error('Falha ao inativar moto:', err);
+      const isPendingAppointments = err instanceof ApiError && err.status === 422;
+      Modal.error({
+        title: t('motoDetalhes.remove.error.title'),
+        content: isPendingAppointments
+          ? t('motoDetalhes.remove.error.pendingAppointments')
+          : (err.message || t('error.deleteMoto')),
+      });
+    }
   };
 
   if (loading) {
@@ -290,14 +301,14 @@ export default function MinhasMotos({ }: MinhasMotosProps) {
         ) : (
             <Flex wrap="wrap" gap="large">
               {motosFiltradas.map((moto) => (
-                  <div key={moto.id} style={{ width: 'calc(33.33% - 16px)', minWidth: 280 }}>
+                  <article key={moto.id} style={{ width: 'calc(33.33% - 16px)', minWidth: 280 }}>
                     <MotoCard
                         moto={moto}
                         onViewDetails={() => navigate(`${PATHS.CLIENTE_MOTOS_DETALHES}/${moto.id}`)}
                         onEdit={() => navigate(`${PATHS.CLIENTE_MOTOS_EDITAR}/${moto.id}`)}
                         onDelete={() => handleDelete(moto.id)}
                     />
-                  </div>
+                  </article>
               ))}
             </Flex>
         )}

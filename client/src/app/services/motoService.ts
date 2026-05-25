@@ -37,6 +37,13 @@ export const motoService = {
     return handleResponse(response, t('error.updateMoto'));
   },
 
+  delete: async (id: number): Promise<void> => {
+    const response = await apiFetch(`${MOTO_URL}/${id}`, {
+      method: 'DELETE',
+    });
+    return handleResponse(response, t('error.deleteMoto'));
+  },
+
   uploadImage: async (file: File): Promise<{ url: string }> => {
     const formData = new FormData();
     formData.append('file', file);

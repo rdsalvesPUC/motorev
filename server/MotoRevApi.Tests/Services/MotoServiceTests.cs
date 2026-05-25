@@ -4,6 +4,7 @@ using MotoRevApi.Dto.Request;
 using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
 using MotoRevApi.Services;
+using Moq;
 using Xunit;
 
 namespace MotoRevApi.Tests.Services;
@@ -491,5 +492,128 @@ public class MotoServiceTests
         // Act & Assert: Cliente 1 tenta acessar moto do Cliente 2, deve lançar NotFoundException
         await Assert.ThrowsAsync<NotFoundException>(
             () => service.GetByIdAsync(10, "user1"));
+    }
+
+    [Fact]
+    public async Task InativarMotoAsync_DeveInativarComSucesso_QuandoMotoExisteESemPendencias()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        
+        var moto = new Moto
+        {
+            Id = 10,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ClienteId = 1,
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Preta",
+            KilometragemAtual = 5000,
+            DataVenda = DateTime.Now
+        };
+        context.Motos.Add(moto);
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+
+        // Act
+        await service.InativarMotoAsync(10, "user123");
+
+        // Assert
+        using var verifyContext = CreateContext();
+        var updatedMoto = await verifyContext.Motos.FindAsync(10);
+        Assert.NotNull(updatedMoto);
+        Assert.False(updatedMoto.Ativo);
+    }
+
+    [Fact]
+    public async Task InativarMotoAsync_DeveLancarBusinessRuleException_QuandoMotoPossuiAgendamentosPendentes()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        
+        var moto = new Moto
+        {
+            Id = 10,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ClienteId = 1,
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Preta",
+            KilometragemAtual = 5000,
+            DataVenda = DateTime.Now
+        };
+        context.Motos.Add(moto);
+        await context.SaveChangesAsync();
+
+        // Criar Mock do MotoService para forçar TemAgendamentosPendentesAsync a retornar true
+        var serviceMock = new Mock<MotoService>(context);
+        serviceMock.Setup(s => s.TemAgendamentosPendentesAsync(10))
+            .ReturnsAsync(true);
+
+        // Configurar as outras chamadas virtuais para se comportarem normalmente chamando a base
+        serviceMock.CallBase = true;
+
+        // Act & Assert
+        var ex = await Assert.ThrowsAsync<BusinessRuleException>(
+            () => serviceMock.Object.InativarMotoAsync(10, "user123"));
+        Assert.Equal("Não é possível inativar uma moto com agendamentos pendentes.", ex.Message);
+    }
+
+    [Fact]
+    public async Task InativarMotoAsync_DeveLancarNotFoundException_QuandoMotoNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        context.Clientes.Add(cliente);
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => service.InativarMotoAsync(999, "user123"));
+    }
+
+    [Fact]
+    public async Task InativarMotoAsync_DeveLancarNotFoundException_QuandoMotoPertenceAOutroCliente()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var cliente1 = new Cliente { Id = 1, Nome = "Cliente 1", UsuarioId = "user1" };
+        var cliente2 = new Cliente { Id = 2, Nome = "Cliente 2", UsuarioId = "user2" };
+        context.Clientes.AddRange(cliente1, cliente2);
+
+        var moto = new Moto
+        {
+            Id = 10,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ClienteId = 2, // Pertence ao cliente 2
+            ModeloMotoId = 1,
+            Ativo = true,
+            Cor = "Preta",
+            KilometragemAtual = 5000,
+            DataVenda = DateTime.Now
+        };
+        context.Motos.Add(moto);
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+
+        // Act & Assert: Cliente 1 tenta inativar moto do Cliente 2, deve lançar NotFoundException
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => service.InativarMotoAsync(10, "user1"));
     }
 }

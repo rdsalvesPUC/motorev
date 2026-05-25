@@ -221,4 +221,92 @@ public class MotoControllerTests
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => _controller.ObterMoto(1));
     }
+
+    [Fact]
+    public async Task InativarMoto_DeveRetornarNoContent_QuandoInativadaComSucesso()
+    {
+        // Arrange
+        var userId = "user-id-123";
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId)
+        }, "mock"));
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        _motoServiceMock.Setup(s => s.InativarMotoAsync(1, userId))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.InativarMoto(1);
+
+        // Assert
+        var noContentResult = Assert.IsType<NoContentResult>(result);
+        Assert.Equal(204, noContentResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task InativarMoto_DeveRetornarUnauthorized_QuandoSemUserId()
+    {
+        // Arrange
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity()); // Sem NameIdentifier Claim
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        // Act
+        var result = await _controller.InativarMoto(1);
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task InativarMoto_DeveLancarNotFoundException_QuandoMotoInexistente()
+    {
+        // Arrange
+        var userId = "user-id-123";
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId)
+        }, "mock"));
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        _motoServiceMock.Setup(s => s.InativarMotoAsync(1, userId))
+            .ThrowsAsync(new NotFoundException("Moto não encontrada."));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => _controller.InativarMoto(1));
+    }
+
+    [Fact]
+    public async Task InativarMoto_DeveLancarBusinessRuleException_QuandoMotoPossuiAgendamentosPendentes()
+    {
+        // Arrange
+        var userId = "user-id-123";
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId)
+        }, "mock"));
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        _motoServiceMock.Setup(s => s.InativarMotoAsync(1, userId))
+            .ThrowsAsync(new BusinessRuleException("Não é possível inativar uma moto com agendamentos pendentes."));
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BusinessRuleException>(() => _controller.InativarMoto(1));
+    }
 }

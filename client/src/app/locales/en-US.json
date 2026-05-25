@@ -249,7 +249,7 @@
   "minhasMotos.card.purchased": "Purchased on {{date}}",
   "minhasMotos.card.chassi": "Chassis: {{chassi}}",
   "minhasMotos.remove.title": "Remove motorcycle",
-  "minhasMotos.remove.confirm": "Are you sure you want to remove \"{{nome}}\"?",
+  "minhasMotos.remove.confirm": "Are you sure you want to remove the motorcycle \"{{nome}}\"?",
   "minhasMotos.remove.ok": "Remove",
   "minhasMotos.remove.cancel": "Cancel",
   "motoDetalhes.title": "Motorcycle Details",
@@ -271,5 +271,14 @@
   "motoDetalhes.label.marca": "Brand",
   "motoDetalhes.label.linha": "Line",
   "motoDetalhes.label.cilindrada": "Engine Capacity",
-  "motoDetalhes.label.ano": "Model Year"
+  "motoDetalhes.label.ano": "Model Year",
+  "motoDetalhes.remove": "Remove Motorcycle",
+  "motoDetalhes.remove.title": "Remove Motorcycle",
+  "motoDetalhes.remove.confirm": "Are you sure you want to remove the motorcycle \"{{nome}}\"?",
+  "motoDetalhes.remove.ok": "Yes, Remove",
+  "motoDetalhes.remove.cancel": "Cancel",
+  "motoDetalhes.remove.success": "Motorcycle removed successfully!",
+  "motoDetalhes.remove.error.title": "Could not remove motorcycle",
+  "motoDetalhes.remove.error.pendingAppointments": "It is not possible to inactivate a motorcycle with pending appointments. Please cancel or complete them before proceeding.",
+  "error.deleteMoto": "Error removing motorcycle."
 }

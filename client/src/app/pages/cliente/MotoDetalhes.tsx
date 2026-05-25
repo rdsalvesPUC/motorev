@@ -11,6 +11,9 @@ import {
   Tag,
   Result,
   Skeleton,
+  Modal,
+  message,
+  Popconfirm,
 } from 'antd';
 import {
   CarOutlined,
@@ -19,6 +22,7 @@ import {
   ArrowLeftOutlined,
   EnvironmentOutlined,
   InfoCircleOutlined,
+  DeleteOutlined,
 } from '@ant-design/icons';
 import { motoService } from "@/app/services/motoService";
 import { Moto } from "@/app/models/Moto";
@@ -37,6 +41,30 @@ export default function MotoDetalhes() {
   const [loading, setLoading] = useState(true);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [deleting, setDeleting] = useState(false);
+
+  const executarRemocao = async () => {
+    if (!moto) return;
+    setDeleting(true);
+    try {
+      await motoService.delete(moto.id);
+      message.success(t('motoDetalhes.remove.success'));
+      navigate(PATHS.CLIENTE_MOTOS);
+    } catch (err: any) {
+      console.error('Falha ao inativar moto:', err);
+      const isPendingAppointments = err instanceof ApiError && err.status === 422;
+      Modal.error({
+        title: t('motoDetalhes.remove.error.title'),
+        content: isPendingAppointments
+          ? t('motoDetalhes.remove.error.pendingAppointments')
+          : (err.message || t('error.deleteMoto')),
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
 
   useEffect(() => {
     const carregarDetalhes = async () => {
@@ -110,16 +138,36 @@ export default function MotoDetalhes() {
           ]}
         />
 
-        <Flex align="center" gap="middle">
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => navigate(PATHS.CLIENTE_MOTOS)}
+        <Flex justify="space-between" align="center" wrap="wrap" gap="middle">
+          <Flex align="center" gap="middle">
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate(PATHS.CLIENTE_MOTOS)}
+            >
+              {t('motoForm.back')}
+            </Button>
+            <Title level={2} style={{ margin: 0 }}>
+              {t('motoDetalhes.title')}
+            </Title>
+          </Flex>
+          <Popconfirm
+            title={t('motoDetalhes.remove.title')}
+            description={t('motoDetalhes.remove.confirm', { nome: `${moto.marca} ${moto.nomeModelo} · ${moto.placa}` })}
+            onConfirm={executarRemocao}
+            okText={t('motoDetalhes.remove.ok')}
+            cancelText={t('motoDetalhes.remove.cancel')}
+            okButtonProps={{ danger: true, loading: deleting }}
+            placement="bottomRight"
           >
-            {t('motoForm.back')}
-          </Button>
-          <Title level={2} style={{ margin: 0 }}>
-            {t('motoDetalhes.title')}
-          </Title>
+            <Button
+              danger
+              type="primary"
+              icon={<DeleteOutlined />}
+              loading={deleting}
+            >
+              {t('motoDetalhes.remove')}
+            </Button>
+          </Popconfirm>
         </Flex>
       </Flex>
 
@@ -144,11 +192,11 @@ export default function MotoDetalhes() {
                 ) : (
                   <CarOutlined style={{ fontSize: 80, color: 'rgba(255,255,255,0.4)' }} />
                 )}
-                <div style={{ position: 'absolute', top: 16, right: 16 }}>
+                <span style={{ position: 'absolute', top: 16, right: 16 }}>
                   <Tag color="blue" style={{ fontSize: '14px', padding: '4px 8px' }}>
                     {moto.cor}
                   </Tag>
-                </div>
+                </span>
               </Flex>
             }
           >
