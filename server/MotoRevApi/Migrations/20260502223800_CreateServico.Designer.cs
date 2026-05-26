@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MotoRevApi.Data;
 
@@ -11,9 +12,11 @@ using MotoRevApi.Data;
 namespace MotoRevApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260502223800_CreateServico")]
+    partial class CreateServico
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -172,17 +175,10 @@ namespace MotoRevApi.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("UsuarioId1")
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("UsuarioId")
                         .IsUnique();
-
-                    b.HasIndex("UsuarioId1")
-                        .IsUnique()
-                        .HasFilter("[UsuarioId1] IS NOT NULL");
 
                     b.ToTable("Clientes");
                 });
@@ -195,13 +191,6 @@ namespace MotoRevApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Cnpj")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -211,97 +200,12 @@ namespace MotoRevApi.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("UsuarioId1")
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("Cnpj")
-                        .IsUnique();
 
                     b.HasIndex("UsuarioId")
                         .IsUnique();
 
-                    b.HasIndex("UsuarioId1")
-                        .IsUnique()
-                        .HasFilter("[UsuarioId1] IS NOT NULL");
-
                     b.ToTable("Concessionarias");
-                });
-
-            modelBuilder.Entity("MotoRevApi.Model.Endereco", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Bairro")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Cep")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Cidade")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Complemento")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("ConcessionariaId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Estado")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Logradouro")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Numero")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConcessionariaId");
-
-                    b.ToTable("Enderecos");
-                });
-
-            modelBuilder.Entity("MotoRevApi.Model.ModeloMoto", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Categoria")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Marca")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("NomeModelo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ModelosMotos");
                 });
 
             modelBuilder.Entity("MotoRevApi.Model.Moto", b =>
@@ -339,25 +243,8 @@ namespace MotoRevApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("Ativo")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
                     b.Property<int>("Categoria")
                         .HasColumnType("int");
-
-                    b.Property<string>("Codigo")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<decimal>("Custo")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Descricao")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
@@ -369,13 +256,8 @@ namespace MotoRevApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Codigo")
-                        .IsUnique()
-                        .HasFilter("[Ativo] = 1");
-
-                    b.HasIndex("Categoria", "Nome")
-                        .IsUnique()
-                        .HasFilter("[Ativo] = 1");
+                    b.HasIndex("Nome", "Categoria")
+                        .IsUnique();
 
                     b.ToTable("Servicos");
                 });
@@ -387,9 +269,6 @@ namespace MotoRevApi.Migrations
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("bit");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -513,10 +392,6 @@ namespace MotoRevApi.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MotoRevApi.Model.Usuario", null)
-                        .WithOne("Cliente")
-                        .HasForeignKey("MotoRevApi.Model.Cliente", "UsuarioId1");
-
                     b.Navigation("Usuario");
                 });
 
@@ -528,34 +403,7 @@ namespace MotoRevApi.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("MotoRevApi.Model.Usuario", null)
-                        .WithOne("Concessionaria")
-                        .HasForeignKey("MotoRevApi.Model.Concessionaria", "UsuarioId1");
-
                     b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("MotoRevApi.Model.Endereco", b =>
-                {
-                    b.HasOne("MotoRevApi.Model.Concessionaria", "Concessionaria")
-                        .WithMany("Enderecos")
-                        .HasForeignKey("ConcessionariaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Concessionaria");
-                });
-
-            modelBuilder.Entity("MotoRevApi.Model.Concessionaria", b =>
-                {
-                    b.Navigation("Enderecos");
-                });
-
-            modelBuilder.Entity("MotoRevApi.Model.Usuario", b =>
-                {
-                    b.Navigation("Cliente");
-
-                    b.Navigation("Concessionaria");
                 });
 #pragma warning restore 612, 618
         }
