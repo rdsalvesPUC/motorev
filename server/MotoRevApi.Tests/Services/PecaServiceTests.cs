@@ -29,60 +29,67 @@ public class PecaServiceTests
     {
         using var context = CreateContext();
         var service = new PecaService(context);
-        var request = new PecaRequest("Filtro de oleo", "Descricao valida", 10.99m);
+        var request = new PecaRequest("p001", "Filtro de oleo", CategoriaPeca.Filtros, 10.99m, 25);
 
         var result = service.CadastrarPeca(request);
 
         Assert.NotNull(result);
+        Assert.Equal("P001", result.Codigo);
         Assert.Equal("Filtro de oleo", result.Nome);
-        Assert.Equal("Descricao valida", result.Descricao);
-        Assert.Equal(10.99m, result.Valor);
+        Assert.Equal(nameof(CategoriaPeca.Filtros), result.Categoria);
+        Assert.Equal(10.99m, result.Preco);
+        Assert.Equal(25, result.Estoque);
+        Assert.Equal(nameof(StatusCadastro.Ativo), result.Status);
 
         var pecaNoDb = context.Pecas.SingleOrDefault();
         Assert.NotNull(pecaNoDb);
+        Assert.Equal("P001", pecaNoDb.Codigo);
         Assert.Equal("Filtro de oleo", pecaNoDb.Nome);
+        Assert.Equal(CategoriaPeca.Filtros, pecaNoDb.Categoria);
+        Assert.Equal(10.99m, pecaNoDb.Preco);
+        Assert.Equal(25, pecaNoDb.Estoque);
         Assert.Equal(StatusCadastro.Ativo, pecaNoDb.Status);
     }
 
-    [Fact]
-    public void CadastrarPeca_DeveCriarPecaSemDescricao()
-    {
-        using var context = CreateContext();
-        var service = new PecaService(context);
-        var request = new PecaRequest("Filtro de oleo", null, 10.99m);
-
-        var result = service.CadastrarPeca(request);
-
-        Assert.Null(result.Descricao);
-
-        var pecaNoDb = context.Pecas.SingleOrDefault();
-        Assert.NotNull(pecaNoDb);
-        Assert.Null(pecaNoDb.Descricao);
-    }
-
     [Theory]
-    [InlineData("Filtro de oleo", "Filtro de oleo")]
-    [InlineData("Filtro de oleo", "  Filtro de oleo  ")]
-    [InlineData("Filtro de Oleo", "filtro de oleo")]
-    public void CadastrarPeca_DeveLancarDuplicateDataException_QuandoNomeJaExiste(
-        string nomeExistente,
-        string novoNome)
+    [InlineData("P001", "P001")]
+    [InlineData("P001", "  P001  ")]
+    [InlineData("P001", "p001")]
+    public void CadastrarPeca_DeveLancarDuplicateDataException_QuandoCodigoJaExiste(
+        string codigoExistente,
+        string novoCodigo)
     {
         using var context = CreateContext();
         context.Pecas.Add(new Peca
         {
-            Nome = nomeExistente,
-            Descricao = "Descricao existente",
-            Valor = 10.99m,
+            Codigo = codigoExistente,
+            Nome = "Filtro de oleo",
+            Categoria = CategoriaPeca.Filtros,
+            Preco = 10.99m,
+            Estoque = 25,
             Status = StatusCadastro.Ativo
         });
         context.SaveChanges();
 
         var service = new PecaService(context);
-        var request = new PecaRequest(novoNome, "Nova descricao", 20.99m);
+        var request = new PecaRequest(novoCodigo, "Vela de ignicao", CategoriaPeca.Eletrica, 20.99m, 10);
 
         Assert.Throws<DuplicateDataException>(() => service.CadastrarPeca(request));
         Assert.Single(context.Pecas);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("A")]
+    public void CadastrarPeca_DeveLancarValidationException_QuandoCodigoInvalido(string codigo)
+    {
+        using var context = CreateContext();
+        var service = new PecaService(context);
+        var request = new PecaRequest(codigo, "Filtro de oleo", CategoriaPeca.Filtros, 10.99m, 25);
+
+        Assert.Throws<ValidationException>(() => service.CadastrarPeca(request));
+        Assert.Empty(context.Pecas);
     }
 
     [Theory]
@@ -93,18 +100,18 @@ public class PecaServiceTests
     {
         using var context = CreateContext();
         var service = new PecaService(context);
-        var request = new PecaRequest(nome, "Descricao valida", 10.99m);
+        var request = new PecaRequest("P001", nome, CategoriaPeca.Filtros, 10.99m, 25);
 
         Assert.Throws<ValidationException>(() => service.CadastrarPeca(request));
         Assert.Empty(context.Pecas);
     }
 
     [Fact]
-    public void CadastrarPeca_DeveLancarValidationException_QuandoDescricaoTemMaisDe1024Caracteres()
+    public void CadastrarPeca_DeveLancarValidationException_QuandoCategoriaAusente()
     {
         using var context = CreateContext();
         var service = new PecaService(context);
-        var request = new PecaRequest("Filtro de oleo", new string('A', 1025), 10.99m);
+        var request = new PecaRequest("P001", "Filtro de oleo", null, 10.99m, 25);
 
         Assert.Throws<ValidationException>(() => service.CadastrarPeca(request));
         Assert.Empty(context.Pecas);
@@ -114,22 +121,35 @@ public class PecaServiceTests
     [InlineData(null)]
     [InlineData(0)]
     [InlineData(-1)]
-    public void CadastrarPeca_DeveLancarValidationException_QuandoValorAusenteZeroOuNegativo(int? valor)
+    public void CadastrarPeca_DeveLancarValidationException_QuandoPrecoAusenteZeroOuNegativo(int? preco)
     {
         using var context = CreateContext();
         var service = new PecaService(context);
-        var request = new PecaRequest("Filtro de oleo", "Descricao valida", valor);
+        var request = new PecaRequest("P001", "Filtro de oleo", CategoriaPeca.Filtros, preco, 25);
 
         Assert.Throws<ValidationException>(() => service.CadastrarPeca(request));
         Assert.Empty(context.Pecas);
     }
 
     [Fact]
-    public void CadastrarPeca_DeveLancarValidationException_QuandoValorTemMaisDe2CasasDecimais()
+    public void CadastrarPeca_DeveLancarValidationException_QuandoPrecoTemMaisDe2CasasDecimais()
     {
         using var context = CreateContext();
         var service = new PecaService(context);
-        var request = new PecaRequest("Filtro de oleo", "Descricao valida", 10.999m);
+        var request = new PecaRequest("P001", "Filtro de oleo", CategoriaPeca.Filtros, 10.999m, 25);
+
+        Assert.Throws<ValidationException>(() => service.CadastrarPeca(request));
+        Assert.Empty(context.Pecas);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(-1)]
+    public void CadastrarPeca_DeveLancarValidationException_QuandoEstoqueAusenteOuNegativo(int? estoque)
+    {
+        using var context = CreateContext();
+        var service = new PecaService(context);
+        var request = new PecaRequest("P001", "Filtro de oleo", CategoriaPeca.Filtros, 10.99m, estoque);
 
         Assert.Throws<ValidationException>(() => service.CadastrarPeca(request));
         Assert.Empty(context.Pecas);

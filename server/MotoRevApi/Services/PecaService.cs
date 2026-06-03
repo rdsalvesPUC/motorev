@@ -1,10 +1,10 @@
 using System.ComponentModel.DataAnnotations;
-using Mapster;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
 using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
+using MotoRevApi.Model;
 
 namespace MotoRevApi.Services;
 
@@ -17,34 +17,44 @@ public class PecaService
         _context = context;
     }
     
-    public PecaResponse CadastrarPeca (PecaRequest request)
+    public PecaResponse CadastrarPeca(PecaRequest request)
     {
         ValidarRequest(request);
-        ValidarNomeDuplicado(request.Nome);
+        ValidarCodigoDuplicado(request.Codigo);
 
-        var peca = request.Adapt<Model.Peca>();
-        peca.Nome = request.Nome.Trim();
-        peca.Status = StatusCadastro.Ativo;
+        var peca = new Peca
+        {
+            Codigo = request.Codigo.Trim().ToUpperInvariant(),
+            Nome = request.Nome.Trim(),
+            Categoria = request.Categoria!.Value,
+            Preco = request.Preco!.Value,
+            Estoque = request.Estoque!.Value,
+            Status = StatusCadastro.Ativo
+        };
 
         _context.Pecas.Add(peca);
         _context.SaveChanges();
         
-        return peca.Adapt<PecaResponse>();
+        return MapToResponse(peca);
     }
     
     public PecaResponse ObterPeca(int id)
     {
-        var peca = _context.Pecas.Find(id)?.Adapt<PecaResponse>();
+        var peca = _context.Pecas.Find(id);
         if (peca == null)
         {
             throw new NotFoundException($"Peça com ID {id} não encontrada.");
         }
-        return peca;
+
+        return MapToResponse(peca);
     }
     
     public List<PecaResponse> ListarPecas()
     {
-        return _context.Pecas.ToList().Adapt<List<PecaResponse>>();
+        return _context.Pecas
+            .OrderBy(peca => peca.Nome)
+            .Select(MapToResponse)
+            .ToList();
     }
 
     private static void ValidarRequest(PecaRequest request)
@@ -53,19 +63,41 @@ public class PecaService
         Validator.ValidateObject(request, validationContext, true);
     }
 
-    private void ValidarNomeDuplicado(string nome)
+    private void ValidarCodigoDuplicado(string codigo)
     {
-        var nomeNormalizado = nome.Trim();
-        var nomeJaExiste = _context.Pecas
+        var codigoNormalizado = codigo.Trim().ToUpperInvariant();
+        var codigoJaExiste = _context.Pecas
             .AsEnumerable()
             .Any(peca => string.Equals(
-                peca.Nome.Trim(),
-                nomeNormalizado,
+                peca.Codigo.Trim(),
+                codigoNormalizado,
                 StringComparison.OrdinalIgnoreCase));
 
-        if (nomeJaExiste)
+        if (codigoJaExiste)
         {
-            throw new DuplicateDataException($"Já existe uma peça cadastrada com o nome {nomeNormalizado}.");
+            throw new DuplicateDataException($"Já existe uma peça cadastrada com o código {codigoNormalizado}.");
         }
+    }
+
+    private static PecaResponse MapToResponse(Peca peca)
+    {
+        return new PecaResponse(
+            peca.Id,
+            peca.Codigo,
+            peca.Nome,
+            ObterNomeCategoria(peca.Categoria),
+            peca.Preco,
+            peca.Estoque,
+            peca.Status.ToString());
+    }
+
+    private static string ObterNomeCategoria(CategoriaPeca categoria)
+    {
+        return categoria switch
+        {
+            CategoriaPeca.Transmissao => "Transmissão",
+            CategoriaPeca.Eletrica => "Elétrica",
+            _ => categoria.ToString()
+        };
     }
 }   

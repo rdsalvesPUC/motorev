@@ -7,6 +7,7 @@ using MotoRevApi.Authorization;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Enums;
 using MotoRevApi.Services;
 using Xunit;
 using PecaApiController = MotoRevApi.Controller.PecaController;
@@ -32,7 +33,7 @@ public class PecaControllerTests
     {
         using var context = CreateContext();
         var controller = new PecaApiController(new PecaService(context));
-        var request = new PecaRequest("Filtro de oleo", "Descricao valida", 10.99m);
+        var request = new PecaRequest("P001", "Filtro de oleo", CategoriaPeca.Filtros, 10.99m, 25);
 
         var result = controller.AdicionarPeca(request);
 
@@ -41,8 +42,11 @@ public class PecaControllerTests
         Assert.Equal(nameof(PecaApiController.ObterPeca), createdAtActionResult.ActionName);
 
         var response = Assert.IsType<PecaResponse>(createdAtActionResult.Value);
+        Assert.Equal("P001", response.Codigo);
         Assert.Equal("Filtro de oleo", response.Nome);
-        Assert.Equal(10.99m, response.Valor);
+        Assert.Equal(nameof(CategoriaPeca.Filtros), response.Categoria);
+        Assert.Equal(10.99m, response.Preco);
+        Assert.Equal(25, response.Estoque);
     }
 
     [Fact]

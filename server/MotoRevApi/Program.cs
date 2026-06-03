@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -34,8 +35,11 @@ builder.Services.AddOpenApi(options =>
 });
 
 // Configurar o Banco de Dados
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+if (!builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
 
 // Configurar ASP.NET Core Identity
 builder.Services.AddIdentity<Usuario, IdentityRole>()
@@ -73,7 +77,11 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<HashService>();
 builder.Services.AddScoped<AuthService>();
@@ -158,3 +166,5 @@ internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvi
         }
     }
 }
+
+public partial class Program;

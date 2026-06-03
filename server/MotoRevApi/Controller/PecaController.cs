@@ -52,9 +52,14 @@ public class PecaController : ControllerBase
     /// </summary>
     /// <param name="id">O ID da Peça a ser obtida.</param>
     /// <response code="200">Retorna os dados da Peça.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem permissão para consultar Peças.</response>
     /// <response code="404">Peça não encontrada.</response>
     [HttpGet("id/{id}")]
+    [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(PecaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public ActionResult<PecaResponse> ObterPeca(int id)
     {
@@ -66,8 +71,13 @@ public class PecaController : ControllerBase
     /// Listar todas as Peças cadastradas no sistema.
     /// </summary>
     /// <response code="200">Retorna a lista de Peças.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem permissão para consultar Peças.</response>
     [HttpGet("listar")]
+    [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(List<PecaResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public ActionResult<List<PecaResponse>> ObterPecas()
     {
         var response = _pecaService.ListarPecas();
