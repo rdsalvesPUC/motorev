@@ -17,5 +17,13 @@ public static class MapsterConfig
             .NewConfig()
             .Map(dest => dest.NomeModeloMoto, src => src.ModeloMoto != null ? src.ModeloMoto.NomeModelo : string.Empty)
             .Map(dest => dest.Servicos, src => src.Servicos.Select(s => s.Servico));
+            
+        TypeAdapterConfig<RevisaoPadrao, RevisaoPadraoListResponse>
+            .NewConfig()
+            .MapWith(src => new RevisaoPadraoListResponse(
+                src.Id,
+                src.Nome,
+                src.ModeloMoto != null ? src.ModeloMoto.NomeModelo : string.Empty
+            ));
     }
 }

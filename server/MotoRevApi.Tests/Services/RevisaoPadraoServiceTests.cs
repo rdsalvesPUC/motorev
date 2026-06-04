@@ -214,4 +214,50 @@ public class RevisaoPadraoServiceTests
         var exception = await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(1, 1));
         Assert.Contains("não encontrada", exception.Message);
     }
+
+    [Fact]
+    public async Task AtualizarRevisaoAsync_DeveSincronizarServicosCorretamente()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var servico1 = new Servico { Id = 1, Nome = "S1", Categoria = CategoriaServico.Verificacao, Codigo = "S1", Descricao = "D1", Ativo = true };
+        var servico2 = new Servico { Id = 2, Nome = "S2", Categoria = CategoriaServico.Verificacao, Codigo = "S2", Descricao = "D2", Ativo = true };
+        var servico3 = new Servico { Id = 3, Nome = "S3", Categoria = CategoriaServico.Verificacao, Codigo = "S3", Descricao = "D3", Ativo = true };
+        context.Servicos.AddRange(servico1, servico2, servico3);
+
+        var revisao = new RevisaoPadrao { Id = 1, Nome = "Rev Antiga", ModeloMotoId = 1, ConcessionariaId = 1, Ordem = 1 };
+        revisao.Servicos.Add(new RevisaoPadraoServico { ServicoId = 1 }); // Começa com Serviço 1
+        revisao.Servicos.Add(new RevisaoPadraoServico { ServicoId = 2 }); // e Serviço 2
+        context.RevisoesPadrao.Add(revisao);
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoUpdateRequest("Rev Nova", 1, new List<int> { 2, 3 }); // Remove 1, mantém 2, adiciona 3
+
+        // Act
+        var result = await service.AtualizarRevisaoAsync(1, request, 1);
+
+        // Assert
+        Assert.Equal(2, result.Servicos.Count);
+        Assert.DoesNotContain(result.Servicos, s => s.Id == 1);
+        Assert.Contains(result.Servicos, s => s.Id == 2);
+        Assert.Contains(result.Servicos, s => s.Id == 3);
+    }
+
+    [Fact]
+    public async Task AtualizarRevisaoAsync_DeveLancarExcecao_QuandoOrdemDuplicada()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var revisao1 = new RevisaoPadrao { Id = 1, Nome = "Rev 1", ModeloMotoId = 1, ConcessionariaId = 1, Ordem = 1 };
+        var revisao2 = new RevisaoPadrao { Id = 2, Nome = "Rev 2", ModeloMotoId = 1, ConcessionariaId = 1, Ordem = 2 };
+        context.RevisoesPadrao.AddRange(revisao1, revisao2);
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoUpdateRequest("Rev 1 Atualizada", 2, new List<int>()); // Tenta mudar a ordem para 2, que já existe
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.AtualizarRevisaoAsync(1, request, 1));
+    }
 }

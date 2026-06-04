@@ -102,6 +102,24 @@ public class RevisaoPadraoControllerTests
     }
 
     [Fact]
+    public async Task Put_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var request = new RevisaoPadraoUpdateRequest("Revisão 1000km Atualizada", 2, new List<int> { 1, 2, 3 });
+        var response = new RevisaoPadraoResponse(1, "Revisão 1000km Atualizada", 2, 1, "Ninja", new List<ServicoResponse>());
+        
+        _revisaoServiceMock.Setup(s => s.AtualizarRevisaoAsync(1, request, 1)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.Put(1, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
     public void Atributos_Classe_DeveTerRoleConcessionaria()
     {
         var attribute = typeof(RevisaoPadraoController).GetCustomAttributes(typeof(AuthorizeAttribute), true)
