@@ -12,4 +12,6 @@ public class Servico
     public int TempoEstimado { get; set; } // em minutos
     public decimal Custo { get; set; }
     public bool Ativo { get; set; } = true;
+    
+    public virtual ICollection<RevisaoPadraoServico> RevisoesPadrao { get; set; } = new List<RevisaoPadraoServico>();
 }

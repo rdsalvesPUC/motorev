@@ -87,6 +87,7 @@ builder.Services.AddScoped<ServicoService>();
 builder.Services.AddScoped<HashService>();
 builder.Services.AddScoped<ModeloMotoService>();
 builder.Services.AddScoped<EnderecoService>();
+builder.Services.AddScoped<RevisaoPadraoService>();
 builder.Services.AddEndpointsApiExplorer();
 
 // Configurar Mapster

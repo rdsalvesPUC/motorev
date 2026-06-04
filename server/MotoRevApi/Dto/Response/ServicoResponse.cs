@@ -9,5 +9,6 @@ public record ServicoResponse(
     string Descricao,
     CategoriaServico Categoria,
     int TempoEstimado,
-    decimal Custo
+    decimal Custo,
+    bool Ativo
 );

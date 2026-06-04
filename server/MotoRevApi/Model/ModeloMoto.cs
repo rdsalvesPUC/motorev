@@ -7,4 +7,6 @@ public class ModeloMoto
     public required string Marca { get; set; }
     public string? Categoria { get; set; }
     public bool Ativo { get; set; } = true;
+    
+    public virtual ICollection<RevisaoPadrao> RevisoesPadrao { get; set; } = new List<RevisaoPadrao>();
 }

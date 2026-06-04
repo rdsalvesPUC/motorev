@@ -16,6 +16,8 @@ public class AppDbContext : IdentityDbContext<Usuario>
     public DbSet<Concessionaria> Concessionarias { get; set; }
     public DbSet<Endereco> Enderecos { get; set; }
     public DbSet<Servico> Servicos { get; set; }
+    public DbSet<RevisaoPadrao> RevisoesPadrao { get; set; }
+    public DbSet<RevisaoPadraoServico> RevisaoPadraoServicos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,12 +49,34 @@ public class AppDbContext : IdentityDbContext<Usuario>
             .HasForeignKey(e => e.ConcessionariaId)
             .OnDelete(DeleteBehavior.Cascade); // Apagar concessionária apaga os endereços
 
+        // Configuração Revisão Padrão
+        modelBuilder.Entity<RevisaoPadrao>(entity =>
+        {
+            // Garante que não pode haver duas revisões com a mesma ordem para o mesmo modelo de moto
+            entity.HasIndex(rp => new { rp.ModeloMotoId, rp.Ordem }).IsUnique();
+        });
+
+        // Configuração da tabela de junção N:N entre RevisaoPadrao e Servico
+        modelBuilder.Entity<RevisaoPadraoServico>(entity =>
+        {
+            entity.HasKey(rps => new { rps.RevisaoPadraoId, rps.ServicoId });
+
+            entity.HasOne(rps => rps.RevisaoPadrao)
+                .WithMany(rp => rp.Servicos)
+                .HasForeignKey(rps => rps.RevisaoPadraoId);
+
+            entity.HasOne(rps => rps.Servico)
+                .WithMany(s => s.RevisoesPadrao)
+                .HasForeignKey(rps => rps.ServicoId);
+        });
+
         // Global Query Filters para Soft Delete (Ignorar registros inativos em qualquer busca)
         modelBuilder.Entity<Concessionaria>().HasQueryFilter(c => c.Ativo);
         modelBuilder.Entity<Endereco>().HasQueryFilter(e => e.Ativo);
         modelBuilder.Entity<Usuario>().HasQueryFilter(u => u.Ativo);
-        // Aplica o global filter para as outras entidades que tem a propriedade Ativo
         modelBuilder.Entity<ModeloMoto>().HasQueryFilter(m => m.Ativo);
+        modelBuilder.Entity<RevisaoPadrao>().HasQueryFilter(rp => rp.Ativo);
+        modelBuilder.Entity<Servico>().HasQueryFilter(s => s.Ativo);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
     }

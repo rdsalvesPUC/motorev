@@ -13,4 +13,6 @@ public class Concessionaria
     
     // Relacionamento com Endereco (1:N)
     public virtual ICollection<Endereco> Enderecos { get; set; } = new List<Endereco>();
+    
+    public virtual ICollection<RevisaoPadrao> RevisoesPadrao { get; set; } = new List<RevisaoPadrao>();
 }
