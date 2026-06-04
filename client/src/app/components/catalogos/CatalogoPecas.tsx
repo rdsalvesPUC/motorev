@@ -3,7 +3,7 @@ import { Breadcrumb, Typography, Input, Select, Button, Table, Space, Flex, Tag,
 import { HomeOutlined, ToolOutlined, SearchOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useNavigate } from 'react-router';
-import { CATEGORIAS_PECA, pecaService, type PecaResponse } from '../../services/pecaService';
+import { CATEGORIAS_PECA, pecaService, type PecaResponse, type StatusPecaFilter } from '../../services/pecaService';
 import { PATHS } from '../../paths';
 
 const { Title, Text } = Typography;
@@ -30,13 +30,14 @@ export default function CatalogoPecas() {
   const [search, setSearch] = useState('');
   const [categoria, setCategoria] = useState<string>();
   const [estoque, setEstoque] = useState<EstoqueFilter>();
+  const [status, setStatus] = useState<StatusPecaFilter>('Ativo');
 
   const loadPecas = async () => {
     setLoading(true);
     setError('');
 
     try {
-      const data = await pecaService.listar();
+      const data = await pecaService.listar(status);
       setPecas(data);
     } catch (err: any) {
       const errorMessage = err.message || 'Não foi possível carregar o catálogo de peças.';
@@ -49,7 +50,7 @@ export default function CatalogoPecas() {
 
   useEffect(() => {
     loadPecas();
-  }, []);
+  }, [status]);
 
   const filteredPecas = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -76,7 +77,12 @@ export default function CatalogoPecas() {
     setSearch('');
     setCategoria(undefined);
     setEstoque(undefined);
+    setStatus('Ativo');
   };
+
+  const emptyText = pecas.length === 0
+    ? 'Nenhuma peça cadastrada.'
+    : 'Nenhuma peça encontrada com os filtros selecionados.';
 
   const columns: ColumnsType<PecaResponse> = [
     {
@@ -179,6 +185,18 @@ export default function CatalogoPecas() {
             allowClear
           />
 
+          <Select
+            placeholder="Status"
+            value={status}
+            onChange={setStatus}
+            style={{ width: 140 }}
+            options={[
+              { value: 'Ativo', label: 'Ativas' },
+              { value: 'Inativo', label: 'Inativas' },
+              { value: 'Todos', label: 'Todas' },
+            ]}
+          />
+
           <Flex gap="small" style={{ marginLeft: 'auto' }}>
             <Button onClick={clearFilters}>Limpar</Button>
             <Button icon={<ReloadOutlined />} onClick={loadPecas} loading={loading}>
@@ -208,6 +226,7 @@ export default function CatalogoPecas() {
             dataSource={filteredPecas}
             columns={columns}
             rowKey="id"
+            locale={{ emptyText }}
             pagination={{ pageSize: 10, showSizeChanger: true }}
           />
         </Space>

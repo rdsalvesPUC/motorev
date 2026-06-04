@@ -154,4 +154,80 @@ public class PecaServiceTests
         Assert.Throws<ValidationException>(() => service.CadastrarPeca(request));
         Assert.Empty(context.Pecas);
     }
+
+    [Fact]
+    public void ListarPecas_DeveRetornarTodasAsPecas_QuandoStatusNaoForInformado()
+    {
+        using var context = CreateContext();
+        SeedPecas(context);
+        var service = new PecaService(context);
+
+        var result = service.ListarPecas();
+
+        Assert.Equal(3, result.Count);
+    }
+
+    [Fact]
+    public void ListarPecas_DeveRetornarApenasPecasAtivas_QuandoStatusForAtivo()
+    {
+        using var context = CreateContext();
+        SeedPecas(context);
+        var service = new PecaService(context);
+
+        var result = service.ListarPecas(StatusCadastro.Ativo);
+
+        Assert.Equal(2, result.Count);
+        Assert.All(result, peca => Assert.Equal(nameof(StatusCadastro.Ativo), peca.Status));
+        Assert.Collection(
+            result,
+            peca => Assert.Equal("Filtro", peca.Nome),
+            peca => Assert.Equal("Vela", peca.Nome));
+    }
+
+    [Fact]
+    public void ListarPecas_DeveRetornarApenasPecasInativas_QuandoStatusForInativo()
+    {
+        using var context = CreateContext();
+        SeedPecas(context);
+        var service = new PecaService(context);
+
+        var result = service.ListarPecas(StatusCadastro.Inativo);
+
+        Assert.Single(result);
+        Assert.Equal("Pastilha", result[0].Nome);
+        Assert.Equal(nameof(StatusCadastro.Inativo), result[0].Status);
+    }
+
+    private static void SeedPecas(AppDbContext context)
+    {
+        context.Pecas.AddRange(
+            new Peca
+            {
+                Codigo = "P002",
+                Nome = "Vela",
+                Categoria = CategoriaPeca.Eletrica,
+                Preco = 20m,
+                Estoque = 5,
+                Status = StatusCadastro.Ativo
+            },
+            new Peca
+            {
+                Codigo = "P001",
+                Nome = "Filtro",
+                Categoria = CategoriaPeca.Filtros,
+                Preco = 10m,
+                Estoque = 15,
+                Status = StatusCadastro.Ativo
+            },
+            new Peca
+            {
+                Codigo = "P003",
+                Nome = "Pastilha",
+                Categoria = CategoriaPeca.Freios,
+                Preco = 30m,
+                Estoque = 0,
+                Status = StatusCadastro.Inativo
+            });
+        context.SaveChanges();
+    }
 }

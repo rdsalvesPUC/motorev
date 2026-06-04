@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using MotoRevApi.Authorization;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Enums;
 using MotoRevApi.Services;
 
 namespace MotoRevApi.Controller;
@@ -70,6 +71,29 @@ public class PecaController : ControllerBase
     /// <summary>
     /// Listar todas as Peças cadastradas no sistema.
     /// </summary>
+    /// <remarks>
+    /// Quando o parâmetro <c>status</c> não é informado, retorna todas as peças.
+    ///
+    /// Exemplos:
+    /// GET /api/Peca/listar
+    /// GET /api/Peca/listar?status=Ativo
+    /// GET /api/Peca/listar?status=Inativo
+    ///
+    /// Exemplo de resposta:
+    ///
+    /// [
+    ///   {
+    ///     "id": 1,
+    ///     "codigo": "P001",
+    ///     "nome": "Filtro de Óleo",
+    ///     "categoria": "Filtros",
+    ///     "preco": 39.90,
+    ///     "estoque": 12,
+    ///     "status": "Ativo"
+    ///   }
+    /// ]
+    /// </remarks>
+    /// <param name="status">Filtro opcional por status da peça. Valores aceitos: Ativo ou Inativo.</param>
     /// <response code="200">Retorna a lista de Peças.</response>
     /// <response code="401">Usuário não autenticado.</response>
     /// <response code="403">Usuário não tem permissão para consultar Peças.</response>
@@ -78,9 +102,9 @@ public class PecaController : ControllerBase
     [ProducesResponseType(typeof(List<PecaResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public ActionResult<List<PecaResponse>> ObterPecas()
+    public ActionResult<List<PecaResponse>> ObterPecas([FromQuery] StatusCadastro? status = null)
     {
-        var response = _pecaService.ListarPecas();
+        var response = _pecaService.ListarPecas(status);
         return Ok(response);
     }
     

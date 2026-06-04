@@ -274,6 +274,8 @@ namespace MotoRevApi.Migrations
 
                     b.HasIndex("Nome");
 
+                    b.HasIndex("Status");
+
                     b.ToTable("Pecas", (string)null);
                 });
 
