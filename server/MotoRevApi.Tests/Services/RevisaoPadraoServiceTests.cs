@@ -102,4 +102,71 @@ public class RevisaoPadraoServiceTests
         var ex = await Assert.ThrowsAsync<NotFoundException>(() => service.CadastrarRevisaoAsync(request, 1));
         Assert.Contains("99", ex.Message);
     }
+
+    [Fact]
+    public async Task ListarRevisoesAsync_DeveRetornarListaCorreta()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var modelo1 = new ModeloMoto { Id = 1, NomeModelo = "Ninja", Marca = "Kawasaki", Categoria = "Esportiva" };
+        var modelo2 = new ModeloMoto { Id = 2, NomeModelo = "Z400", Marca = "Yamaha", Categoria = "Super Esportiva" };
+        context.ModelosMotos.AddRange(modelo1, modelo2);
+
+        context.RevisoesPadrao.AddRange(
+            new RevisaoPadrao { Id = 1, Nome = "Rev 1 Ninja", ModeloMotoId = 1, ConcessionariaId = 1, Ordem = 1 },
+            new RevisaoPadrao { Id = 2, Nome = "Rev 2 Ninja", ModeloMotoId = 1, ConcessionariaId = 1, Ordem = 2 },
+            new RevisaoPadrao { Id = 3, Nome = "Rev 1 Z400", ModeloMotoId = 2, ConcessionariaId = 1, Ordem = 1 }
+        );
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+
+        // Act
+        var result = await service.ListarRevisoesAsync(1);
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.Contains(result, r => r.Nome == "Rev 1 Ninja" && r.NomeModeloMoto == "Ninja");
+    }
+
+    [Fact]
+    public async Task ListarRevisoesAsync_DeveRetornarListaVazia_QuandoNaoHaRevisoes()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new RevisaoPadraoService(context);
+
+        // Act
+        var result = await service.ListarRevisoesAsync(1);
+
+        // Assert
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task ListarRevisoesAsync_DeveFiltrarPorModeloMotoId_QuandoInformado()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var modelo1 = new ModeloMoto { Id = 1, NomeModelo = "Ninja", Marca = "Kawasaki", Categoria = "Esportiva" };
+        var modelo2 = new ModeloMoto { Id = 2, NomeModelo = "Z400", Marca = "Yamaha", Categoria = "Super Esportiva" };
+        context.ModelosMotos.AddRange(modelo1, modelo2);
+
+        context.RevisoesPadrao.AddRange(
+            new RevisaoPadrao { Id = 1, Nome = "Rev 1 Ninja", ModeloMotoId = 1, ConcessionariaId = 1, Ordem = 1 },
+            new RevisaoPadrao { Id = 2, Nome = "Rev 2 Ninja", ModeloMotoId = 1, ConcessionariaId = 1, Ordem = 2 },
+            new RevisaoPadrao { Id = 3, Nome = "Rev 1 Z400", ModeloMotoId = 2, ConcessionariaId = 1, Ordem = 1 }
+        );
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+
+        // Act
+        var result = await service.ListarRevisoesAsync(1, 2); // Filtra pelo modelo Z400
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Rev 1 Z400", result.First().Nome);
+        Assert.Equal("Z400", result.First().NomeModeloMoto);
+    }
 }

@@ -18,6 +18,27 @@ public class RevisaoPadraoService
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
     }
+    
+    public virtual async Task<List<RevisaoPadraoListResponse>> ListarRevisoesAsync(int concessionariaId, int? modeloMotoId = null)
+    {
+        var query = _context.RevisoesPadrao
+            .AsNoTracking()
+            .Where(rp => rp.ConcessionariaId == concessionariaId && rp.Ativo);
+
+        if (modeloMotoId.HasValue)
+        {
+            query = query.Where(rp => rp.ModeloMotoId == modeloMotoId.Value);
+        }
+
+        return await query
+            .Include(rp => rp.ModeloMoto)
+            .Select(rp => new RevisaoPadraoListResponse(
+                rp.Id,
+                rp.Nome,
+                rp.ModeloMoto.NomeModelo
+            ))
+            .ToListAsync();
+    }
 
     public virtual async Task<RevisaoPadraoResponse> CadastrarRevisaoAsync(RevisaoPadraoRequest request, int concessionariaId)
     {

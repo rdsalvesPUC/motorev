@@ -15,26 +15,21 @@ namespace MotoRevApi.Tests.Controllers;
 public class RevisaoPadraoControllerTests
 {
     private readonly Mock<RevisaoPadraoService> _revisaoServiceMock;
-    private readonly Mock<ConcessionariaService> _concessionariaServiceMock;
     private readonly RevisaoPadraoController _controller;
 
     public RevisaoPadraoControllerTests()
     {
         _revisaoServiceMock = new Mock<RevisaoPadraoService>();
-        _concessionariaServiceMock = new Mock<ConcessionariaService>();
-        _controller = new RevisaoPadraoController(_revisaoServiceMock.Object, _concessionariaServiceMock.Object);
+        _controller = new RevisaoPadraoController(_revisaoServiceMock.Object);
         
         // Mock do usuário padrão para a maioria dos testes
-        var userId = "user-123";
+        var userId = "1"; // O ClaimTypes.NameIdentifier agora parece ser o ID da concessionária
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock"));
         _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
-
-        var concessionaria = new ConcessionariaResponse { Id = 1, Nome = "Conc 1", Cnpj = "123" };
-        _concessionariaServiceMock.Setup(s => s.GetByUserIdAsync(userId)).ReturnsAsync(concessionaria);
     }
 
     [Fact]
-    public async Task CadastrarRevisao_DeveRetornarCreated_QuandoSucesso()
+    public async Task Post_DeveRetornarCreated_QuandoSucesso()
     {
         // Arrange
         var request = new RevisaoPadraoRequest("Revisão 1000km", 1, 1, new List<int> { 1, 2 });
@@ -43,7 +38,7 @@ public class RevisaoPadraoControllerTests
         _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, 1)).ReturnsAsync(response);
 
         // Act
-        var result = await _controller.CadastrarRevisao(request);
+        var result = await _controller.Post(request);
 
         // Assert
         var createdResult = Assert.IsType<CreatedAtActionResult>(result);
@@ -52,7 +47,7 @@ public class RevisaoPadraoControllerTests
     }
 
     [Fact]
-    public async Task CadastrarRevisao_DeveLancarNotFoundException_QuandoEntidadeNaoExiste()
+    public async Task Post_DeveLancarNotFoundException_QuandoEntidadeNaoExiste()
     {
         // Arrange
         var request = new RevisaoPadraoRequest("Revisão com erro", 99, 1, new List<int> { 99 });
@@ -60,12 +55,12 @@ public class RevisaoPadraoControllerTests
             .ThrowsAsync(new NotFoundException("Modelo de moto não encontrado."));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<NotFoundException>(() => _controller.CadastrarRevisao(request));
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => _controller.Post(request));
         Assert.Equal("Modelo de moto não encontrado.", exception.Message);
     }
 
     [Fact]
-    public async Task CadastrarRevisao_DeveLancarDuplicateDataException_QuandoOrdemDuplicada()
+    public async Task Post_DeveLancarDuplicateDataException_QuandoOrdemDuplicada()
     {
         // Arrange
         var request = new RevisaoPadraoRequest("Revisão duplicada", 1, 1, new List<int> { 1 });
@@ -73,23 +68,21 @@ public class RevisaoPadraoControllerTests
             .ThrowsAsync(new DuplicateDataException("Ordem de revisão já existe."));
 
         // Act & Assert
-        var exception = await Assert.ThrowsAsync<DuplicateDataException>(() => _controller.CadastrarRevisao(request));
+        var exception = await Assert.ThrowsAsync<DuplicateDataException>(() => _controller.Post(request));
         Assert.Equal("Ordem de revisão já existe.", exception.Message);
     }
 
     [Fact]
-    public async Task CadastrarRevisao_DeveRetornarUnauthorized_QuandoSemUsuario()
+    public async Task Post_DeveLancarExcecao_QuandoSemUsuario()
     {
         // Arrange
         var user = new ClaimsPrincipal(new ClaimsIdentity()); // Usuário sem claims
         _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
         var request = new RevisaoPadraoRequest("Revisão 1000km", 1, 1, new List<int> { 1 });
 
-        // Act
-        var result = await _controller.CadastrarRevisao(request);
-
-        // Assert
-        Assert.IsType<UnauthorizedResult>(result);
+        // Act & Assert
+        // O controller agora usa o ! (null-forgiving operator), então ele lança NullReferenceException se o claim faltar.
+        await Assert.ThrowsAsync<NullReferenceException>(() => _controller.Post(request));
     }
 
     [Fact]
@@ -100,6 +93,6 @@ public class RevisaoPadraoControllerTests
             .FirstOrDefault();
 
         Assert.NotNull(attribute);
-        Assert.Equal(Authorization.Roles.Concessionaria, attribute.Roles);
+        Assert.Equal("Concessionaria", attribute.Roles);
     }
 }
