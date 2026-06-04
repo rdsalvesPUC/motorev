@@ -49,9 +49,16 @@ public class PecaService
         return MapToResponse(peca);
     }
     
-    public List<PecaResponse> ListarPecas()
+    public List<PecaResponse> ListarPecas(StatusCadastro? status = null)
     {
-        return _context.Pecas
+        var query = _context.Pecas.AsQueryable();
+
+        if (status is not null)
+        {
+            query = query.Where(peca => peca.Status == status);
+        }
+
+        return query
             .OrderBy(peca => peca.Nome)
             .Select(MapToResponse)
             .ToList();

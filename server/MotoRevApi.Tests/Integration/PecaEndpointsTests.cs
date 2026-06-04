@@ -197,6 +197,62 @@ public class PecaEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task Listar_DeveRetornarTodasAsPecas_QuandoStatusNaoForInformado()
+    {
+        SeedPecas(
+            CreatePeca("P001", "Filtro", StatusCadastro.Ativo),
+            CreatePeca("P002", "Pastilha", StatusCadastro.Inativo));
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.GetAsync("/api/Peca/listar");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var pecas = await response.Content.ReadFromJsonAsync<List<PecaResponse>>();
+        Assert.NotNull(pecas);
+        Assert.Equal(2, pecas.Count);
+    }
+
+    [Fact]
+    public async Task Listar_DeveRetornarApenasPecasAtivas_QuandoStatusForAtivo()
+    {
+        SeedPecas(
+            CreatePeca("P001", "Filtro", StatusCadastro.Ativo),
+            CreatePeca("P002", "Pastilha", StatusCadastro.Inativo),
+            CreatePeca("P003", "Vela", StatusCadastro.Ativo));
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.GetAsync("/api/Peca/listar?status=Ativo");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var pecas = await response.Content.ReadFromJsonAsync<List<PecaResponse>>();
+        Assert.NotNull(pecas);
+        Assert.Equal(2, pecas.Count);
+        Assert.All(pecas, peca => Assert.Equal(nameof(StatusCadastro.Ativo), peca.Status));
+        Assert.Collection(
+            pecas,
+            peca => Assert.Equal("Filtro", peca.Nome),
+            peca => Assert.Equal("Vela", peca.Nome));
+    }
+
+    [Fact]
+    public async Task Listar_DeveRetornarApenasPecasInativas_QuandoStatusForInativo()
+    {
+        SeedPecas(
+            CreatePeca("P001", "Filtro", StatusCadastro.Ativo),
+            CreatePeca("P002", "Pastilha", StatusCadastro.Inativo));
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.GetAsync("/api/Peca/listar?status=Inativo");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var pecas = await response.Content.ReadFromJsonAsync<List<PecaResponse>>();
+        Assert.NotNull(pecas);
+        Assert.Single(pecas);
+        Assert.Equal("Pastilha", pecas[0].Nome);
+        Assert.Equal(nameof(StatusCadastro.Inativo), pecas[0].Status);
+    }
+
+    [Fact]
     public async Task Listar_DeveRetornarUnauthorized_QuandoNaoEnviarToken()
     {
         var client = _factory.CreateClient();
@@ -269,5 +325,18 @@ public class PecaEndpointsTests : IDisposable
         context.Pecas.AddRange(pecas);
         context.SaveChanges();
         return pecas.Select(peca => peca.Id).ToList();
+    }
+
+    private static Peca CreatePeca(string codigo, string nome, StatusCadastro status)
+    {
+        return new Peca
+        {
+            Codigo = codigo,
+            Nome = nome,
+            Categoria = CategoriaPeca.Filtros,
+            Preco = 10m,
+            Estoque = 10,
+            Status = status
+        };
     }
 }

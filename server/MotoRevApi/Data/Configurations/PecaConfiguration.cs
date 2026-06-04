@@ -41,6 +41,8 @@ public class PecaConfiguration : IEntityTypeConfiguration<Peca>
         builder
             .HasIndex(p => p.Nome);
         builder
+            .HasIndex(p => p.Status);
+        builder
             .ToTable("Pecas");
     }
 }

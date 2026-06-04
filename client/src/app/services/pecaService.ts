@@ -1,6 +1,7 @@
 import { BASE_URL, handleResponse, apiFetch } from './http';
 
 export type CategoriaPeca = 'Filtros' | 'Motor' | 'Freios' | 'Transmissão' | 'Elétrica';
+export type StatusPecaFilter = 'Todos' | 'Ativo' | 'Inativo';
 
 export interface PecaResponse {
   id: number;
@@ -29,8 +30,9 @@ export const CATEGORIAS_PECA: Array<{ value: CategoriaPeca; label: string }> = [
 ];
 
 export const pecaService = {
-  async listar(): Promise<PecaResponse[]> {
-    const response = await apiFetch(`${BASE_URL}/Peca/listar`);
+  async listar(status: StatusPecaFilter = 'Todos'): Promise<PecaResponse[]> {
+    const query = status === 'Todos' ? '' : `?status=${encodeURIComponent(status)}`;
+    const response = await apiFetch(`${BASE_URL}/Peca/listar${query}`);
     return handleResponse(response, 'Falha ao carregar peças');
   },
 
