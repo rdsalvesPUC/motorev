@@ -6,6 +6,7 @@ using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
 using MotoRevApi.Services;
+using MotoRevApi.Tests.Factories;
 using Xunit;
 
 namespace MotoRevApi.Tests.Services;
@@ -153,6 +154,140 @@ public class PecaServiceTests
 
         Assert.Throws<ValidationException>(() => service.CadastrarPeca(request));
         Assert.Empty(context.Pecas);
+    }
+
+    [Fact]
+    public void AtualizarPeca_DeveAtualizarPecaExistente_QuandoDadosForemValidos()
+    {
+        using var context = CreateContext();
+        var pecaId = PecaTestFactory.SeedPecas(context, PecaTestFactory.CreatePeca()).Single();
+        var service = new PecaService(context);
+        var request = PecaTestFactory.CreateValidUpdateRequest(
+            codigo: "P002",
+            nome: "Kit relacao",
+            categoria: CategoriaPeca.Transmissao,
+            preco: 199.90m,
+            estoque: 8,
+            status: StatusCadastro.Inativo);
+
+        var result = service.AtualizarPeca(pecaId, request);
+
+        Assert.Equal(pecaId, result.Id);
+        Assert.Equal("P002", result.Codigo);
+        Assert.Equal("Kit relacao", result.Nome);
+        Assert.Equal("Transmissão", result.Categoria);
+        Assert.Equal(199.90m, result.Preco);
+        Assert.Equal(8, result.Estoque);
+        Assert.Equal(nameof(StatusCadastro.Inativo), result.Status);
+
+        var pecaNoDb = context.Pecas.Single();
+        Assert.Equal("P002", pecaNoDb.Codigo);
+        Assert.Equal("Kit relacao", pecaNoDb.Nome);
+        Assert.Equal(CategoriaPeca.Transmissao, pecaNoDb.Categoria);
+        Assert.Equal(199.90m, pecaNoDb.Preco);
+        Assert.Equal(8, pecaNoDb.Estoque);
+        Assert.Equal(StatusCadastro.Inativo, pecaNoDb.Status);
+    }
+
+    [Fact]
+    public void AtualizarPeca_DeveNormalizarCodigo_QuandoCodigoVierComEspacosOuMinusculo()
+    {
+        using var context = CreateContext();
+        var pecaId = PecaTestFactory.SeedPecas(context, PecaTestFactory.CreatePeca()).Single();
+        var service = new PecaService(context);
+        var request = PecaTestFactory.CreateValidUpdateRequest(codigo: " p002 ");
+
+        var result = service.AtualizarPeca(pecaId, request);
+
+        Assert.Equal("P002", result.Codigo);
+        Assert.Equal("P002", context.Pecas.Single().Codigo);
+    }
+
+    [Fact]
+    public void AtualizarPeca_DevePermitirMesmoCodigo_QuandoCodigoPertencerAoMesmoRegistro()
+    {
+        using var context = CreateContext();
+        var pecaId = PecaTestFactory.SeedPecas(context, PecaTestFactory.CreatePeca(codigo: "P001")).Single();
+        var service = new PecaService(context);
+        var request = PecaTestFactory.CreateValidUpdateRequest(codigo: " p001 ", nome: "Filtro atualizado");
+
+        var result = service.AtualizarPeca(pecaId, request);
+
+        Assert.Equal("P001", result.Codigo);
+        Assert.Equal("Filtro atualizado", result.Nome);
+        Assert.Single(context.Pecas);
+    }
+
+    [Fact]
+    public void AtualizarPeca_DeveLancarDuplicateDataException_QuandoCodigoPertencerAOutraPeca()
+    {
+        using var context = CreateContext();
+        var ids = PecaTestFactory.SeedPecas(
+            context,
+            PecaTestFactory.CreatePeca(codigo: "P001", nome: "Filtro"),
+            PecaTestFactory.CreatePeca(codigo: "P002", nome: "Vela"));
+        var service = new PecaService(context);
+        var request = PecaTestFactory.CreateValidUpdateRequest(codigo: "p002");
+
+        Assert.Throws<DuplicateDataException>(() => service.AtualizarPeca(ids[0], request));
+    }
+
+    [Fact]
+    public void AtualizarPeca_DeveLancarNotFoundException_QuandoPecaNaoExistir()
+    {
+        using var context = CreateContext();
+        var service = new PecaService(context);
+        var request = PecaTestFactory.CreateValidUpdateRequest();
+
+        Assert.Throws<NotFoundException>(() => service.AtualizarPeca(999, request));
+    }
+
+    [Theory]
+    [MemberData(nameof(PecaTestFactory.InvalidUpdateRequests), MemberType = typeof(PecaTestFactory))]
+    public void AtualizarPeca_DeveLancarValidationException_QuandoRequestForInvalido(PecaUpdateRequest request)
+    {
+        using var context = CreateContext();
+        var pecaId = PecaTestFactory.SeedPecas(context, PecaTestFactory.CreatePeca()).Single();
+        var service = new PecaService(context);
+
+        Assert.Throws<ValidationException>(() => service.AtualizarPeca(pecaId, request));
+    }
+
+    [Fact]
+    public void AtualizarPeca_NaoDeveAlterarBanco_QuandoRequestForInvalido()
+    {
+        using var context = CreateContext();
+        var pecaId = PecaTestFactory.SeedPecas(context, PecaTestFactory.CreatePeca()).Single();
+        var service = new PecaService(context);
+        var request = PecaTestFactory.CreateValidUpdateRequest(nome: "");
+
+        Assert.Throws<ValidationException>(() => service.AtualizarPeca(pecaId, request));
+
+        var pecaNoDb = context.Pecas.Single();
+        Assert.Equal("P001", pecaNoDb.Codigo);
+        Assert.Equal("Filtro de oleo", pecaNoDb.Nome);
+        Assert.Equal(CategoriaPeca.Filtros, pecaNoDb.Categoria);
+        Assert.Equal(10.99m, pecaNoDb.Preco);
+        Assert.Equal(25, pecaNoDb.Estoque);
+        Assert.Equal(StatusCadastro.Ativo, pecaNoDb.Status);
+    }
+
+    [Fact]
+    public void AtualizarPeca_NaoDeveAlterarBanco_QuandoCodigoDuplicado()
+    {
+        using var context = CreateContext();
+        var ids = PecaTestFactory.SeedPecas(
+            context,
+            PecaTestFactory.CreatePeca(codigo: "P001", nome: "Filtro"),
+            PecaTestFactory.CreatePeca(codigo: "P002", nome: "Vela"));
+        var service = new PecaService(context);
+        var request = PecaTestFactory.CreateValidUpdateRequest(codigo: "P002", nome: "Nome alterado");
+
+        Assert.Throws<DuplicateDataException>(() => service.AtualizarPeca(ids[0], request));
+
+        var pecaNoDb = context.Pecas.Single(peca => peca.Id == ids[0]);
+        Assert.Equal("P001", pecaNoDb.Codigo);
+        Assert.Equal("Filtro", pecaNoDb.Nome);
     }
 
     [Fact]
