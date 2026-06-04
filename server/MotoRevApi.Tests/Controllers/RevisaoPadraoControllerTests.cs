@@ -23,9 +23,25 @@ public class RevisaoPadraoControllerTests
         _controller = new RevisaoPadraoController(_revisaoServiceMock.Object);
         
         // Mock do usuário padrão para a maioria dos testes
-        var userId = "1"; // O ClaimTypes.NameIdentifier agora parece ser o ID da concessionária
+        var userId = "1"; // O ClaimTypes.NameIdentifier agora parece ser o ID numérico da concessionária
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock"));
         _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
+    }
+
+    [Fact]
+    public async Task GetById_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1, "Ninja", new List<ServicoResponse>());
+        _revisaoServiceMock.Setup(s => s.GetByIdAsync(1, 1)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.GetById(1);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
     }
 
     [Fact]
@@ -73,7 +89,7 @@ public class RevisaoPadraoControllerTests
     }
 
     [Fact]
-    public async Task Post_DeveLancarExcecao_QuandoSemUsuario()
+    public async Task Post_DeveLancarNullReferenceException_QuandoSemUsuario()
     {
         // Arrange
         var user = new ClaimsPrincipal(new ClaimsIdentity()); // Usuário sem claims

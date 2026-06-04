@@ -43,6 +43,26 @@ public class RevisaoPadraoController : ControllerBase
     }
 
     /// <summary>
+    /// Obtém os detalhes de uma revisão padrão específica pelo ID.
+    /// </summary>
+    /// <param name="id">O ID da revisão padrão a ser detalhada.</param>
+    /// <response code="200">Retorna os detalhes da revisão.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não for do tipo Concessionaria.</response>
+    /// <response code="404">Se a revisão não existir ou não pertencer à concessionária logada.</response>
+    [HttpGet("{id}")]
+    [ProducesResponseType(typeof(RevisaoPadraoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(int id)
+    {
+        var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var revisao = await _revisaoPadraoService.GetByIdAsync(id, concessionariaId);
+        return Ok(revisao);
+    }
+
+    /// <summary>
     /// Cadastrar uma nova revisão padrão.
     /// </summary>
     /// <param name="request">Dados da revisão padrão.</param>
@@ -63,6 +83,6 @@ public class RevisaoPadraoController : ControllerBase
     {
         var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var response = await _revisaoPadraoService.CadastrarRevisaoAsync(request, concessionariaId);
-        return CreatedAtAction(nameof(Get), new { id = response.Id }, response);
+        return CreatedAtAction(nameof(GetById), new { id = response.Id }, response); // Atualizado para apontar para o GetById
     }
 }

@@ -169,4 +169,49 @@ public class RevisaoPadraoServiceTests
         Assert.Equal("Rev 1 Z400", result.First().Nome);
         Assert.Equal("Z400", result.First().NomeModeloMoto);
     }
+    
+    [Fact]
+    public async Task GetByIdAsync_DeveRetornarRevisaoCompleta_QuandoSucesso()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "Ninja", Marca = "Kawasaki" };
+        var servico = new Servico { Id = 1, Codigo = "S1", Nome = "Oleo", Descricao = "D", Categoria = CategoriaServico.Verificacao };
+        context.ModelosMotos.Add(modelo);
+        context.Servicos.Add(servico);
+        
+        var revisao = new RevisaoPadrao { Id = 1, Nome = "Rev", ModeloMotoId = 1, ConcessionariaId = 1, Ordem = 1 };
+        context.RevisoesPadrao.Add(revisao);
+        context.RevisaoPadraoServicos.Add(new RevisaoPadraoServico { RevisaoPadraoId = 1, ServicoId = 1 });
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+
+        // Act
+        var result = await service.GetByIdAsync(1, 1);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Equal("Rev", result.Nome);
+        Assert.Equal("Ninja", result.NomeModeloMoto);
+        Assert.Single(result.Servicos);
+        Assert.Equal("Oleo", result.Servicos.First().Nome);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_DeveLancarExcecao_QuandoNaoEncontradaOuDeOutraConcessionaria()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var revisao = new RevisaoPadrao { Id = 1, Nome = "Rev", ModeloMotoId = 1, ConcessionariaId = 2, Ordem = 1 }; // Pertence à concessionaria 2
+        context.RevisoesPadrao.Add(revisao);
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+
+        // Act & Assert
+        // Tenta buscar com ID 1, mas simulando estar logado como concessionária 1
+        var exception = await Assert.ThrowsAsync<NotFoundException>(() => service.GetByIdAsync(1, 1));
+        Assert.Contains("não encontrada", exception.Message);
+    }
 }

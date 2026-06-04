@@ -40,6 +40,24 @@ public class RevisaoPadraoService
             .ToListAsync();
     }
 
+    public virtual async Task<RevisaoPadraoResponse> GetByIdAsync(int id, int concessionariaId)
+    {
+        var revisao = await _context.RevisoesPadrao
+            .AsNoTracking()
+            .Include(rp => rp.ModeloMoto)
+            .Include(rp => rp.Servicos)
+                .ThenInclude(rs => rs.Servico)
+            // TODO: Adicionar .Include() para Peças quando implementado
+            .FirstOrDefaultAsync(rp => rp.Id == id && rp.ConcessionariaId == concessionariaId && rp.Ativo);
+
+        if (revisao == null)
+        {
+            throw new NotFoundException($"Revisão padrão com ID {id} não encontrada ou não pertence a esta concessionária.");
+        }
+
+        return revisao.Adapt<RevisaoPadraoResponse>();
+    }
+
     public virtual async Task<RevisaoPadraoResponse> CadastrarRevisaoAsync(RevisaoPadraoRequest request, int concessionariaId)
     {
         // 1. Validar se o Modelo de Moto existe
