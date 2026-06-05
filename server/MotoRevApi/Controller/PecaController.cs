@@ -67,6 +67,45 @@ public class PecaController : ControllerBase
         var response = _pecaService.ObterPeca(id);
         return Ok(response);
     }
+
+    /// <summary>
+    /// Atualizar os dados de uma Peça existente.
+    /// </summary>
+    /// <remarks>
+    /// Apenas usuários com a role 'Concessionária' podem atualizar Peças.
+    ///
+    /// Exemplo de request:
+    ///
+    /// {
+    ///   "codigo": "P001",
+    ///   "nome": "Filtro de Óleo",
+    ///   "categoria": "Filtros",
+    ///   "preco": 39.90,
+    ///   "estoque": 12,
+    ///   "status": "Ativo"
+    /// }
+    /// </remarks>
+    /// <param name="id">O ID da Peça a ser atualizada.</param>
+    /// <param name="request">Dados atualizados da Peça.</param>
+    /// <response code="200">Peça atualizada com sucesso.</response>
+    /// <response code="400">Dados de entrada inválidos.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem permissão para atualizar Peças.</response>
+    /// <response code="404">Peça não encontrada.</response>
+    /// <response code="409">Já existe uma Peça cadastrada com os dados informados.</response>
+    [HttpPut("id/{id}")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(PecaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public ActionResult<PecaResponse> AtualizarPeca(int id, [FromBody] PecaUpdateRequest request)
+    {
+        var response = _pecaService.AtualizarPeca(id, request);
+        return Ok(response);
+    }
     
     /// <summary>
     /// Listar todas as Peças cadastradas no sistema.

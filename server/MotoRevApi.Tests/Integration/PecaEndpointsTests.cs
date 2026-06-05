@@ -7,6 +7,7 @@ using MotoRevApi.Data;
 using MotoRevApi.Dto.Response;
 using MotoRevApi.Enums;
 using MotoRevApi.Model;
+using MotoRevApi.Tests.Factories;
 using Xunit;
 
 namespace MotoRevApi.Tests.Integration;
@@ -143,6 +144,117 @@ public class PecaEndpointsTests : IDisposable
         var client = CreateClient(Roles.Cliente);
 
         var response = await client.GetAsync("/api/Peca/id/1");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Atualizar_DeveAtualizarPeca_QuandoUsuarioForConcessionaria()
+    {
+        var id = SeedPecas(CreatePeca("P001", "Filtro", StatusCadastro.Ativo)).Single();
+        var client = CreateClient(Roles.Concessionaria);
+        var request = CreateValidUpdateRequest(
+            codigo: " p002 ",
+            nome: "Kit relacao",
+            categoria: "Transmissão",
+            preco: 199.90m,
+            estoque: 8,
+            status: "Inativo");
+
+        var response = await client.PutAsJsonAsync($"/api/Peca/id/{id}", request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var peca = await response.Content.ReadFromJsonAsync<PecaResponse>();
+        Assert.NotNull(peca);
+        Assert.Equal(id, peca.Id);
+        Assert.Equal("P002", peca.Codigo);
+        Assert.Equal("Kit relacao", peca.Nome);
+        Assert.Equal("Transmissão", peca.Categoria);
+        Assert.Equal(199.90m, peca.Preco);
+        Assert.Equal(8, peca.Estoque);
+        Assert.Equal(nameof(StatusCadastro.Inativo), peca.Status);
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var pecaNoDb = context.Pecas.Single();
+        Assert.Equal("P002", pecaNoDb.Codigo);
+        Assert.Equal("Kit relacao", pecaNoDb.Nome);
+        Assert.Equal(CategoriaPeca.Transmissao, pecaNoDb.Categoria);
+        Assert.Equal(199.90m, pecaNoDb.Preco);
+        Assert.Equal(8, pecaNoDb.Estoque);
+        Assert.Equal(StatusCadastro.Inativo, pecaNoDb.Status);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidUpdateRequests))]
+    public async Task Atualizar_DeveRetornarBadRequest_QuandoPayloadForInvalido(object request)
+    {
+        var id = SeedPecas(CreatePeca("P001", "Filtro", StatusCadastro.Ativo)).Single();
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.PutAsJsonAsync($"/api/Peca/id/{id}", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Atualizar_DeveRetornarNotFound_QuandoPecaNaoExistir()
+    {
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.PutAsJsonAsync("/api/Peca/id/999", CreateValidUpdateRequest());
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Atualizar_DeveRetornarConflict_QuandoCodigoJaExistirEmOutraPeca()
+    {
+        var ids = SeedPecas(
+            CreatePeca("P001", "Filtro", StatusCadastro.Ativo),
+            CreatePeca("P002", "Vela", StatusCadastro.Ativo));
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/Peca/id/{ids[0]}",
+            CreateValidUpdateRequest(codigo: "p002"));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Atualizar_DevePermitirMesmoCodigo_QuandoCodigoPertencerAoMesmoRegistro()
+    {
+        var id = SeedPecas(CreatePeca("P001", "Filtro", StatusCadastro.Ativo)).Single();
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/Peca/id/{id}",
+            CreateValidUpdateRequest(codigo: " p001 ", nome: "Filtro atualizado"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var peca = await response.Content.ReadFromJsonAsync<PecaResponse>();
+        Assert.NotNull(peca);
+        Assert.Equal("P001", peca.Codigo);
+        Assert.Equal("Filtro atualizado", peca.Nome);
+    }
+
+    [Fact]
+    public async Task Atualizar_DeveRetornarUnauthorized_QuandoNaoEnviarToken()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PutAsJsonAsync("/api/Peca/id/1", CreateValidUpdateRequest());
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Atualizar_DeveRetornarForbidden_QuandoUsuarioForCliente()
+    {
+        var client = CreateClient(Roles.Cliente);
+
+        var response = await client.PutAsJsonAsync("/api/Peca/id/1", CreateValidUpdateRequest());
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -288,6 +400,24 @@ public class PecaEndpointsTests : IDisposable
         yield return [CreateValidRequest(estoque: -1)];
     }
 
+    public static IEnumerable<object[]> InvalidUpdateRequests()
+    {
+        yield return [CreateValidUpdateRequest(codigo: "")];
+        yield return [CreateValidUpdateRequest(codigo: "A")];
+        yield return [CreateValidUpdateRequest(nome: "")];
+        yield return [CreateValidUpdateRequest(nome: "AB")];
+        yield return [CreateValidUpdateRequest(categoria: null)];
+        yield return [CreateValidUpdateRequest(categoria: "CategoriaInvalida")];
+        yield return [CreateValidUpdateRequest(preco: null)];
+        yield return [CreateValidUpdateRequest(preco: 0m)];
+        yield return [CreateValidUpdateRequest(preco: -1m)];
+        yield return [CreateValidUpdateRequest(preco: 10.999m)];
+        yield return [CreateValidUpdateRequest(estoque: null)];
+        yield return [CreateValidUpdateRequest(estoque: -1)];
+        yield return [CreateValidUpdateRequest(status: null)];
+        yield return [CreateValidUpdateRequest(status: "StatusInvalido")];
+    }
+
     public void Dispose()
     {
         _factory.Dispose();
@@ -315,6 +445,25 @@ public class PecaEndpointsTests : IDisposable
             categoria,
             preco,
             estoque
+        };
+    }
+
+    private static object CreateValidUpdateRequest(
+        string? codigo = "P001",
+        string? nome = "Filtro de oleo atualizado",
+        string? categoria = "Filtros",
+        decimal? preco = 20.99m,
+        int? estoque = 30,
+        string? status = "Ativo")
+    {
+        return new
+        {
+            codigo,
+            nome,
+            categoria,
+            preco,
+            estoque,
+            status
         };
     }
 

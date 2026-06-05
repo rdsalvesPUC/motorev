@@ -48,6 +48,30 @@ public class PecaService
 
         return MapToResponse(peca);
     }
+
+    public PecaResponse AtualizarPeca(int id, PecaUpdateRequest request)
+    {
+        ValidarRequest(request);
+
+        var peca = _context.Pecas.Find(id);
+        if (peca == null)
+        {
+            throw new NotFoundException($"Peça com ID {id} não encontrada.");
+        }
+
+        ValidarCodigoDuplicado(request.Codigo, id);
+
+        peca.Codigo = request.Codigo.Trim().ToUpperInvariant();
+        peca.Nome = request.Nome.Trim();
+        peca.Categoria = request.Categoria!.Value;
+        peca.Preco = request.Preco!.Value;
+        peca.Estoque = request.Estoque!.Value;
+        peca.Status = request.Status!.Value;
+
+        _context.SaveChanges();
+
+        return MapToResponse(peca);
+    }
     
     public List<PecaResponse> ListarPecas(StatusCadastro? status = null)
     {
@@ -70,15 +94,23 @@ public class PecaService
         Validator.ValidateObject(request, validationContext, true);
     }
 
-    private void ValidarCodigoDuplicado(string codigo)
+    private static void ValidarRequest(PecaUpdateRequest request)
+    {
+        var validationContext = new ValidationContext(request);
+        Validator.ValidateObject(request, validationContext, true);
+    }
+
+    private void ValidarCodigoDuplicado(string codigo, int? idIgnorado = null)
     {
         var codigoNormalizado = codigo.Trim().ToUpperInvariant();
         var codigoJaExiste = _context.Pecas
             .AsEnumerable()
-            .Any(peca => string.Equals(
-                peca.Codigo.Trim(),
-                codigoNormalizado,
-                StringComparison.OrdinalIgnoreCase));
+            .Any(peca =>
+                (!idIgnorado.HasValue || peca.Id != idIgnorado.Value) &&
+                string.Equals(
+                    peca.Codigo.Trim(),
+                    codigoNormalizado,
+                    StringComparison.OrdinalIgnoreCase));
 
         if (codigoJaExiste)
         {
