@@ -291,6 +291,86 @@ public class PecaServiceTests
     }
 
     [Fact]
+    public void AtualizarStatusPeca_DeveInativarPeca_QuandoStatusForInativo()
+    {
+        using var context = CreateContext();
+        var pecaId = PecaTestFactory.SeedPecas(
+            context,
+            PecaTestFactory.CreatePeca(status: StatusCadastro.Ativo)).Single();
+        var service = new PecaService(context);
+        var request = new PecaStatusRequest(StatusCadastro.Inativo);
+
+        var result = service.AtualizarStatusPeca(pecaId, request);
+
+        Assert.Equal(nameof(StatusCadastro.Inativo), result.Status);
+        Assert.Equal(StatusCadastro.Inativo, context.Pecas.Single().Status);
+    }
+
+    [Fact]
+    public void AtualizarStatusPeca_DeveAtivarPeca_QuandoStatusForAtivo()
+    {
+        using var context = CreateContext();
+        var pecaId = PecaTestFactory.SeedPecas(
+            context,
+            PecaTestFactory.CreatePeca(status: StatusCadastro.Inativo)).Single();
+        var service = new PecaService(context);
+        var request = new PecaStatusRequest(StatusCadastro.Ativo);
+
+        var result = service.AtualizarStatusPeca(pecaId, request);
+
+        Assert.Equal(nameof(StatusCadastro.Ativo), result.Status);
+        Assert.Equal(StatusCadastro.Ativo, context.Pecas.Single().Status);
+    }
+
+    [Fact]
+    public void AtualizarStatusPeca_DeveLancarNotFoundException_QuandoPecaNaoExistir()
+    {
+        using var context = CreateContext();
+        var service = new PecaService(context);
+        var request = new PecaStatusRequest(StatusCadastro.Inativo);
+
+        Assert.Throws<NotFoundException>(() => service.AtualizarStatusPeca(999, request));
+    }
+
+    [Fact]
+    public void AtualizarStatusPeca_DeveLancarValidationException_QuandoStatusForNulo()
+    {
+        using var context = CreateContext();
+        var pecaId = PecaTestFactory.SeedPecas(context, PecaTestFactory.CreatePeca()).Single();
+        var service = new PecaService(context);
+        var request = new PecaStatusRequest(null);
+
+        Assert.Throws<ValidationException>(() => service.AtualizarStatusPeca(pecaId, request));
+    }
+
+    [Fact]
+    public void AtualizarStatusPeca_NaoDeveAlterarOutrosCamposDaPeca()
+    {
+        using var context = CreateContext();
+        var pecaId = PecaTestFactory.SeedPecas(
+            context,
+            PecaTestFactory.CreatePeca(
+                codigo: "P001",
+                nome: "Filtro",
+                categoria: CategoriaPeca.Filtros,
+                preco: 10.99m,
+                estoque: 25,
+                status: StatusCadastro.Ativo)).Single();
+        var service = new PecaService(context);
+        var request = new PecaStatusRequest(StatusCadastro.Inativo);
+
+        service.AtualizarStatusPeca(pecaId, request);
+
+        var pecaNoDb = context.Pecas.Single();
+        Assert.Equal("P001", pecaNoDb.Codigo);
+        Assert.Equal("Filtro", pecaNoDb.Nome);
+        Assert.Equal(CategoriaPeca.Filtros, pecaNoDb.Categoria);
+        Assert.Equal(10.99m, pecaNoDb.Preco);
+        Assert.Equal(25, pecaNoDb.Estoque);
+        Assert.Equal(StatusCadastro.Inativo, pecaNoDb.Status);
+    }
+
+    [Fact]
     public void ListarPecas_DeveRetornarTodasAsPecas_QuandoStatusNaoForInformado()
     {
         using var context = CreateContext();

@@ -26,6 +26,10 @@ export interface PecaUpdateRequest extends PecaRequest {
   status: StatusCadastro;
 }
 
+export interface PecaStatusRequest {
+  status: StatusCadastro;
+}
+
 export const CATEGORIAS_PECA: Array<{ value: CategoriaPeca; label: string }> = [
   { value: 'Filtros', label: 'Filtros' },
   { value: 'Motor', label: 'Motor' },
@@ -55,5 +59,13 @@ export const pecaService = {
       body: JSON.stringify(data),
     });
     return handleResponse(response, 'Falha ao atualizar peça');
+  },
+
+  async atualizarStatus(id: number, data: PecaStatusRequest): Promise<PecaResponse> {
+    const response = await apiFetch(`${BASE_URL}/Peca/id/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response, 'Falha ao atualizar status da peça');
   },
 };
