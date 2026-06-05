@@ -255,10 +255,7 @@ export default function CatalogoPecas() {
       setSavingKey(record.id);
 
       try {
-        const updatedPeca = await pecaService.atualizar(record.id, {
-          ...toUpdateRequest(record),
-          status: nextStatus,
-        });
+        const updatedPeca = await pecaService.atualizarStatus(record.id, { status: nextStatus });
         setPecas((currentPecas) =>
           currentPecas.map((peca) => (peca.id === record.id ? updatedPeca : peca)),
         );
