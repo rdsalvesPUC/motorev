@@ -106,6 +106,38 @@ public class PecaController : ControllerBase
         var response = _pecaService.AtualizarPeca(id, request);
         return Ok(response);
     }
+
+    /// <summary>
+    /// Atualizar apenas o status de uma Peça.
+    /// </summary>
+    /// <remarks>
+    /// Usado para soft delete e reativação de Peças. O registro não é removido do banco.
+    ///
+    /// Exemplo de request:
+    ///
+    /// {
+    ///   "status": "Inativo"
+    /// }
+    /// </remarks>
+    /// <param name="id">O ID da Peça que terá o status atualizado.</param>
+    /// <param name="request">Novo status da Peça.</param>
+    /// <response code="200">Status da Peça atualizado com sucesso.</response>
+    /// <response code="400">Dados de entrada inválidos.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem permissão para atualizar o status de Peças.</response>
+    /// <response code="404">Peça não encontrada.</response>
+    [HttpPatch("id/{id}/status")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(PecaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public ActionResult<PecaResponse> AtualizarStatusPeca(int id, [FromBody] PecaStatusRequest request)
+    {
+        var response = _pecaService.AtualizarStatusPeca(id, request);
+        return Ok(response);
+    }
     
     /// <summary>
     /// Listar todas as Peças cadastradas no sistema.

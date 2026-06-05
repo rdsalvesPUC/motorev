@@ -260,6 +260,93 @@ public class PecaEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task AtualizarStatus_DeveRetornarOkEInativarPeca_QuandoUsuarioForConcessionaria()
+    {
+        var id = SeedPecas(CreatePeca("P001", "Filtro", StatusCadastro.Ativo)).Single();
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/Peca/id/{id}/status",
+            CreateValidStatusRequest("Inativo"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var peca = await response.Content.ReadFromJsonAsync<PecaResponse>();
+        Assert.NotNull(peca);
+        Assert.Equal(id, peca.Id);
+        Assert.Equal(nameof(StatusCadastro.Inativo), peca.Status);
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var pecaNoDb = context.Pecas.Single();
+        Assert.Equal(StatusCadastro.Inativo, pecaNoDb.Status);
+    }
+
+    [Fact]
+    public async Task AtualizarStatus_DeveRetornarOkEAtivarPeca_QuandoUsuarioForConcessionaria()
+    {
+        var id = SeedPecas(CreatePeca("P001", "Filtro", StatusCadastro.Inativo)).Single();
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/Peca/id/{id}/status",
+            CreateValidStatusRequest("Ativo"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var peca = await response.Content.ReadFromJsonAsync<PecaResponse>();
+        Assert.NotNull(peca);
+        Assert.Equal(id, peca.Id);
+        Assert.Equal(nameof(StatusCadastro.Ativo), peca.Status);
+    }
+
+    [Theory]
+    [MemberData(nameof(InvalidStatusRequests))]
+    public async Task AtualizarStatus_DeveRetornarBadRequest_QuandoPayloadForInvalido(object request)
+    {
+        var id = SeedPecas(CreatePeca("P001", "Filtro", StatusCadastro.Ativo)).Single();
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.PatchAsJsonAsync($"/api/Peca/id/{id}/status", request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AtualizarStatus_DeveRetornarNotFound_QuandoPecaNaoExistir()
+    {
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.PatchAsJsonAsync(
+            "/api/Peca/id/999/status",
+            CreateValidStatusRequest("Inativo"));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AtualizarStatus_DeveRetornarUnauthorized_QuandoNaoEnviarToken()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.PatchAsJsonAsync(
+            "/api/Peca/id/1/status",
+            CreateValidStatusRequest("Inativo"));
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AtualizarStatus_DeveRetornarForbidden_QuandoUsuarioForCliente()
+    {
+        var client = CreateClient(Roles.Cliente);
+
+        var response = await client.PatchAsJsonAsync(
+            "/api/Peca/id/1/status",
+            CreateValidStatusRequest("Inativo"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Listar_DeveRetornarPecasOrdenadasPorNome_QuandoUsuarioForConcessionaria()
     {
         SeedPecas(
@@ -418,6 +505,12 @@ public class PecaEndpointsTests : IDisposable
         yield return [CreateValidUpdateRequest(status: "StatusInvalido")];
     }
 
+    public static IEnumerable<object[]> InvalidStatusRequests()
+    {
+        yield return [CreateValidStatusRequest(null)];
+        yield return [CreateValidStatusRequest("StatusInvalido")];
+    }
+
     public void Dispose()
     {
         _factory.Dispose();
@@ -463,6 +556,14 @@ public class PecaEndpointsTests : IDisposable
             categoria,
             preco,
             estoque,
+            status
+        };
+    }
+
+    private static object CreateValidStatusRequest(string? status = "Ativo")
+    {
+        return new
+        {
             status
         };
     }

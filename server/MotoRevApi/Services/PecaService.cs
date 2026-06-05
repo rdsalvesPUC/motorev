@@ -72,6 +72,23 @@ public class PecaService
 
         return MapToResponse(peca);
     }
+
+    public PecaResponse AtualizarStatusPeca(int id, PecaStatusRequest request)
+    {
+        ValidarRequest(request);
+
+        var peca = _context.Pecas.Find(id);
+        if (peca == null)
+        {
+            throw new NotFoundException($"Peça com ID {id} não encontrada.");
+        }
+
+        peca.Status = request.Status!.Value;
+
+        _context.SaveChanges();
+
+        return MapToResponse(peca);
+    }
     
     public List<PecaResponse> ListarPecas(StatusCadastro? status = null)
     {
@@ -95,6 +112,12 @@ public class PecaService
     }
 
     private static void ValidarRequest(PecaUpdateRequest request)
+    {
+        var validationContext = new ValidationContext(request);
+        Validator.ValidateObject(request, validationContext, true);
+    }
+
+    private static void ValidarRequest(PecaStatusRequest request)
     {
         var validationContext = new ValidationContext(request);
         Validator.ValidateObject(request, validationContext, true);
