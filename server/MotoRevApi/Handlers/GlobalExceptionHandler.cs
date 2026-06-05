@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MotoRevApi.Exceptions;
 using System.ComponentModel.DataAnnotations;
@@ -56,6 +58,12 @@ public class GlobalExceptionHandler : IExceptionHandler
                 Status = StatusCodes.Status409Conflict,
                 Title = "Dados Duplicados",
                 Detail = dupEx.Message
+            },
+            DbUpdateException dbEx when dbEx.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627) => new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Conflito de Dados",
+                Detail = "Não foi possível completar a operação pois já existe um registro com os mesmos dados únicos (código ou nome)."
             },
             _ => new ProblemDetails
             {
