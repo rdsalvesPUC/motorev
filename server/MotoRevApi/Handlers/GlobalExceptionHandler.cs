@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MotoRevApi.Exceptions;
+using System.ComponentModel.DataAnnotations;
 
 namespace MotoRevApi.Handlers;
 
@@ -39,6 +40,12 @@ public class GlobalExceptionHandler : IExceptionHandler
                 Title = "Erro de Registro",
                 Detail = "Um ou mais erros de validação ocorreram.",
                 Extensions = { ["errors"] = regEx.Errors }
+            },
+            ValidationException validationEx => new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Erro de Validação",
+                Detail = validationEx.Message
             },
             NotFoundException notFoundEx => new ProblemDetails
             {

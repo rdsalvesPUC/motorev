@@ -6,5 +6,4 @@ public class Moto
     public required string Modelo { get; set; }
     public string? Cor { get; set; }
     public required string Ano { get; set; }
-    
 }

@@ -1,5 +1,25 @@
 # MotoRev
 
+## Sumário
+
+- [1. Visão Geral](#1-visão-geral)
+- [2. Objetivo do Projeto](#2-objetivo-do-projeto)
+- [3. Arquitetura](#3-arquitetura)
+- [4. Tecnologias Utilizadas](#4-tecnologias-utilizadas)
+- [5. Estrutura do Repositório](#5-estrutura-do-repositório)
+- [6. Funcionalidades (Requisitos Funcionais)](#6-funcionalidades-requisitos-funcionais)
+- [7. Regras de Negócio](#7-regras-de-negócio)
+- [8. Autenticação e Autorização](#8-autenticação-e-autorização)
+- [9. Banco de Dados](#9-banco-de-dados)
+- [10. Testes](#10-testes)
+- [11. Como Executar o Projeto](#11-como-executar-o-projeto)
+- [12. API](#12-api)
+- [13. Documentação UML e Arquitetura](#13-documentação-uml-e-arquitetura)
+- [14. Organização Ágil](#14-organização-ágil)
+- [15. Autores](#15-autores)
+
+---
+
 ## 1. Visão Geral
 
 O MotoRev é um sistema web para gerenciamento de revisões de motocicletas, permitindo o controle de clientes, motos, concessionárias, agendamentos, execuções de revisões e histórico de manutenção.
@@ -204,8 +224,42 @@ dotnet test
 ### Comando para executar testes com cobertura
 
 ```bash
-dotnet test --collect:"XPlat Code Coverage"
+dotnet test --collect:"XPlat Code Coverage" --settings coverlet.runsettings
 ```
+
+Esse comando gera um arquivo `coverage.cobertura.xml` dentro da pasta `TestResults` do projeto de testes. O caminho costuma seguir este formato:
+
+```text
+server/MotoRevApi.Tests/TestResults/{guid}/coverage.cobertura.xml
+```
+
+O arquivo `coverlet.runsettings` exclui da análise de cobertura os arquivos que não representam regras de negócio testáveis, como:
+
+- `Program.cs`;
+- configurações de OpenAPI geradas;
+- migrations do Entity Framework Core;
+- arquivos gerados em `obj`;
+- configuração de mapeamento `Profiles/MapsterConfig.cs`.
+
+### Gerar relatório HTML da cobertura
+
+Após gerar o XML de cobertura, utilizar o **ReportGenerator** para criar uma visualização em HTML:
+
+```bash
+reportgenerator -reports:"server/MotoRevApi.Tests/TestResults/{guid}/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
+```
+
+Substituir `{guid}` pelo nome da pasta criada dentro de `TestResults` na execução do `dotnet test`.
+
+O relatório HTML será gerado em:
+
+```text
+coveragereport/index.html
+```
+
+Abrir esse arquivo no navegador para visualizar o relatório de cobertura.
+
+Sempre que os testes ou o código do back-end forem alterados, executar novamente o comando de testes com cobertura e depois gerar novamente o relatório HTML.
 
 ### Objetivo dos testes
 
@@ -229,14 +283,14 @@ dotnet test --collect:"XPlat Code Coverage"
 ### Passos
 
 ```bash
+# Navegar até a API
+cd ../server/MotoRevApi
+
 # Subir infraestrutura
 docker compose up
 
 # Build do projeto
 dotnet build
-
-# Navegar até a API
-cd server/MotoRevApi
 
 # Executar API
 dotnet run

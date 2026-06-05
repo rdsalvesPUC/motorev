@@ -1,12 +1,16 @@
 import {Routes, Route, Navigate, useNavigate} from 'react-router';
 import DashboardLayout from './DashboardLayout';
-import {Typography} from 'antd';
-import {tokenManager} from '../services/tokenManager';
-import {PATHS} from '../paths';
-import {t} from '../i18n';
+
+import { Typography } from 'antd';
+import { tokenManager } from '../services/tokenManager';
+import { PATHS, PATH_SEGMENTS } from '../paths';
+import { t } from '../i18n';
+import CatalogoPecas from './catalogos/CatalogoPecas';
+import CatalogoPecasCreate from './catalogos/CatalogoPecasCreate';
 import FormServico from "@/app/components/catalogos/FormServico";
 import CatalogoServicos from "@/app/components/catalogos/CatalogoServicos";
 import DetalheServico from './catalogos/DetalheServico';
+
 
 const {Title, Paragraph} = Typography;
 
@@ -25,18 +29,20 @@ export default function DashboardConcessionaria() {
     const user = tokenManager.getUserData();
     const navigate = useNavigate();
 
-    return (
-        <DashboardLayout
-            userType="concessionaria"
-            userName={user?.nome || 'Concessionária'}
-        >
-            <Routes>
-                <Route index element={<DashboardHome/>}/>
-                <Route path="catalogos-servicos" element={<CatalogoServicos onNavigateToForm={() => navigate('/dashboard/concessionaria/catalogos-servicos/novo')} />} />
-                <Route path="catalogos-servicos/novo" element={<FormServico onCancel={() => navigate('/dashboard/concessionaria/catalogos-servicos')} />} />
-                <Route path="catalogos-servicos/:id" element={<DetalheServico />} />
-                <Route path="*" element={<Navigate to={PATHS.DASHBOARD_CONCESSIONARIA} replace/>}/>
-            </Routes>
-        </DashboardLayout>
-    );
+  return (
+    <DashboardLayout
+      userType="concessionaria"
+      userName={user?.nome || 'Concessionária'}
+    >
+      <Routes>
+        <Route index element={<DashboardHome />} />
+        <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_PECAS} element={<CatalogoPecas />} />
+        <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_PECAS_CREATE} element={<CatalogoPecasCreate />} />
+        <Route path="catalogos-servicos" element={<CatalogoServicos onNavigateToForm={() => navigate('/dashboard/concessionaria/catalogos-servicos/novo')} />} />
+        <Route path="catalogos-servicos/novo" element={<FormServico onCancel={() => navigate('/dashboard/concessionaria/catalogos-servicos')} />} />
+        <Route path="catalogos-servicos/:id" element={<DetalheServico />} />
+        <Route path="*" element={<Navigate to={PATHS.DASHBOARD_CONCESSIONARIA} replace />} />
+      </Routes>
+    </DashboardLayout>
+  );
 }
