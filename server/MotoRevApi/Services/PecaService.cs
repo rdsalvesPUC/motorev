@@ -99,8 +99,11 @@ public class PecaService
             query = query.Where(peca => peca.Status == status);
         }
 
-        return query
+        var pecas = query
             .OrderBy(peca => peca.Nome)
+            .ToList();
+
+        return pecas
             .Select(MapToResponse)
             .ToList();
     }
