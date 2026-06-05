@@ -126,14 +126,10 @@ public class PecaService
     private void ValidarCodigoDuplicado(string codigo, int? idIgnorado = null)
     {
         var codigoNormalizado = codigo.Trim().ToUpperInvariant();
-        var codigoJaExiste = _context.Pecas
-            .AsEnumerable()
-            .Any(peca =>
-                (!idIgnorado.HasValue || peca.Id != idIgnorado.Value) &&
-                string.Equals(
-                    peca.Codigo.Trim(),
-                    codigoNormalizado,
-                    StringComparison.OrdinalIgnoreCase));
+
+        var codigoJaExiste = _context.Pecas.Any(peca =>
+            (!idIgnorado.HasValue || peca.Id != idIgnorado.Value) &&
+            peca.Codigo == codigoNormalizado);
 
         if (codigoJaExiste)
         {
