@@ -66,7 +66,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
   cellTitle,
   required = true,
   children,
-  linhas,
+  linhas = [],
   ...restProps
 }) => {
   const inputNodeMap: Record<string, React.ReactNode> = {
@@ -346,8 +346,8 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
 
   return (
     <Spin spinning={loading}>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
           <DashboardBreadcrumb
             userType="concessionaria"
             items={[
@@ -418,7 +418,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
         </Space>
 
         <Card>
-          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
             <Flex justify="space-between" align="center">
               <span>{t('modeloMotoCatalog.total', { count: filteredData.length })}</span>
               <Button type="primary" onClick={onNavigateToForm}>

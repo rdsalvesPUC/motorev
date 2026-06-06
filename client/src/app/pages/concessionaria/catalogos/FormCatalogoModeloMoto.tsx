@@ -83,8 +83,8 @@ export default function CatalogoMotosCreate({ onBack }: CatalogoMotosCreateProps
 
   return (
     <Spin spinning={loading}>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
+        <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
           <DashboardBreadcrumb
             userType="concessionaria"
             items={[
