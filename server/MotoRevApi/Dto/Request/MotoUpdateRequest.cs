@@ -4,7 +4,7 @@ namespace MotoRevApi.Dto.Request;
 
 /// <summary>
 /// DTO para atualização parcial de uma moto.
-/// Apenas os campos <c>Placa</c> e <c>Cor</c> são aceitos.
+/// Os campos <c>Placa</c>, <c>Cor</c> e <c>KilometragemAtual</c> são aceitos.
 /// Os campos Chassi, ModeloMotoId e Ano são imutáveis e ignorados nesta operação.
 /// </summary>
 public record MotoUpdateRequest
