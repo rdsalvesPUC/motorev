@@ -39,7 +39,7 @@ public class MotoServiceTests
             NomeModelo = "CB 500F", 
             Marca = "Honda", 
             Ativo = true,
-            Linha = "CB",
+            Linha = new Linha { Nome = "CB" },
             Cilindrada = "500cc",
             Ano = 2023
         };
@@ -87,7 +87,7 @@ public class MotoServiceTests
         using var context = CreateContext();
         
         // Seed Modelo e Cliente
-        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "Linha", Cilindrada = "100cc" };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "Linha" }, Cilindrada = "100cc" };
         context.ModelosMotos.Add(modelo);
         var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
         context.Clientes.Add(cliente);
@@ -130,7 +130,7 @@ public class MotoServiceTests
     {
         // Arrange
         using var context = CreateContext();
-        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "Linha", Cilindrada = "100cc" };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "Linha" }, Cilindrada = "100cc" };
         context.ModelosMotos.Add(modelo);
         await context.SaveChangesAsync();
 
@@ -148,7 +148,7 @@ public class MotoServiceTests
         // Arrange
         using var context = CreateContext();
         
-        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "CB" } };
         context.ModelosMotos.Add(modelo);
         
         var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
@@ -201,7 +201,7 @@ public class MotoServiceTests
         // Arrange
         using var context = CreateContext();
 
-        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc", Ano = 2023 };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "CB" }, Cilindrada = "500cc", Ano = 2023 };
         context.ModelosMotos.Add(modelo);
         var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
         context.Clientes.Add(cliente);
@@ -241,7 +241,7 @@ public class MotoServiceTests
         // Arrange
         using var context = CreateContext();
 
-        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc" };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "CB" }, Cilindrada = "500cc" };
         context.ModelosMotos.Add(modelo);
         var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
         context.Clientes.Add(cliente);
@@ -305,7 +305,7 @@ public class MotoServiceTests
         // Arrange
         using var context = CreateContext();
 
-        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc", Ano = 2023 };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "CB" }, Cilindrada = "500cc", Ano = 2023 };
         context.ModelosMotos.Add(modelo);
         var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
         context.Clientes.Add(cliente);
@@ -343,7 +343,7 @@ public class MotoServiceTests
         // Arrange
         using var context = CreateContext();
 
-        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc", Ano = 2023 };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "CB" }, Cilindrada = "500cc", Ano = 2023 };
         context.ModelosMotos.Add(modelo);
         var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
         context.Clientes.Add(cliente);
@@ -377,7 +377,7 @@ public class MotoServiceTests
         // Arrange
         using var context = CreateContext();
 
-        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc", Ano = 2023 };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "CB" }, Cilindrada = "500cc", Ano = 2023 };
         context.ModelosMotos.Add(modelo);
         var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
         context.Clientes.Add(cliente);
@@ -409,7 +409,7 @@ public class MotoServiceTests
         // Arrange
         using var context = CreateContext();
 
-        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = "CB", Cilindrada = "500cc", Ano = 2023 };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "CB" }, Cilindrada = "500cc", Ano = 2023 };
         context.ModelosMotos.Add(modelo);
         var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
         context.Clientes.Add(cliente);

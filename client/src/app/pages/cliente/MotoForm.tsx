@@ -34,8 +34,10 @@ import { BASE_URL } from '@/app/services/http';
 import { modeloMotoService } from '@/app/services/modeloMotoService';
 import { concessionariaService } from '@/app/services/concessionariaService';
 import { motoService } from '@/app/services/motoService';
+import { linhaService } from '@/app/services/linhaService';
 import { ModeloMoto } from '@/app/models/ModeloMoto';
 import { Concessionaria } from '@/app/models/Concessionaria';
+import { Linha } from '@/app/models/Linha';
 import { MotoRequest } from '@/app/models/MotoRequest';
 import { MotoUpdateRequest } from '@/app/models/MotoUpdateRequest';
 import { handleApiError } from '@/app/utils/errorHandler';
@@ -53,6 +55,7 @@ export default function MotoForm() {
 
   const [modelos, setModelos] = useState<ModeloMoto[]>([]);
   const [concessionarias, setConcessionarias] = useState<Concessionaria[]>([]);
+  const [linhas, setLinhas] = useState<Linha[]>([]);
   const [loadingModelos, setLoadingModelos] = useState<boolean>(true);
   const [loadingConcessionarias, setLoadingConcessionarias] = useState<boolean>(true);
   const [loadingMoto, setLoadingMoto] = useState<boolean>(isEdit);
@@ -103,6 +106,13 @@ export default function MotoForm() {
       }
 
       try {
+        const linesData = await linhaService.getAll(false);
+        setLinhas(linesData);
+      } catch (error) {
+        handleApiError(error, 'error.fetchLinhas');
+      }
+
+      try {
         const concessionariasData = await concessionariaService.getAll();
         setConcessionarias(concessionariasData);
       } catch (error) {
@@ -149,6 +159,10 @@ export default function MotoForm() {
     loadFormData();
   }, [id, isEdit, form, navigate]);
 
+  const getLinhaNome = (linhaId: number) => {
+    return linhas.find(l => l.id === linhaId)?.nome || '';
+  };
+
   const handleModeloChange = (id: number) => {
     const modelo = modelos.find((m) => m.id === id) ?? null;
     setModeloSelecionado(modelo);
@@ -156,7 +170,7 @@ export default function MotoForm() {
 
   const modeloOptions = modelos.map((m) => ({
     value: m.id,
-    label: `${m.marca} ${m.nomeModelo} ${m.ano} · ${m.cilindrada} · ${m.linha}`,
+    label: `${m.marca} ${m.nomeModelo} ${m.ano} · ${m.cilindrada} · ${getLinhaNome(m.linhaId)}`,
   }));
 
   const onFinish = async (values: any) => {
@@ -264,7 +278,7 @@ export default function MotoForm() {
                       <Tag color="purple">{modeloSelecionado.cilindrada}</Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label={t('motoForm.linha.label')} span={4}>
-                      <Tag color="blue">{modeloSelecionado.linha}</Tag>
+                      <Tag color="blue">{getLinhaNome(modeloSelecionado.linhaId)}</Tag>
                     </Descriptions.Item>
                   </Descriptions>
                 )}
@@ -310,7 +324,7 @@ export default function MotoForm() {
                       <Tag color="purple">{modeloSelecionado.cilindrada}</Tag>
                     </Descriptions.Item>
                     <Descriptions.Item label={t('motoForm.linha.label')} span={4}>
-                      <Tag color="blue">{modeloSelecionado.linha}</Tag>
+                      <Tag color="blue">{getLinhaNome(modeloSelecionado.linhaId)}</Tag>
                     </Descriptions.Item>
                   </Descriptions>
                 )}

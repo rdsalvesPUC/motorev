@@ -3,7 +3,7 @@ export interface ModeloMoto {
   nomeModelo: string;
   marca: string;
   categoria?: string;
-  linha?: string;
+  linhaId: number;
   cilindrada?: string;
   ano?: number;
   ativo: boolean;

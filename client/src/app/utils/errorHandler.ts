@@ -8,6 +8,8 @@ export const handleApiError = (error: unknown, fallbackKey: string = 'error.unex
       message.error(t('error.serviceConflict'));
     } else if (error.status === 405) {
       message.error(t('error.methodNotAllowed'));
+    } else if (error.status === 422) {
+      message.error(error.message);
     } else {
       console.error('API Error:', error.message, error.data);
       message.error(t('error.apiError'));

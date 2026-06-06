@@ -34,6 +34,7 @@ public class MotoService
 
         var motos = await _context.Motos
             .Include(m => m.ModeloMoto)
+                .ThenInclude(mm => mm.Linha)
             .Include(m => m.Concessionaria)
             .Where(m => m.ClienteId == cliente.Id && m.Ativo)
             .ToListAsync();
@@ -98,6 +99,7 @@ public class MotoService
             // Retorna o response carregando os dados do modelo e concessionária associados
             var savedMoto = await _context.Motos
                 .Include(m => m.ModeloMoto)
+                    .ThenInclude(mm => mm.Linha)
                 .Include(m => m.Concessionaria)
                 .FirstAsync(m => m.Id == moto.Id);
 
@@ -120,6 +122,7 @@ public class MotoService
 
         var moto = await _context.Motos
             .Include(m => m.ModeloMoto)
+                .ThenInclude(mm => mm.Linha)
             .Include(m => m.Concessionaria)
             .FirstOrDefaultAsync(m => m.Id == id && m.ClienteId == cliente.Id && m.Ativo);
 
@@ -180,6 +183,7 @@ public class MotoService
 
             var updatedMoto = await _context.Motos
                 .Include(m => m.ModeloMoto)
+                    .ThenInclude(mm => mm.Linha)
                 .Include(m => m.Concessionaria)
                 .FirstAsync(m => m.Id == moto.Id);
 

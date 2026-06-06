@@ -1,8 +1,11 @@
-﻿using Mapster;
+using Mapster;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace MotoRevApi.Services;
 
@@ -18,6 +21,12 @@ public class ModeloMotoService
     // Adicionado virtual para permitir o mock pelo Moq
     public virtual ModeloMotoResponse CadastrarModeloMoto(ModeloMotoRequest request)
     {
+        var linhaExiste = _context.Linhas.Any(l => l.Id == request.LinhaId);
+        if (!linhaExiste)
+        {
+            throw new NotFoundException("Linha informada não encontrada.");
+        }
+
         var modeloMoto = request.Adapt<ModeloMoto>();
         _context.ModelosMotos.Add(modeloMoto);
         _context.SaveChanges();
@@ -25,12 +34,12 @@ public class ModeloMotoService
         return modeloMoto.Adapt<ModeloMotoResponse>();
     }
     
-    public virtual ModeloMotoResponse? ObterModeloMoto(int id)
+    public virtual ModeloMotoResponse ObterModeloMoto(int id)
     {
         var modeloMoto = _context.ModelosMotos.Find(id);
         if (modeloMoto == null)
         {
-            return null;
+            throw new NotFoundException("Modelo de moto não encontrado.");
         }
         return modeloMoto.Adapt<ModeloMotoResponse>();
     }
@@ -40,12 +49,18 @@ public class ModeloMotoService
         return _context.ModelosMotos.ToList().Adapt<List<ModeloMotoResponse>>();
     }
     
-    public virtual ModeloMotoResponse? AtualizarModeloMoto(int id, ModeloMotoRequest request)
+    public virtual ModeloMotoResponse AtualizarModeloMoto(int id, ModeloMotoRequest request)
     {
         var modeloMoto = _context.ModelosMotos.Find(id);
         if (modeloMoto == null)
         {
-            return null;
+            throw new NotFoundException("Modelo de moto não encontrado.");
+        }
+
+        var linhaExiste = _context.Linhas.Any(l => l.Id == request.LinhaId);
+        if (!linhaExiste)
+        {
+            throw new NotFoundException("Linha informada não encontrada.");
         }
         
         // Mapeia os dados do request para a entidade que já existe e está sendo rastreada pelo EF
@@ -56,12 +71,12 @@ public class ModeloMotoService
         return modeloMoto.Adapt<ModeloMotoResponse>();
     }
     
-    public virtual ModeloMotoResponse? AlternarStatus(int id)
+    public virtual ModeloMotoResponse AlternarStatus(int id)
     {
         var modeloMoto = _context.ModelosMotos.Find(id);
         if (modeloMoto == null)
         {
-            return null;
+            throw new NotFoundException("Modelo de moto não encontrado.");
         }
 
         modeloMoto.Ativo = !modeloMoto.Ativo; // Inverte o status atual

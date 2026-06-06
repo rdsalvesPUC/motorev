@@ -69,10 +69,6 @@ public class ModeloMotoController : ControllerBase
     public ActionResult<ModeloMotoResponse> ObterModeloMoto(int id)
     {
         var response = _modeloMotoService.ObterModeloMoto(id);
-        if (response == null)
-        {
-            return NotFound(new { message = "Modelo de moto não encontrado." });
-        }
         return Ok(response);
     }
 
@@ -117,12 +113,6 @@ public class ModeloMotoController : ControllerBase
         }
 
         var response = _modeloMotoService.AtualizarModeloMoto(id, request);
-        
-        if (response == null)
-        {
-            return NotFound(new { message = "Modelo de moto não encontrado." });
-        }
-
         return Ok(response);
     }
 
@@ -143,12 +133,6 @@ public class ModeloMotoController : ControllerBase
     public IActionResult AlternarStatusModeloMoto(int id)
     {
         var response = _modeloMotoService.AlternarStatus(id);
-
-        if (response == null)
-        {
-            return NotFound(new { message = "Modelo de moto não encontrado." });
-        }
-
         return Ok(new { message = response.Ativo ? "Modelo ativado com sucesso." : "Modelo inativado com sucesso.", modelo = response });
     }
 }

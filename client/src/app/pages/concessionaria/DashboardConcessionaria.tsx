@@ -7,6 +7,8 @@ import {t} from '@/app/i18n';
 import FormServico from "@/app/pages/concessionaria/catalogos/FormServico";
 import CatalogoServicos from "@/app/pages/concessionaria/catalogos/CatalogoServicos";
 import DetalheServico from '@/app/pages/concessionaria/catalogos/DetalheServico';
+import CatalogoLinhas from "@/app/pages/concessionaria/catalogos/CatalogoLinhas";
+import FormLinha from "@/app/pages/concessionaria/catalogos/FormLinha";
 
 const {Title, Paragraph} = Typography;
 
@@ -35,6 +37,8 @@ export default function DashboardConcessionaria() {
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_SERVICOS} element={<CatalogoServicos onNavigateToForm={() => navigate(PATHS.CONCESSIONARIA_CATALOGOS_SERVICOS_NOVO)} />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_SERVICOS_NOVO} element={<FormServico onCancel={() => navigate(PATHS.CONCESSIONARIA_CATALOGOS_SERVICOS)} />} />
                 <Route path={`${PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_SERVICOS}/:id`} element={<DetalheServico />} />
+                <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_LINHAS} element={<CatalogoLinhas onNavigateToForm={() => navigate(PATHS.CONCESSIONARIA_CATALOGOS_LINHAS_NOVO)} />} />
+                <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_LINHAS_NOVO} element={<FormLinha onCancel={() => navigate(PATHS.CONCESSIONARIA_CATALOGOS_LINHAS)} />} />
                 <Route path="*" element={<Navigate to={PATHS.DASHBOARD_CONCESSIONARIA} replace/>}/>
             </Routes>
         </DashboardLayout>
