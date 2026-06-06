@@ -11,7 +11,7 @@ public record PecaUpdateRequest(
     [Required(ErrorMessage = "A categoria é obrigatória.")]
     CategoriaPeca? Categoria,
     [Required(ErrorMessage = "O preço é obrigatório.")]
-    [Range(typeof(decimal), "0.01", "79228162514264337593543950335", ErrorMessage = "O preço deve ser maior que zero.")]
+    [Range(0.01, double.MaxValue, ErrorMessage = "O preço deve ser maior que zero.")]
     decimal? Preco,
     [Required(ErrorMessage = "O estoque é obrigatório.")]
     [Range(0, int.MaxValue, ErrorMessage = "O estoque não pode ser negativo.")]
