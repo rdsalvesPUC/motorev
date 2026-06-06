@@ -7,6 +7,7 @@ using MotoRevApi.Controller;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
 using MotoRevApi.Services;
+using MotoRevApi.Authorization;
 using Xunit;
 
 namespace MotoRevApi.Tests.Controllers;
@@ -26,7 +27,7 @@ public class ClienteControllerTests
     public async Task Register_DeveRetornarCreated_QuandoSucesso()
     {
         // Arrange
-        var request = new RegisterClienteRequest("john@test.com", "Password123!", "John Doe");
+        var request = new RegisterClienteRequest("john@test.com", "Password123!", "John Doe", "529.982.247-25", "(11) 99999-0000");
         var response = new ClienteResponse(1, "John Doe");
         _clienteServiceMock.Setup(s => s.RegisterAsync(request)).ReturnsAsync(response);
 
@@ -67,6 +68,120 @@ public class ClienteControllerTests
     }
 
     [Fact]
+    public async Task GetMe_DeveRetornarOk_QuandoUsuarioAutenticado()
+    {
+        // Arrange
+        var userId = "user-id-123";
+        SetAuthenticatedUser(userId);
+
+        var response = new ClientePerfilResponse(
+            1,
+            "John Doe",
+            "john@test.com",
+            "52998224725",
+            "11999990000",
+            new ClienteEnderecoResponse(null, null, null, null, null, null, null));
+        _clienteServiceMock.Setup(s => s.GetPerfilByUserIdAsync(userId)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.GetMe();
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task UpdateDadosPessoais_DeveRetornarOk_QuandoUsuarioAutenticado()
+    {
+        // Arrange
+        var userId = "user-id-123";
+        SetAuthenticatedUser(userId);
+
+        var request = new ClienteDadosPessoaisRequest("John Doe", "john@test.com", "(11) 99999-0000");
+        var response = new ClientePerfilResponse(
+            1,
+            "John Doe",
+            "john@test.com",
+            "52998224725",
+            "11999990000",
+            new ClienteEnderecoResponse(null, null, null, null, null, null, null));
+        _clienteServiceMock.Setup(s => s.UpdateDadosPessoaisAsync(userId, request)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.UpdateDadosPessoais(request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task AlterarSenha_DeveRetornarNoContent_QuandoUsuarioAutenticado()
+    {
+        // Arrange
+        var userId = "user-id-123";
+        SetAuthenticatedUser(userId);
+
+        var request = new ClienteAlterarSenhaRequest("SenhaAtual123!", "NovaSenha123!", "NovaSenha123!");
+        _clienteServiceMock.Setup(s => s.AlterarSenhaAsync(userId, request)).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.AlterarSenha(request);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task UpdateEndereco_DeveRetornarOk_QuandoUsuarioAutenticado()
+    {
+        // Arrange
+        var userId = "user-id-123";
+        SetAuthenticatedUser(userId);
+
+        var request = new ClienteEnderecoRequest("04538-132", "Rua Funchal", "418", null, "Vila Olímpia", "São Paulo", "SP");
+        var response = new ClientePerfilResponse(
+            1,
+            "John Doe",
+            "john@test.com",
+            "52998224725",
+            "11999990000",
+            new ClienteEnderecoResponse("04538132", "Rua Funchal", "418", null, "Vila Olímpia", "São Paulo", "SP"));
+        _clienteServiceMock.Setup(s => s.UpdateEnderecoAsync(userId, request)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.UpdateEndereco(request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Theory]
+    [InlineData(nameof(ClienteController.GetMe))]
+    [InlineData(nameof(ClienteController.UpdateDadosPessoais))]
+    [InlineData(nameof(ClienteController.UpdateEndereco))]
+    [InlineData(nameof(ClienteController.AlterarSenha))]
+    public void EndpointsDoMeuPerfil_DevemExigirRoleCliente(string methodName)
+    {
+        // Arrange
+        var method = typeof(ClienteController).GetMethod(methodName)!;
+
+        // Act
+        var authorizeAttribute = method.GetCustomAttributes(typeof(AuthorizeAttribute), false)
+            .Cast<AuthorizeAttribute>()
+            .SingleOrDefault();
+
+        // Assert
+        Assert.NotNull(authorizeAttribute);
+        Assert.Equal(Roles.Cliente, authorizeAttribute.Roles);
+    }
+
+    [Fact]
     public async Task Get_DeveRetornarUnauthorized_QuandoSemUserId()
     {
         // Arrange
@@ -81,5 +196,18 @@ public class ClienteControllerTests
 
         // Assert
         Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    private void SetAuthenticatedUser(string userId)
+    {
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new Claim[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId)
+        }, "mock"));
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = user }
+        };
     }
 }

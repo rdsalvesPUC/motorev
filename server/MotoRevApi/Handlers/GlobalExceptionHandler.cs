@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using MotoRevApi.Exceptions;
+using System.ComponentModel.DataAnnotations;
 
 namespace MotoRevApi.Handlers;
 
@@ -40,6 +41,12 @@ public class GlobalExceptionHandler : IExceptionHandler
                 Detail = "Um ou mais erros de validação ocorreram.",
                 Extensions = { ["errors"] = regEx.Errors }
             },
+            ValidationException validationEx => new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Erro de Validação",
+                Detail = validationEx.Message
+            },
             NotFoundException notFoundEx => new ProblemDetails
             {
                 Status = StatusCodes.Status404NotFound,
@@ -51,6 +58,12 @@ public class GlobalExceptionHandler : IExceptionHandler
                 Status = StatusCodes.Status409Conflict,
                 Title = "Dados Duplicados",
                 Detail = dupEx.Message
+            },
+            BusinessRuleException ruleEx => new ProblemDetails
+            {
+                Status = StatusCodes.Status422UnprocessableEntity,
+                Title = "Regra de Negócio Violada",
+                Detail = ruleEx.Message
             },
             DbUpdateException dbEx when dbEx.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627) => new ProblemDetails
             {

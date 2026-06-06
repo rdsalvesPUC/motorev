@@ -5,6 +5,7 @@ import imgAMechanicWearingABlueJumpsuitInspectingAMotorcycleInAWellLitWorkshopSu
 import { imgContent } from "./svg-ur0rn";
 import { Button } from 'antd';
 import { useNavigate } from 'react-router';
+import { PATHS } from '@/app/paths';
 
 function Logo() {
   return (
@@ -123,8 +124,8 @@ function ButtonGroup() {
 
   return (
     <div className="content-stretch flex gap-[16px] items-center relative shrink-0" data-name="buttonGroup">
-      <Button type="default" size="middle" onClick={() => navigate('/login')}>Entrar</Button>
-      <Button type="primary" size="middle" onClick={() => navigate('/cadastro')}>Cadastrar</Button>
+      <Button type="default" size="middle" onClick={() => navigate(PATHS.LOGIN)}>Entrar</Button>
+      <Button type="primary" size="middle" onClick={() => navigate(PATHS.CADASTRO)}>Cadastrar</Button>
     </div>
   );
 }
@@ -150,7 +151,7 @@ function ButtonMarketing() {
 
   return (
     <div className="content-stretch flex items-center justify-center relative shrink-0" data-name="buttonMarketing">
-      <Button type="primary" size="large" style={{ height: '52px', fontSize: '20px', padding: '0 32px' }} onClick={() => navigate('/cadastro')}>Comece Agora</Button>
+      <Button type="primary" size="large" style={{ height: '52px', fontSize: '20px', padding: '0 32px' }} onClick={() => navigate(PATHS.CADASTRO)}>Comece Agora</Button>
     </div>
   );
 }
@@ -591,7 +592,7 @@ function ButtonLarge() {
 
   return (
     <div className="content-stretch flex items-center justify-center relative shrink-0" data-name="buttonLarge">
-      <Button type="primary" size="large" style={{ height: '52px', fontSize: '20px', padding: '0 32px' }} onClick={() => navigate('/cadastro')}>Saiba Mais</Button>
+      <Button type="primary" size="large" style={{ height: '52px', fontSize: '20px', padding: '0 32px' }} onClick={() => navigate(PATHS.CADASTRO)}>Saiba Mais</Button>
     </div>
   );
 }
@@ -653,7 +654,7 @@ function ButtonLarge1() {
 
   return (
     <div className="content-stretch flex items-center justify-center relative shrink-0" data-name="buttonLarge">
-      <Button type="primary" size="large" style={{ height: '52px', fontSize: '20px', padding: '0 32px' }} onClick={() => navigate('/cadastro')}>Saiba Mais</Button>
+      <Button type="primary" size="large" style={{ height: '52px', fontSize: '20px', padding: '0 32px' }} onClick={() => navigate(PATHS.CADASTRO)}>Saiba Mais</Button>
     </div>
   );
 }

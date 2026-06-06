@@ -1,5 +1,5 @@
-import { BASE_URL, handleResponse, apiFetch } from './http';
-import { tokenManager } from './tokenManager';
+import { BASE_URL, handleResponse, apiFetch } from '@/app/services/http';
+import { tokenManager } from '@/app/services/tokenManager';
 
 export const authService = {
   async login(data: any) {

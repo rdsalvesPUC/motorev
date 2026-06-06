@@ -1,6 +1,6 @@
-import { tokenManager } from './tokenManager';
+import { tokenManager } from '@/app/services/tokenManager';
 
-export const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'http://localhost:5262/api';
+export const BASE_URL = import.meta.env.VITE_BACKEND_BASE_URL || 'https://localhost:7138/api';
 
 export class ApiError extends Error {
   status?: number;
@@ -46,7 +46,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
   }
-  if (!headers.has('Content-Type')) {
+  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
 
