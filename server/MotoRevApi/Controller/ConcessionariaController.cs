@@ -148,4 +148,43 @@ public class ConcessionariaController : ControllerBase
         var response = await _concessionariaService.GetLojaByIdAsync(id, lojaId);
         return Ok(response);
     }
+
+    /// <summary>
+    /// Atualizar uma loja filial de uma concessionaria matriz.
+    /// </summary>
+    /// <param name="id">O ID da concessionaria matriz.</param>
+    /// <param name="lojaId">O ID da loja filial.</param>
+    /// <param name="request">Os novos dados da loja filial.</param>
+    /// <response code="200">Retorna a loja atualizada.</response>
+    /// <response code="400">Se os dados fornecidos forem invalidos.</response>
+    /// <response code="404">Se a loja nao for encontrada.</response>
+    /// <response code="409">Se ja existir uma matriz ou filial com o mesmo CNPJ.</response>
+    [HttpPut("{id}/lojas/{lojaId}")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateLoja(int id, int lojaId, [FromBody] LojaRequest request)
+    {
+        var response = await _concessionariaService.UpdateLojaAsync(id, lojaId, request);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Alternar status ativo/inativo de uma loja filial.
+    /// </summary>
+    /// <param name="id">O ID da concessionaria matriz.</param>
+    /// <param name="lojaId">O ID da loja filial.</param>
+    /// <response code="200">Retorna a loja com status atualizado.</response>
+    /// <response code="404">Se a loja nao for encontrada.</response>
+    [HttpPatch("{id}/lojas/{lojaId}/alternar-status")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AlternarStatusLoja(int id, int lojaId)
+    {
+        var response = await _concessionariaService.AlternarStatusLojaAsync(id, lojaId);
+        return Ok(response);
+    }
 }

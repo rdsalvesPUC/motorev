@@ -1,16 +1,14 @@
-import { Loja } from '@/app/models/Loja';
-
-export interface Concessionaria {
+export interface Loja {
   id: number;
   nome: string;
-  cnpj: string;
-  telefone: string;
   tipo: string;
+  cnpj: string;
   cep: string;
   logradouro: string;
   numero: string;
   bairro: string;
   cidade: string;
   uf: string;
-  lojas: Loja[];
+  concessionariaId: number;
+  ativo: boolean;
 }

@@ -97,6 +97,7 @@ namespace MotoRevApi.Migrations
                     Bairro = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Cidade = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Uf = table.Column<string>(type: "nvarchar(2)", maxLength: 2, nullable: false),
+                    Ativo = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
                     ConcessionariaId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>

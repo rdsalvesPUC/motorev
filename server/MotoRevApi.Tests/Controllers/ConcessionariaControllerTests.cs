@@ -140,7 +140,7 @@ public class ConcessionariaControllerTests
     {
         // Arrange
         var request = new LojaRequest("Loja", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
-        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1);
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true);
         _serviceMock.Setup(s => s.AddLojaAsync(1, request)).ReturnsAsync(response);
 
         // Act
@@ -150,5 +150,38 @@ public class ConcessionariaControllerTests
         var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
         Assert.Equal(201, createdAtActionResult.StatusCode);
         Assert.Equal(response, createdAtActionResult.Value);
+    }
+
+    [Fact]
+    public async Task UpdateLoja_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true);
+        _serviceMock.Setup(s => s.UpdateLojaAsync(1, 1, request)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.UpdateLoja(1, 1, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task AlternarStatusLoja_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, false);
+        _serviceMock.Setup(s => s.AlternarStatusLojaAsync(1, 1)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.AlternarStatusLoja(1, 1);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
     }
 }

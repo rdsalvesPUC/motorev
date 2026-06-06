@@ -140,6 +140,54 @@ public class ConcessionariaService
         return MapLojaResponse(loja);
     }
 
+    public virtual async Task<LojaResponse> UpdateLojaAsync(int concessionariaId, int lojaId, LojaRequest request)
+    {
+        var loja = await _context.Lojas
+            .FirstOrDefaultAsync(l => l.Id == lojaId && l.ConcessionariaId == concessionariaId);
+
+        if (loja == null)
+        {
+            throw new NotFoundException($"Loja com ID {lojaId} nao encontrada.");
+        }
+
+        var cnpjEmUsoPorMatriz = await _context.Concessionarias.AnyAsync(c => c.Cnpj == request.Cnpj);
+        var cnpjEmUsoPorOutraLoja = await _context.Lojas.AnyAsync(l => l.Cnpj == request.Cnpj && l.Id != lojaId);
+        if (cnpjEmUsoPorMatriz || cnpjEmUsoPorOutraLoja)
+        {
+            throw new DuplicateDataException($"O CNPJ {request.Cnpj} ja esta em uso.");
+        }
+
+        loja.Nome = request.Nome;
+        loja.Tipo = "Filial";
+        loja.Cnpj = request.Cnpj;
+        loja.Cep = request.Cep;
+        loja.Logradouro = request.Logradouro;
+        loja.Numero = request.Numero;
+        loja.Bairro = request.Bairro;
+        loja.Cidade = request.Cidade;
+        loja.Uf = request.Uf.ToUpperInvariant();
+
+        await _context.SaveChangesAsync();
+
+        return MapLojaResponse(loja);
+    }
+
+    public virtual async Task<LojaResponse> AlternarStatusLojaAsync(int concessionariaId, int lojaId)
+    {
+        var loja = await _context.Lojas
+            .FirstOrDefaultAsync(l => l.Id == lojaId && l.ConcessionariaId == concessionariaId);
+
+        if (loja == null)
+        {
+            throw new NotFoundException($"Loja com ID {lojaId} nao encontrada.");
+        }
+
+        loja.Ativo = !loja.Ativo;
+        await _context.SaveChangesAsync();
+
+        return MapLojaResponse(loja);
+    }
+
     public virtual async Task<IEnumerable<LojaResponse>> GetLojasAsync(int concessionariaId)
     {
         var concessionariaExiste = await _context.Concessionarias.AnyAsync(c => c.Id == concessionariaId);
@@ -202,7 +250,8 @@ public class ConcessionariaService
             loja.Bairro,
             loja.Cidade,
             loja.Uf,
-            loja.ConcessionariaId
+            loja.ConcessionariaId,
+            loja.Ativo
         );
     }
 }

@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
 import { clienteService } from '@/app/services/clienteService';
 import { concessionariaService } from '@/app/services/concessionariaService';
-import { formatCNPJ, formatCPF, formatPhone } from '@/app/utils/formatters';
-import { validateCNPJ, validateCPF, CPF_REGEX, CNPJ_REGEX, PHONE_REGEX } from '@/app/utils/validators';
+import { formatCEP, formatCNPJ, formatCPF, formatPhone } from '@/app/utils/formatters';
+import { validateCNPJ, validateCPF, CPF_REGEX, CNPJ_REGEX, PHONE_REGEX, CEP_REGEX, UF_REGEX } from '@/app/utils/validators';
 import { t } from '@/app/i18n';
 import LanguageSelector from '@/app/components/layout/LanguageSelector';
 import { PATHS } from '@/app/paths';
@@ -73,7 +73,15 @@ export default function Cadastro() {
       await concessionariaService.register({
         nome: values.nomeConcessionaria,
         email: values.email,
-        password: values.senha
+        password: values.senha,
+        cnpj: values.cnpj,
+        telefone: values.tel,
+        cep: values.cep,
+        logradouro: values.logradouro,
+        numero: values.numero,
+        bairro: values.bairro,
+        cidade: values.cidade,
+        uf: values.uf.toUpperCase(),
       });
       message.success(t('cadastro.concessionaria.success'));
       navigate(PATHS.LOGIN);
@@ -238,6 +246,61 @@ export default function Cadastro() {
           ]}
         >
           <Input prefix={<PhoneOutlined />} placeholder={t('cadastro.concessionaria.telefone.placeholder')} />
+        </Form.Item>
+
+        <Form.Item
+          label="CEP"
+          name="cep"
+          normalize={formatCEP}
+          rules={[
+            { required: true, message: 'Por favor, insira o CEP' },
+            { pattern: CEP_REGEX, message: 'CEP invalido' }
+          ]}
+        >
+          <Input placeholder="00000-000" />
+        </Form.Item>
+
+        <Form.Item
+          label="Rua / Avenida"
+          name="logradouro"
+          rules={[{ required: true, message: 'Por favor, insira o logradouro' }]}
+        >
+          <Input placeholder="Rua ou Avenida" />
+        </Form.Item>
+
+        <Form.Item
+          label="Numero"
+          name="numero"
+          rules={[{ required: true, message: 'Por favor, insira o numero' }]}
+        >
+          <Input placeholder="Numero" />
+        </Form.Item>
+
+        <Form.Item
+          label="Bairro"
+          name="bairro"
+          rules={[{ required: true, message: 'Por favor, insira o bairro' }]}
+        >
+          <Input placeholder="Bairro" />
+        </Form.Item>
+
+        <Form.Item
+          label="Cidade"
+          name="cidade"
+          rules={[{ required: true, message: 'Por favor, insira a cidade' }]}
+        >
+          <Input placeholder="Cidade" />
+        </Form.Item>
+
+        <Form.Item
+          label="UF"
+          name="uf"
+          rules={[
+            { required: true, message: 'Por favor, insira a UF' },
+            { pattern: UF_REGEX, message: 'UF deve conter 2 letras' }
+          ]}
+        >
+          <Input placeholder="SP" maxLength={2} />
         </Form.Item>
 
         <Form.Item

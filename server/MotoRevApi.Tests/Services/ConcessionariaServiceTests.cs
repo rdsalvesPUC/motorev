@@ -205,6 +205,7 @@ public class ConcessionariaServiceTests
         Assert.Equal("Loja Zona Sul", result.Nome);
         Assert.Equal("Filial", result.Tipo);
         Assert.Equal(1, result.ConcessionariaId);
+        Assert.True(result.Ativo);
         Assert.Single(context.Lojas);
     }
 
@@ -233,6 +234,72 @@ public class ConcessionariaServiceTests
 
         // Act & Assert
         await Assert.ThrowsAsync<DuplicateDataException>(() => service.AddLojaAsync(1, request));
+    }
+
+    [Fact]
+    public async Task UpdateLojaAsync_DeveAtualizarDadosDaLoja()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(CreateConcessionaria());
+        context.Lojas.Add(new Loja
+        {
+            Id = 10,
+            Nome = "Loja Antiga",
+            Tipo = "Filial",
+            Cnpj = "11.222.333/0001-44",
+            Cep = "04000-000",
+            Logradouro = "Rua Antiga",
+            Numero = "10",
+            Bairro = "Bairro",
+            Cidade = "Cidade",
+            Uf = "SP",
+            ConcessionariaId = 1
+        });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new LojaRequest("Loja Nova", "11.222.333/0001-44", "05000-000", "Rua Nova", "20", "Novo Bairro", "Nova Cidade", "RJ");
+
+        // Act
+        var result = await service.UpdateLojaAsync(1, 10, request);
+
+        // Assert
+        Assert.Equal("Loja Nova", result.Nome);
+        Assert.Equal("Filial", result.Tipo);
+        Assert.Equal("RJ", result.Uf);
+    }
+
+    [Fact]
+    public async Task AlternarStatusLojaAsync_DeveAlternarAtivo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(CreateConcessionaria());
+        context.Lojas.Add(new Loja
+        {
+            Id = 10,
+            Nome = "Loja",
+            Tipo = "Filial",
+            Cnpj = "11.222.333/0001-44",
+            Cep = "04000-000",
+            Logradouro = "Rua",
+            Numero = "10",
+            Bairro = "Bairro",
+            Cidade = "Cidade",
+            Uf = "SP",
+            Ativo = true,
+            ConcessionariaId = 1
+        });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act
+        var result = await service.AlternarStatusLojaAsync(1, 10);
+
+        // Assert
+        Assert.False(result.Ativo);
     }
 
     [Fact]

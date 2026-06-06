@@ -11,5 +11,6 @@ public record LojaResponse(
     string Bairro,
     string Cidade,
     string Uf,
-    int ConcessionariaId
+    int ConcessionariaId,
+    bool Ativo
 );
