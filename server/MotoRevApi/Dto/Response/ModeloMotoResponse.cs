@@ -5,5 +5,8 @@ public record ModeloMotoResponse(
     string NomeModelo,
     string Marca,
     string? Categoria,
+    string? Linha,
+    string? Cilindrada,
+    int? Ano,
     bool Ativo
 );

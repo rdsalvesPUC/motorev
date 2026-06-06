@@ -7,5 +7,8 @@ public record ModeloMotoRequest(
     string NomeModelo,
     [Required(ErrorMessage = "A marca é obrigatória.")]
     string Marca,
-    string? Categoria
+    string? Categoria,
+    string? Linha,
+    string? Cilindrada,
+    int? Ano
 );

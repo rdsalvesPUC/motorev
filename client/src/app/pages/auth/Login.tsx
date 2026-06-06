@@ -2,11 +2,11 @@ import { Form, Input, Button, Layout, Typography, Card, Space, Flex, message } f
 import { MailOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
-import { tokenManager } from '../services/tokenManager';
-import { authService } from '../services/authService';
-import { t } from '../i18n';
-import LanguageSelector from './LanguageSelector';
-import { PATHS } from '../paths';
+import { tokenManager } from '@/app/services/tokenManager';
+import { authService } from '@/app/services/authService';
+import { t } from '@/app/i18n';
+import LanguageSelector from '@/app/components/layout/LanguageSelector';
+import { PATHS } from '@/app/paths';
 
 const { Content } = Layout;
 const { Title, Text, Link } = Typography;

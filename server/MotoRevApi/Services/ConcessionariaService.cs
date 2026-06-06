@@ -61,6 +61,7 @@ public class ConcessionariaService
     public virtual async Task<ConcessionariaResponse> GetByIdAsync(int id)
     {
         var concessionaria = await _context.Concessionarias
+            .Where(c => c.Id == id)
             .ProjectToType<ConcessionariaResponse>()
             .FirstOrDefaultAsync();
 
@@ -75,5 +76,12 @@ public class ConcessionariaService
             .FirstOrDefaultAsync();
 
         return concessionaria ?? throw new NotFoundException($"Concessionária não encontrada.");
+    }
+
+    public virtual async Task<IEnumerable<ConcessionariaResponse>> GetAllAsync()
+    {
+        return await _context.Concessionarias
+            .ProjectToType<ConcessionariaResponse>()
+            .ToListAsync();
     }
 }

@@ -1,5 +1,5 @@
 import { Select, Space } from 'antd';
-import { getLocale, setLocale, t } from '../i18n';
+import { getLocale, setLocale, t } from '@/app/i18n';
 import { GlobalOutlined } from '@ant-design/icons';
 
 export default function LanguageSelector() {

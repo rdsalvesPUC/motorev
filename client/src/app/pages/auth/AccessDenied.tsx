@@ -1,7 +1,7 @@
 import { Button, Result } from 'antd';
 import { useNavigate } from 'react-router';
-import { PATHS } from '../paths';
-import { t } from '../i18n';
+import { PATHS } from '@/app/paths';
+import { t } from '@/app/i18n';
 
 export default function AccessDenied() {
   const navigate = useNavigate();

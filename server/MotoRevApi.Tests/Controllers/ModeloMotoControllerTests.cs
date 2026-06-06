@@ -31,8 +31,8 @@ public class ModeloMotoControllerTests
     public void AdicionarModeloMoto_DeveRetornarCreatedAtAction_QuandoSucesso()
     {
         // Arrange
-        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva");
-        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", true);
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva", "Ninja", "400cc", 2023);
+        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", "Ninja", "400cc", 2023, true);
 
         _modeloMotoServiceMock.Setup(s => s.CadastrarModeloMoto(request)).Returns(response);
 
@@ -50,7 +50,7 @@ public class ModeloMotoControllerTests
     {
         // Arrange
         _controller.ModelState.AddModelError("NomeModelo", "Obrigatório");
-        var request = new ModeloMotoRequest("", "Kawasaki", "Esportiva");
+        var request = new ModeloMotoRequest("", "Kawasaki", "Esportiva", null, null, null);
 
         // Act
         var result = _controller.AdicionarModeloMoto(request);
@@ -63,7 +63,7 @@ public class ModeloMotoControllerTests
     public void ObterModeloMoto_DeveRetornarOk_QuandoModeloExiste()
     {
         // Arrange
-        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", true);
+        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", "Ninja", "400cc", 2023, true);
         _modeloMotoServiceMock.Setup(s => s.ObterModeloMoto(1)).Returns(response);
 
         // Act
@@ -95,7 +95,7 @@ public class ModeloMotoControllerTests
         // Arrange
         var list = new List<ModeloMotoResponse> 
         { 
-            new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", true) 
+            new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", "Ninja", "400cc", 2023, true) 
         };
         _modeloMotoServiceMock.Setup(s => s.ListarModelosMotos()).Returns(list);
 
@@ -112,8 +112,8 @@ public class ModeloMotoControllerTests
     public void AtualizarModeloMoto_DeveRetornarOk_QuandoSucesso()
     {
         // Arrange
-        var request = new ModeloMotoRequest("Ninja ZX-6R", "Kawasaki", "Esportiva");
-        var response = new ModeloMotoResponse(1, "Ninja ZX-6R", "Kawasaki", "Esportiva", true);
+        var request = new ModeloMotoRequest("Ninja ZX-6R", "Kawasaki", "Esportiva", "Ninja", "600cc", 2024);
+        var response = new ModeloMotoResponse(1, "Ninja ZX-6R", "Kawasaki", "Esportiva", "Ninja", "600cc", 2024, true);
 
         _modeloMotoServiceMock.Setup(s => s.AtualizarModeloMoto(1, request)).Returns(response);
 
@@ -130,7 +130,7 @@ public class ModeloMotoControllerTests
     public void AtualizarModeloMoto_DeveRetornarNotFound_QuandoModeloNaoExiste()
     {
         // Arrange
-        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva");
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva", null, null, null);
         _modeloMotoServiceMock.Setup(s => s.AtualizarModeloMoto(1, request)).Returns((ModeloMotoResponse)null);
 
         // Act
@@ -145,7 +145,7 @@ public class ModeloMotoControllerTests
     public void AlternarStatusModeloMoto_DeveRetornarOk_QuandoSucesso()
     {
         // Arrange
-        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", false);
+        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", "Ninja", "400cc", 2023, false);
         _modeloMotoServiceMock.Setup(s => s.AlternarStatus(1)).Returns(response);
 
         // Act

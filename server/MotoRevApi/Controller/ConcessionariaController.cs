@@ -84,4 +84,16 @@ public class ConcessionariaController : ControllerBase
         var response = await _concessionariaService.GetByUserIdAsync(userId);
         return Ok(response);
     }
+
+    /// <summary>
+    /// Obter todas as concessionárias cadastradas.
+    /// </summary>
+    /// <response code="200">Retorna a lista de concessionárias.</response>
+    [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<ConcessionariaResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetAll()
+    {
+        var response = await _concessionariaService.GetAllAsync();
+        return Ok(response);
+    }
 }
