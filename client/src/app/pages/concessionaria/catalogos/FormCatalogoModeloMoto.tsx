@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Typography, Form, Input, Select, Button, Space, message, Card, Spin } from 'antd';
+import { Typography, Form, Input, InputNumber, Select, Button, Space, message, Card, Spin } from 'antd';
 import { CarOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { linhaService } from '@/app/services/linhaService';
@@ -36,10 +36,8 @@ const categoriaOptions = [
   { value: 'Adventure', label: 'Adventure' },
 ];
 
-const anoOptions = [2026, 2025, 2024, 2023, 2022, 2021, 2020].map((ano) => ({
-  value: ano,
-  label: ano.toString(),
-}));
+const currentYear = new Date().getFullYear();
+const minModelYear = 1901;
 
 export default function CatalogoMotosCreate({ onBack }: CatalogoMotosCreateProps) {
   const [form] = Form.useForm<ModeloMotoRequest>();
@@ -147,11 +145,21 @@ export default function CatalogoMotosCreate({ onBack }: CatalogoMotosCreateProps
             <Form.Item
               label={t('modeloMotoCatalog.year')}
               name="ano"
+              rules={[
+                {
+                  type: 'number',
+                  min: minModelYear,
+                  max: currentYear,
+                  message: t('modeloMotoCatalog.yearRange', { min: minModelYear, max: currentYear }),
+                },
+              ]}
             >
-              <Select
-                allowClear
+              <InputNumber
                 placeholder={t('modeloMotoCatalog.yearPlaceholder')}
-                options={anoOptions}
+                min={minModelYear}
+                max={currentYear}
+                precision={0}
+                parser={(value) => value?.replace(/[^\d]/g, '') as any}
               />
             </Form.Item>
 

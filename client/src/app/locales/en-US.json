@@ -216,6 +216,7 @@
   "modeloMotoCatalog.lineRequired": "Line is required",
   "modeloMotoCatalog.modelLength": "Model cannot exceed 100 characters.",
   "modeloMotoCatalog.engineLength": "Engine capacity cannot exceed 50 characters.",
+  "modeloMotoCatalog.yearRange": "Year must be between {{min}} and {{max}}.",
   "modeloMotoCatalog.activateTitle": "Activate model",
   "modeloMotoCatalog.activateDescription": "Are you sure you want to activate this model?",
   "modeloMotoCatalog.deactivateTitle": "Deactivate model",

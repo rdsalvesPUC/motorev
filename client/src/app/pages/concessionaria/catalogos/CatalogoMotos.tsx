@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, Input, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, Card, Empty, Switch } from 'antd';
+import { Typography, Input, InputNumber, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, Card, Empty, Switch } from 'antd';
 import { CarOutlined, SearchOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
 import type { ColumnType } from 'antd/es/table';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
@@ -24,6 +24,7 @@ interface CatalogoMotosProps {
 interface EditableColumn extends ColumnType<ModeloMotoData> {
   editable?: boolean;
   required?: boolean;
+  rules?: any[];
 }
 
 interface EditableCellProps {
@@ -31,6 +32,7 @@ interface EditableCellProps {
   dataIndex: string;
   cellTitle: React.ReactNode;
   required?: boolean;
+  rules?: any[];
   children: React.ReactNode;
   linhas: Linha[];
 }
@@ -55,16 +57,15 @@ const categoriaOptions = [
   { value: 'Adventure', label: 'Adventure' },
 ];
 
-const anoOptions = [2026, 2025, 2024, 2023, 2022, 2021, 2020].map((ano) => ({
-  value: ano,
-  label: ano.toString(),
-}));
+const currentYear = new Date().getFullYear();
+const minModelYear = 1901;
 
 const EditableCell: React.FC<EditableCellProps> = ({
   editing,
   dataIndex,
   cellTitle,
   required = true,
+  rules,
   children,
   linhas = [],
   ...restProps
@@ -73,7 +74,13 @@ const EditableCell: React.FC<EditableCellProps> = ({
     marca: <Select options={marcaOptions} />,
     categoria: <Select allowClear options={categoriaOptions} />,
     linhaId: <Select options={linhas.map((linha) => ({ value: linha.id, label: linha.nome }))} />,
-    ano: <Select allowClear options={anoOptions} />,
+    ano: (
+      <InputNumber
+        min={0}
+        precision={0}
+        parser={(value) => value?.replace(/[^\d]/g, '') as any}
+      />
+    ),
     cilindrada: <Input placeholder="Ex: 160cc" />,
   };
 
@@ -85,7 +92,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
         <Form.Item
           name={dataIndex}
           style={{ margin: 0 }}
-          rules={[
+          rules={rules || [
             {
               required,
               message: t('modeloMotoCatalog.enterField', { field: String(cellTitle) }),
@@ -244,6 +251,14 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
       key: 'ano',
       editable: true,
       required: false,
+      rules: [
+        {
+          type: 'number',
+          min: minModelYear,
+          max: currentYear,
+          message: t('modeloMotoCatalog.yearRange', { min: minModelYear, max: currentYear }),
+        },
+      ],
       render: (ano?: number) => ano ?? '-',
     },
     {
@@ -338,6 +353,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
         dataIndex: col.dataIndex,
         cellTitle: col.title,
         required,
+        rules: col.rules,
         editing: isEditing(record),
         linhas,
       }),
@@ -389,13 +405,15 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
               options={linhas.map((linha) => ({ value: linha.id, label: linha.nome }))}
             />
 
-            <Select
+            <InputNumber
               placeholder={t('modeloMotoCatalog.year')}
               style={{ width: 120 }}
               value={anoFilter}
-              onChange={setAnoFilter}
-              allowClear
-              options={anoOptions}
+              onChange={(value) => setAnoFilter(typeof value === 'number' ? value : undefined)}
+              min={minModelYear}
+              max={currentYear}
+              precision={0}
+              parser={(value) => value?.replace(/[^\d]/g, '') as any}
             />
 
             <Select

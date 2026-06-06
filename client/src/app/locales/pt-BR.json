@@ -216,6 +216,7 @@
   "modeloMotoCatalog.lineRequired": "Linha é obrigatória",
   "modeloMotoCatalog.modelLength": "O modelo não pode exceder 100 caracteres.",
   "modeloMotoCatalog.engineLength": "A cilindrada não pode exceder 50 caracteres.",
+  "modeloMotoCatalog.yearRange": "O ano deve estar entre {{min}} e {{max}}.",
   "modeloMotoCatalog.activateTitle": "Ativar modelo",
   "modeloMotoCatalog.activateDescription": "Tem certeza que deseja ativar este modelo?",
   "modeloMotoCatalog.deactivateTitle": "Desativar modelo",
