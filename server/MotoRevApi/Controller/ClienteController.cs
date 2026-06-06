@@ -66,4 +66,112 @@ public class ClienteController : ControllerBase
         var response = await _clienteService.GetByUserIdAsync(userId);
         return Ok(response);
     }
+
+    /// <summary>
+    /// Obter o perfil completo do cliente autenticado.
+    /// </summary>
+    /// <response code="200">Retorna os dados completos do perfil do cliente.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de cliente.</response>
+    /// <response code="404">Se o cliente não for encontrado.</response>
+    [HttpGet("me")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(ClientePerfilResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMe()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _clienteService.GetPerfilByUserIdAsync(userId);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Atualizar os dados pessoais do cliente autenticado.
+    /// </summary>
+    /// <param name="request">Dados pessoais atualizados.</param>
+    /// <response code="200">Retorna o perfil atualizado.</response>
+    /// <response code="400">Se os dados fornecidos forem inválidos.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de cliente.</response>
+    /// <response code="409">Se email ou CPF já estiverem em uso.</response>
+    [HttpPut("me/dados-pessoais")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(ClientePerfilResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateDadosPessoais([FromBody] ClienteDadosPessoaisRequest request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _clienteService.UpdateDadosPessoaisAsync(userId, request);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Atualizar o endereço temporário do cliente autenticado.
+    /// </summary>
+    /// <remarks>
+    /// Estrutura simples e temporária até o épico dedicado de endereços.
+    /// </remarks>
+    /// <param name="request">Endereço atualizado.</param>
+    /// <response code="200">Retorna o perfil atualizado.</response>
+    /// <response code="400">Se os dados fornecidos forem inválidos.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de cliente.</response>
+    [HttpPut("me/endereco")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(ClientePerfilResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> UpdateEndereco([FromBody] ClienteEnderecoRequest request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _clienteService.UpdateEnderecoAsync(userId, request);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Alterar a senha do cliente autenticado.
+    /// </summary>
+    /// <param name="request">Senha atual e nova senha.</param>
+    /// <response code="204">Senha alterada com sucesso.</response>
+    /// <response code="400">Se a senha atual ou a nova senha forem inválidas.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de cliente.</response>
+    [HttpPut("me/senha")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> AlterarSenha([FromBody] ClienteAlterarSenhaRequest request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        await _clienteService.AlterarSenhaAsync(userId, request);
+        return NoContent();
+    }
 }
