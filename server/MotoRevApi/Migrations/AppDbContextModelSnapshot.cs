@@ -17,7 +17,7 @@ namespace MotoRevApi.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.6")
+                .HasAnnotation("ProductVersion", "10.0.8")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -241,6 +241,80 @@ namespace MotoRevApi.Migrations
                     b.ToTable("Concessionarias");
                 });
 
+            modelBuilder.Entity("MotoRevApi.Model.Linha", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Descricao")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nome")
+                        .IsUnique();
+
+                    b.ToTable("Linhas");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.ModeloMoto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("Ano")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Categoria")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Cilindrada")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("LinhaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Marca")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("NomeModelo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LinhaId");
+
+                    b.HasIndex("Marca");
+
+                    b.HasIndex("NomeModelo")
+                        .IsUnique();
+
+                    b.ToTable("ModelosMotos");
+                });
+
             modelBuilder.Entity("MotoRevApi.Model.Moto", b =>
                 {
                     b.Property<int>("Id")
@@ -249,21 +323,59 @@ namespace MotoRevApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Ano")
+                    b.Property<bool>("Ativo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Chassi")
                         .IsRequired()
-                        .HasMaxLength(4)
-                        .HasColumnType("nvarchar(4)");
+                        .HasMaxLength(17)
+                        .HasColumnType("nvarchar(17)");
+
+                    b.Property<int>("ClienteId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ConcessionariaId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Cor")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime>("DataVenda")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Foto")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("KilometragemAtual")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ModeloMotoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Placa")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
-                    b.Property<string>("Modelo")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("Chassi")
+                        .IsUnique()
+                        .HasFilter("[Ativo] = 1");
+
+                    b.HasIndex("ClienteId");
+
+                    b.HasIndex("ConcessionariaId");
+
+                    b.HasIndex("ModeloMotoId");
+
+                    b.HasIndex("Placa")
+                        .IsUnique()
+                        .HasFilter("[Ativo] = 1");
 
                     b.ToTable("Motos");
                 });
@@ -506,6 +618,43 @@ namespace MotoRevApi.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.ModeloMoto", b =>
+                {
+                    b.HasOne("MotoRevApi.Model.Linha", "Linha")
+                        .WithMany()
+                        .HasForeignKey("LinhaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Linha");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.Moto", b =>
+                {
+                    b.HasOne("MotoRevApi.Model.Cliente", "Cliente")
+                        .WithMany()
+                        .HasForeignKey("ClienteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MotoRevApi.Model.Concessionaria", "Concessionaria")
+                        .WithMany()
+                        .HasForeignKey("ConcessionariaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("MotoRevApi.Model.ModeloMoto", "ModeloMoto")
+                        .WithMany()
+                        .HasForeignKey("ModeloMotoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Cliente");
+
+                    b.Navigation("Concessionaria");
+
+                    b.Navigation("ModeloMoto");
                 });
 #pragma warning restore 612, 618
         }

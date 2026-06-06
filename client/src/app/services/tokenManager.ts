@@ -1,8 +1,8 @@
-import { authService } from './authService';
-import { PATHS } from '../paths';
-import { t } from '../i18n';
-import { message } from 'antd';
-import { BASE_URL, handleResponse } from './http';
+import { authService } from '@/app/services/authService';
+import { PATHS } from '@/app/paths';
+import { t } from '@/app/i18n';
+import { BASE_URL, handleResponse } from '@/app/services/http';
+import {message} from "antd";
 
 let isRefreshing = false;
 let failedQueue: { resolve: (token: string | null) => void; reject: (reason?: any) => void }[] = [];

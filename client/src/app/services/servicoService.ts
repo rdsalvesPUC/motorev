@@ -1,7 +1,7 @@
-import { apiFetch, handleResponse, BASE_URL } from './http';
-import { Servico } from '../models/Servico';
-import { t } from '../i18n';
-import { ServicoRequest } from '../models/ServicoRequest';
+import { apiFetch, handleResponse, BASE_URL } from '@/app/services/http';
+import { Servico } from '@/app/models/Servico';
+import { t } from '@/app/i18n';
+import { ServicoRequest } from '@/app/models/ServicoRequest';
 
 const SERVICE_URL = `${BASE_URL}/Servico`;
 
