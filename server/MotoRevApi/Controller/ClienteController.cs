@@ -121,11 +121,8 @@ public class ClienteController : ControllerBase
     }
 
     /// <summary>
-    /// Atualizar o endereço temporário do cliente autenticado.
+    /// Atualizar o endereço de referência do cliente autenticado.
     /// </summary>
-    /// <remarks>
-    /// Estrutura simples e temporária até o épico dedicado de endereços.
-    /// </remarks>
     /// <param name="request">Endereço atualizado.</param>
     /// <response code="200">Retorna o perfil atualizado.</response>
     /// <response code="400">Se os dados fornecidos forem inválidos.</response>
