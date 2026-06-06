@@ -90,7 +90,6 @@ builder.Services.AddScoped<ConcessionariaService>();
 builder.Services.AddScoped<MotoService>();
 builder.Services.AddScoped<PecaService>();
 builder.Services.AddScoped<ServicoService>();
-builder.Services.AddScoped<HashService>();
 builder.Services.AddScoped<ModeloMotoService>();
 builder.Services.AddScoped<LinhaService>();
 builder.Services.AddEndpointsApiExplorer();
