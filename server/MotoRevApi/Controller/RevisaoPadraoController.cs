@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
@@ -88,7 +89,7 @@ public class RevisaoPadraoController : ControllerBase
     {
         var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var response = await _revisaoPadraoService.CadastrarRevisaoAsync(request, concessionariaId);
-        return CreatedAtAction(nameof(GetById), new { id = response.Id }, response); // Atualizado para apontar para o GetById
+        return CreatedAtAction(nameof(GetById), new { id = response.Id }, response);
     }
 
     /// <summary>
@@ -117,5 +118,29 @@ public class RevisaoPadraoController : ControllerBase
         var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var response = await _revisaoPadraoService.AtualizarRevisaoAsync(id, request, concessionariaId);
         return Ok(response);
+    }
+
+    /// <summary>
+    /// Inativa uma revisão padrão (Soft Delete).
+    /// </summary>
+    /// <remarks>
+    /// Uma vez inativada, a revisão não aparecerá em listagens e não poderá ser utilizada para novos agendamentos.
+    /// A operação é idempotente: inativar uma revisão já inativa não causa erro.
+    /// </remarks>
+    /// <param name="id">ID da revisão a ser inativada.</param>
+    /// <response code="200">Revisão inativada com sucesso.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem permissão.</response>
+    /// <response code="404">Revisão não encontrada ou não pertence a esta concessionária.</response>
+    [HttpPatch("{id}/inativar")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Inativar(int id)
+    {
+        var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        await _revisaoPadraoService.InativarAsync(id, concessionariaId);
+        return Ok(new { message = "Revisão padrão inativada com sucesso." });
     }
 }

@@ -260,4 +260,53 @@ public class RevisaoPadraoServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<DuplicateDataException>(() => service.AtualizarRevisaoAsync(1, request, 1));
     }
+    
+    [Fact]
+    public async Task InativarAsync_DeveMudarStatusParaFalse_QuandoAtiva()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var revisao = new RevisaoPadrao { Id = 1, Nome = "Rev", Ativo = true, ConcessionariaId = 1, ModeloMotoId = 1, Ordem = 1 };
+        context.RevisoesPadrao.Add(revisao);
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+
+        // Act
+        await service.InativarAsync(1, 1);
+
+        // Assert
+        var revisaoInativada = await context.RevisoesPadrao.IgnoreQueryFilters().FirstAsync(r => r.Id == 1);
+        Assert.False(revisaoInativada.Ativo);
+    }
+
+    [Fact]
+    public async Task InativarAsync_DeveSerIdempotente_QuandoJaInativa()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var revisao = new RevisaoPadrao { Id = 1, Nome = "Rev", Ativo = false, ConcessionariaId = 1, ModeloMotoId = 1, Ordem = 1 };
+        context.RevisoesPadrao.Add(revisao);
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+
+        // Act
+        await service.InativarAsync(1, 1); // Nenhuma exceção deve ser lançada
+
+        // Assert
+        var revisaoInativada = await context.RevisoesPadrao.IgnoreQueryFilters().FirstAsync(r => r.Id == 1);
+        Assert.False(revisaoInativada.Ativo); // Continua inativa
+    }
+
+    [Fact]
+    public async Task InativarAsync_DeveLancarExcecao_QuandoNaoEncontrada()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new RevisaoPadraoService(context);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => service.InativarAsync(99, 1));
+    }
 }

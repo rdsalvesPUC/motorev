@@ -47,7 +47,6 @@ public class RevisaoPadraoService
             .Include(rp => rp.ModeloMoto)
             .Include(rp => rp.Servicos)
                 .ThenInclude(rs => rs.Servico)
-            // TODO: Adicionar .Include() para Peças quando implementado
             .FirstOrDefaultAsync(rp => rp.Id == id && rp.ConcessionariaId == concessionariaId && rp.Ativo);
 
         if (revisao == null)
@@ -60,14 +59,12 @@ public class RevisaoPadraoService
 
     public virtual async Task<RevisaoPadraoResponse> CadastrarRevisaoAsync(RevisaoPadraoRequest request, int concessionariaId)
     {
-        // 1. Validar se o Modelo de Moto existe
         var modeloExiste = await _context.ModelosMotos.AnyAsync(m => m.Id == request.ModeloMotoId);
         if (!modeloExiste)
         {
             throw new NotFoundException($"O modelo de moto com ID {request.ModeloMotoId} não existe ou está inativo.");
         }
 
-        // 2. Validar se a ordem já existe para este modelo nesta concessionária
         var ordemDuplicada = await _context.RevisoesPadrao
             .AnyAsync(rp => rp.ModeloMotoId == request.ModeloMotoId 
                          && rp.Ordem == request.Ordem 
@@ -78,19 +75,16 @@ public class RevisaoPadraoService
             throw new DuplicateDataException($"Já existe uma revisão cadastrada com a ordem {request.Ordem} para este modelo de moto.");
         }
 
-        // 3. Validar se os serviços existem
         var servicosExistentes = await _context.Servicos
             .Where(s => request.ServicosIds.Contains(s.Id))
             .ToListAsync();
 
         if (servicosExistentes.Count != request.ServicosIds.Count)
         {
-            // Descobre quais IDs não foram encontrados
             var idsNaoEncontrados = request.ServicosIds.Except(servicosExistentes.Select(s => s.Id)).ToList();
             throw new NotFoundException($"Os seguintes serviços não foram encontrados ou estão inativos: {string.Join(", ", idsNaoEncontrados)}");
         }
 
-        // 4. Iniciar a transação para salvar a revisão e as relações
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
@@ -103,9 +97,8 @@ public class RevisaoPadraoService
             };
 
             _context.RevisoesPadrao.Add(revisao);
-            await _context.SaveChangesAsync(); // Salva para gerar o ID da RevisaoPadrao
+            await _context.SaveChangesAsync(); 
 
-            // 5. Vincular os serviços à revisão
             foreach (var servicoId in request.ServicosIds)
             {
                 _context.RevisaoPadraoServicos.Add(new RevisaoPadraoServico
@@ -118,7 +111,6 @@ public class RevisaoPadraoService
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            // Carrega os relacionamentos para retornar o DTO completo
             var revisaoCriada = await _context.RevisoesPadrao
                 .Include(rp => rp.ModeloMoto)
                 .Include(rp => rp.Servicos)
@@ -136,9 +128,8 @@ public class RevisaoPadraoService
 
     public virtual async Task<RevisaoPadraoResponse> AtualizarRevisaoAsync(int id, RevisaoPadraoUpdateRequest request, int concessionariaId)
     {
-        // 1. Validar se a revisão existe
         var revisao = await _context.RevisoesPadrao
-            .Include(rp => rp.Servicos) // Carrega as relações N:N para podermos alterá-las
+            .Include(rp => rp.Servicos)
             .Include(rp => rp.ModeloMoto)
             .FirstOrDefaultAsync(rp => rp.Id == id && rp.ConcessionariaId == concessionariaId);
 
@@ -147,14 +138,13 @@ public class RevisaoPadraoService
             throw new NotFoundException($"Revisão padrão com ID {id} não encontrada ou não pertence a esta concessionária.");
         }
 
-        // 2. Validar ordem duplicada APENAS se a ordem for alterada
         if (revisao.Ordem != request.Ordem)
         {
             var ordemDuplicada = await _context.RevisoesPadrao
                 .AnyAsync(rp => rp.ModeloMotoId == revisao.ModeloMotoId 
                              && rp.Ordem == request.Ordem 
                              && rp.ConcessionariaId == concessionariaId 
-                             && rp.Id != id); // Ignora a própria revisão em edição
+                             && rp.Id != id); 
                              
             if (ordemDuplicada)
             {
@@ -162,7 +152,6 @@ public class RevisaoPadraoService
             }
         }
 
-        // 3. Validar se os novos serviços existem
         var servicosExistentes = await _context.Servicos
             .Where(s => request.ServicosIds.Contains(s.Id))
             .ToListAsync();
@@ -173,16 +162,12 @@ public class RevisaoPadraoService
             throw new NotFoundException($"Os seguintes serviços não foram encontrados ou estão inativos: {string.Join(", ", idsNaoEncontrados)}");
         }
 
-        // 4. Iniciar a transação
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
-            // 4.1 Atualizar os campos básicos
             revisao.Nome = request.Nome;
             revisao.Ordem = request.Ordem;
 
-            // 4.2 Sincronizar Serviços (N:N)
-            // Remover os serviços que não estão mais na nova lista
             var servicosParaRemover = revisao.Servicos
                 .Where(rs => !request.ServicosIds.Contains(rs.ServicoId))
                 .ToList();
@@ -192,7 +177,6 @@ public class RevisaoPadraoService
                 revisao.Servicos.Remove(s);
             }
 
-            // Adicionar os serviços que estão na nova lista, mas não estavam na antiga
             var servicosAtuaisIds = revisao.Servicos.Select(rs => rs.ServicoId).ToList();
             var servicosParaAdicionarIds = request.ServicosIds.Except(servicosAtuaisIds).ToList();
 
@@ -208,7 +192,6 @@ public class RevisaoPadraoService
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            // 5. Retornar os dados atualizados com todas as referências carregadas
             var revisaoAtualizada = await _context.RevisoesPadrao
                 .Include(rp => rp.ModeloMoto)
                 .Include(rp => rp.Servicos)
@@ -222,5 +205,27 @@ public class RevisaoPadraoService
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    public virtual async Task InativarAsync(int id, int concessionariaId)
+    {
+        // Usa IgnoreQueryFilters para encontrar a revisão mesmo que ela já esteja inativa
+        var revisao = await _context.RevisoesPadrao
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(rp => rp.Id == id && rp.ConcessionariaId == concessionariaId);
+
+        if (revisao == null)
+        {
+            throw new NotFoundException($"Revisão padrão com ID {id} não encontrada ou não pertence a esta concessionária.");
+        }
+
+        // Cenário: Inativação de revisão já inativa (Idempotência)
+        if (!revisao.Ativo)
+        {
+            return; // Já está inativa, operação concluída com sucesso sem fazer nada.
+        }
+
+        revisao.Ativo = false;
+        await _context.SaveChangesAsync();
     }
 }

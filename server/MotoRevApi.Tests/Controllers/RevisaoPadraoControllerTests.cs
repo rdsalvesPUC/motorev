@@ -120,6 +120,20 @@ public class RevisaoPadraoControllerTests
     }
 
     [Fact]
+    public async Task Inativar_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        _revisaoServiceMock.Setup(s => s.InativarAsync(1, 1)).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.Inativar(1);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+    }
+
+    [Fact]
     public void Atributos_Classe_DeveTerRoleConcessionaria()
     {
         var attribute = typeof(RevisaoPadraoController).GetCustomAttributes(typeof(AuthorizeAttribute), true)
