@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Breadcrumb, Typography, Input, Button, Table, Space, Flex, Form, Switch, Tag, Spin, message, Popconfirm, Select } from 'antd';
 import { HomeOutlined, ToolOutlined, SearchOutlined, EditOutlined } from '@ant-design/icons';
-import type { ColumnsType, ColumnType } from 'antd/es/table';
+import type { ColumnType } from 'antd/es/table';
 import { linhaService } from '@/app/services/linhaService';
 import { modeloMotoService } from '@/app/services/modeloMotoService';
 import { Linha } from '@/app/models/Linha';
@@ -263,7 +263,7 @@ export default function CatalogoLinhas({ onNavigateToForm }: CatalogoLinhasProps
             onCell: (record: LinhaData) => ({
                 record,
                 dataIndex: col.dataIndex,
-                title: col.title,
+                title: col.title as string,
                 editing: isEditing(record),
             }),
         };
