@@ -96,4 +96,56 @@ public class ConcessionariaController : ControllerBase
         var response = await _concessionariaService.GetAllAsync();
         return Ok(response);
     }
+
+    /// <summary>
+    /// Cadastrar uma loja filial para uma concessionaria matriz.
+    /// </summary>
+    /// <param name="id">O ID da concessionaria matriz.</param>
+    /// <param name="request">Os dados da loja filial.</param>
+    /// <response code="201">Retorna a loja recem-criada.</response>
+    /// <response code="400">Se os dados fornecidos forem invalidos.</response>
+    /// <response code="404">Se a concessionaria matriz nao for encontrada.</response>
+    /// <response code="409">Se ja existir uma matriz ou filial com o mesmo CNPJ.</response>
+    [HttpPost("{id}/lojas")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AddLoja(int id, [FromBody] LojaRequest request)
+    {
+        var response = await _concessionariaService.AddLojaAsync(id, request);
+        return CreatedAtAction(nameof(GetLojaById), new { id, lojaId = response.Id }, response);
+    }
+
+    /// <summary>
+    /// Obter todas as lojas filiais de uma concessionaria matriz.
+    /// </summary>
+    /// <param name="id">O ID da concessionaria matriz.</param>
+    /// <response code="200">Retorna a lista de lojas da concessionaria.</response>
+    /// <response code="404">Se a concessionaria matriz nao for encontrada.</response>
+    [HttpGet("{id}/lojas")]
+    [ProducesResponseType(typeof(IEnumerable<LojaResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetLojas(int id)
+    {
+        var response = await _concessionariaService.GetLojasAsync(id);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Obter uma loja filial especifica de uma concessionaria matriz.
+    /// </summary>
+    /// <param name="id">O ID da concessionaria matriz.</param>
+    /// <param name="lojaId">O ID da loja filial.</param>
+    /// <response code="200">Retorna os dados da loja.</response>
+    /// <response code="404">Se a loja nao for encontrada.</response>
+    [HttpGet("{id}/lojas/{lojaId}")]
+    [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetLojaById(int id, int lojaId)
+    {
+        var response = await _concessionariaService.GetLojaByIdAsync(id, lojaId);
+        return Ok(response);
+    }
 }

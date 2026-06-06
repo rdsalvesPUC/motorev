@@ -55,6 +55,24 @@ public class AuthServiceTests
 
     private AppDbContext CreateContext() => new AppDbContext(_dbContextOptions);
 
+    private static Concessionaria CreateConcessionaria(string usuarioId, string nome, string cnpj = "12.345.678/0001-90")
+    {
+        return new Concessionaria
+        {
+            UsuarioId = usuarioId,
+            Nome = nome,
+            Cnpj = cnpj,
+            Telefone = "(11) 99999-9999",
+            Tipo = "Matriz",
+            Cep = "01001-000",
+            Logradouro = "Rua Teste",
+            Numero = "100",
+            Bairro = "Centro",
+            Cidade = "Sao Paulo",
+            Uf = "SP"
+        };
+    }
+
     [Fact]
     public async Task LoginAsync_DeveRetornarLoginResponse_ParaCliente()
     {
@@ -94,7 +112,7 @@ public class AuthServiceTests
         var user = new Usuario { Id = "user-conc", Email = "conc@email.com", UserName = "conc@email.com" };
         var request = new LoginRequest("conc@email.com", "password");
         
-        context.Concessionarias.Add(new Concessionaria { UsuarioId = user.Id, Nome = "Conc Teste" });
+        context.Concessionarias.Add(CreateConcessionaria(user.Id, "Conc Teste"));
         await context.SaveChangesAsync();
 
         _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email)).ReturnsAsync(user);
@@ -288,7 +306,7 @@ public class AuthServiceTests
         };
         var request = new RefreshTokenRequest("expired-token", refreshToken);
 
-        context.Concessionarias.Add(new Concessionaria { UsuarioId = userId, Nome = "Conc Refresh" });
+        context.Concessionarias.Add(CreateConcessionaria(userId, "Conc Refresh", "22.345.678/0001-90"));
         await context.SaveChangesAsync();
 
         var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };

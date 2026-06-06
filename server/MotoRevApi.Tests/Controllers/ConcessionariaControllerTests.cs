@@ -23,12 +23,47 @@ public class ConcessionariaControllerTests
         _controller = new ConcessionariaController(_serviceMock.Object);
     }
 
+    private static RegisterConcessionariaRequest CreateRegisterRequest()
+    {
+        return new RegisterConcessionariaRequest(
+            "conc@test.com",
+            "Pass123!",
+            "Conc Test",
+            "12.345.678/0001-90",
+            "(11) 99999-9999",
+            "01001-000",
+            "Rua Teste",
+            "100",
+            "Centro",
+            "Sao Paulo",
+            "SP"
+        );
+    }
+
+    private static ConcessionariaResponse CreateConcessionariaResponse(int id = 1, string nome = "Conc Test")
+    {
+        return new ConcessionariaResponse(
+            id,
+            nome,
+            "12.345.678/0001-90",
+            "(11) 99999-9999",
+            "Matriz",
+            "01001-000",
+            "Rua Teste",
+            "100",
+            "Centro",
+            "Sao Paulo",
+            "SP",
+            []
+        );
+    }
+
     [Fact]
     public async Task Register_DeveRetornarCreated_QuandoSucesso()
     {
         // Arrange
-        var request = new RegisterConcessionariaRequest("conc@test.com", "Pass123!", "Conc Test");
-        var response = new ConcessionariaResponse(1, "Conc Test");
+        var request = CreateRegisterRequest();
+        var response = CreateConcessionariaResponse();
         _serviceMock.Setup(s => s.RegisterAsync(request)).ReturnsAsync(response);
 
         // Act
@@ -44,7 +79,7 @@ public class ConcessionariaControllerTests
     public async Task GetById_DeveRetornarOk_QuandoEncontrado()
     {
         // Arrange
-        var response = new ConcessionariaResponse(1, "Conc 1");
+        var response = CreateConcessionariaResponse(nome: "Conc 1");
         _serviceMock.Setup(s => s.GetByIdAsync(1)).ReturnsAsync(response);
 
         // Act
@@ -63,7 +98,7 @@ public class ConcessionariaControllerTests
         var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock"));
         _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
         
-        var response = new ConcessionariaResponse(1, "Conc 1");
+        var response = CreateConcessionariaResponse(nome: "Conc 1");
         _serviceMock.Setup(s => s.GetByUserIdAsync(userId)).ReturnsAsync(response);
 
         // Act
@@ -98,5 +133,22 @@ public class ConcessionariaControllerTests
 
         Assert.NotNull(attribute);
         Assert.Equal(Authorization.Roles.Concessionaria, attribute.Roles);
+    }
+
+    [Fact]
+    public async Task AddLoja_DeveRetornarCreated_QuandoSucesso()
+    {
+        // Arrange
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1);
+        _serviceMock.Setup(s => s.AddLojaAsync(1, request)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.AddLoja(1, request);
+
+        // Assert
+        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
+        Assert.Equal(201, createdAtActionResult.StatusCode);
+        Assert.Equal(response, createdAtActionResult.Value);
     }
 }
