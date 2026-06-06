@@ -15,15 +15,14 @@ import PublicRoute from '@/app/components/auth/PublicRoute';
 import PrivateRoute from '@/app/components/auth/PrivateRoute';
 import { PATHS } from '@/app/paths';
 import { tokenManager } from '@/app/services/tokenManager';
-import { t } from '@/app/i18n';
-import { message } from 'antd';
+import { ConfiguracoesProvider } from '@/app/contexts/ConfiguracoesContext';
 
 const antdLocales: Record<string, any> = {
   'pt-BR': ptBR,
   'en-US': enUS,
 };
 
-export default function App() {
+function AppContent() {
   const [locale, setLocale] = useState(antdLocales[getLocale()]);
   const [initializing, setInitializing] = useState(true);
 
@@ -97,5 +96,13 @@ export default function App() {
         </BrowserRouter>
       </ConfigProvider>
     </AntdThemeProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ConfiguracoesProvider>
+      <AppContent />
+    </ConfiguracoesProvider>
   );
 }

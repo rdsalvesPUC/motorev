@@ -1,8 +1,10 @@
+import { useCallback, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import DashboardLayout from '@/app/components/layout/DashboardLayout';
 import MinhasMotos from '@/app/pages/cliente/MinhasMotos';
 import MotoForm from '@/app/pages/cliente/MotoForm';
 import MotoDetalhes from '@/app/pages/cliente/MotoDetalhes';
+import PerfilCliente from '@/app/components/perfil/PerfilCliente';
 import { Typography } from 'antd';
 import {tokenManager} from "@/app/services/tokenManager";
 import {PATH_SEGMENTS, PATHS} from "@/app/paths";
@@ -23,14 +25,23 @@ function DashboardHome() {
 
 export default function DashboardCliente() {
   const user = tokenManager.getUserData();
+  const [userName, setUserName] = useState(user?.nome || 'Usuário');
+
+  const handleProfileUpdated = useCallback((perfil: { nome?: string | null }) => {
+    setUserName(perfil.nome || 'Usuário');
+  }, []);
 
   return (
     <DashboardLayout
       userType="cliente"
-      userName={user?.nome || 'Usuário'}
+      userName={userName}
     >
       <Routes>
         <Route index element={<DashboardHome />} />
+        <Route
+          path={PATH_SEGMENTS.PERFIL_USUARIO}
+          element={<PerfilCliente onProfileUpdated={handleProfileUpdated} />}
+        />
         <Route path={PATH_SEGMENTS.CLIENTE_MOTOS} element={<MinhasMotos />} />
         <Route path={PATH_SEGMENTS.CLIENTE_MOTOS_NOVA} element={<MotoForm />} />
         <Route path={`${PATH_SEGMENTS.CLIENTE_MOTOS_EDITAR}/:id`} element={<MotoForm />} />
