@@ -100,7 +100,7 @@ public class ClienteController : ControllerBase
     /// <response code="400">Se os dados fornecidos forem inválidos.</response>
     /// <response code="401">Se o usuário não estiver autenticado.</response>
     /// <response code="403">Se o usuário não tiver permissão de cliente.</response>
-    /// <response code="409">Se email ou CPF já estiverem em uso.</response>
+    /// <response code="409">Se o email já estiver em uso.</response>
     [HttpPut("me/dados-pessoais")]
     [Authorize(Roles = Roles.Cliente)]
     [ProducesResponseType(typeof(ClientePerfilResponse), StatusCodes.Status200OK)]
@@ -150,10 +150,14 @@ public class ClienteController : ControllerBase
     }
 
     /// <summary>
-    /// Alterar a senha do cliente autenticado.
+    /// Alterar a senha do cliente autenticado no Meu Perfil.
     /// </summary>
-    /// <param name="request">Senha atual e nova senha.</param>
-    /// <response code="204">Senha alterada com sucesso.</response>
+    /// <remarks>
+    /// Este endpoint atende apenas o fluxo em que o cliente já está logado e informa a senha atual.
+    /// Não atende o fluxo "Esqueci minha senha", que deve ter endpoints próprios para recuperação antes do login.
+    /// </remarks>
+    /// <param name="request">Senha atual, nova senha e confirmação da nova senha.</param>
+    /// <response code="204">Senha alterada com sucesso para o cliente autenticado.</response>
     /// <response code="400">Se a senha atual ou a nova senha forem inválidas.</response>
     /// <response code="401">Se o usuário não estiver autenticado.</response>
     /// <response code="403">Se o usuário não tiver permissão de cliente.</response>

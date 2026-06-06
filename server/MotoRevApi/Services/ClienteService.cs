@@ -88,7 +88,6 @@ public class ClienteService
         string userId,
         ClienteDadosPessoaisRequest request)
     {
-        var cpf = NormalizeCpf(request.Cpf);
         var telefone = NormalizeTelefone(request.Telefone);
         var cliente = await GetClienteWithUsuarioAsync(userId);
 
@@ -98,16 +97,10 @@ public class ClienteService
             throw new DuplicateDataException($"O email {request.Email} já está em uso.");
         }
 
-        if (await _context.Clientes.AnyAsync(c => c.Cpf == cpf && c.Id != cliente.Id))
-        {
-            throw new DuplicateDataException($"O CPF {request.Cpf} já está em uso.");
-        }
-
         await using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             cliente.Nome = request.Nome;
-            cliente.Cpf = cpf;
 
             if (!string.Equals(cliente.Usuario.Email, request.Email, StringComparison.OrdinalIgnoreCase))
             {

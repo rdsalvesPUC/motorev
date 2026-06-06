@@ -6,6 +6,7 @@ using MotoRevApi.Dto.Request;
 using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
 using MotoRevApi.Services;
+using System.ComponentModel.DataAnnotations;
 using Xunit;
 
 namespace MotoRevApi.Tests.Services;
@@ -157,7 +158,7 @@ public class ClienteServiceTests
     }
 
     [Fact]
-    public async Task UpdateDadosPessoaisAsync_DeveAtualizarClienteEUsuario()
+    public async Task UpdateDadosPessoaisAsync_DeveAtualizarClienteEUsuarioSemAlterarCpf()
     {
         // Arrange
         using var context = CreateContext();
@@ -172,7 +173,7 @@ public class ClienteServiceTests
         _mockUserManager.Setup(x => x.SetPhoneNumberAsync(It.IsAny<Usuario>(), "11988887777")).ReturnsAsync(IdentityResult.Success);
 
         var service = new ClienteService(context, _mockUserManager.Object);
-        var request = new ClienteDadosPessoaisRequest("Cliente Novo", "novo@email.com", "390.533.447-05", "(11) 98888-7777");
+        var request = new ClienteDadosPessoaisRequest("Cliente Novo", "novo@email.com", "(11) 98888-7777");
 
         // Act
         var result = await service.UpdateDadosPessoaisAsync(userId, request);
@@ -180,8 +181,48 @@ public class ClienteServiceTests
         // Assert
         Assert.Equal("Cliente Novo", result.Nome);
         Assert.Equal("novo@email.com", result.Email);
-        Assert.Equal("39053344705", result.Cpf);
+        Assert.Equal("52998224725", result.Cpf);
         Assert.Equal("11988887777", result.Telefone);
+
+        var clienteNoDb = await context.Clientes.SingleAsync(c => c.UsuarioId == userId);
+        Assert.Equal("52998224725", clienteNoDb.Cpf);
+    }
+
+    [Fact]
+    public async Task UpdateDadosPessoaisAsync_DeveLancarExcecao_QuandoEmailJaExisteParaOutroUsuario()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-id-123";
+        context.Users.Add(new Usuario { Id = userId, UserName = "cliente@email.com", Email = "cliente@email.com", PhoneNumber = "11999990000" });
+        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Teste", Cpf = "52998224725" });
+        await context.SaveChangesAsync();
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync("existente@email.com"))
+            .ReturnsAsync(new Usuario { Id = "outro-user-id", Email = "existente@email.com", UserName = "existente@email.com" });
+
+        var service = new ClienteService(context, _mockUserManager.Object);
+        var request = new ClienteDadosPessoaisRequest("Cliente Teste", "existente@email.com", "(11) 99999-0000");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.UpdateDadosPessoaisAsync(userId, request));
+    }
+
+    [Fact]
+    public async Task UpdateDadosPessoaisAsync_DeveLancarExcecao_QuandoTelefoneForInvalido()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-id-123";
+        context.Users.Add(new Usuario { Id = userId, UserName = "cliente@email.com", Email = "cliente@email.com", PhoneNumber = "11999990000" });
+        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Teste", Cpf = "52998224725" });
+        await context.SaveChangesAsync();
+
+        var service = new ClienteService(context, _mockUserManager.Object);
+        var request = new ClienteDadosPessoaisRequest("Cliente Teste", "cliente@email.com", "123");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() => service.UpdateDadosPessoaisAsync(userId, request));
     }
 
     [Fact]
@@ -207,6 +248,40 @@ public class ClienteServiceTests
         Assert.Equal("Vila Olímpia", result.Endereco.Bairro);
         Assert.Equal("São Paulo", result.Endereco.Cidade);
         Assert.Equal("SP", result.Endereco.Uf);
+    }
+
+    [Fact]
+    public async Task UpdateEnderecoAsync_DeveLancarExcecao_QuandoCepForInvalido()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-id-123";
+        context.Users.Add(new Usuario { Id = userId, UserName = "cliente@email.com", Email = "cliente@email.com" });
+        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Teste", Cpf = "52998224725" });
+        await context.SaveChangesAsync();
+
+        var service = new ClienteService(context, _mockUserManager.Object);
+        var request = new ClienteEnderecoRequest("123", "Rua Funchal", "418", null, "Vila Olímpia", "São Paulo", "SP");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() => service.UpdateEnderecoAsync(userId, request));
+    }
+
+    [Fact]
+    public async Task UpdateEnderecoAsync_DeveLancarExcecao_QuandoUfForInvalida()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-id-123";
+        context.Users.Add(new Usuario { Id = userId, UserName = "cliente@email.com", Email = "cliente@email.com" });
+        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Teste", Cpf = "52998224725" });
+        await context.SaveChangesAsync();
+
+        var service = new ClienteService(context, _mockUserManager.Object);
+        var request = new ClienteEnderecoRequest("04538-132", "Rua Funchal", "418", null, "Vila Olímpia", "São Paulo", "SPO");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() => service.UpdateEnderecoAsync(userId, request));
     }
 
     [Fact]
@@ -239,6 +314,25 @@ public class ClienteServiceTests
         var request = new ClienteAlterarSenhaRequest("SenhaAtual123!", "NovaSenha123!", "OutraSenha123!");
 
         // Act & Assert
-        await Assert.ThrowsAsync<System.ComponentModel.DataAnnotations.ValidationException>(() => service.AlterarSenhaAsync("user-id-123", request));
+        await Assert.ThrowsAsync<ValidationException>(() => service.AlterarSenhaAsync("user-id-123", request));
+    }
+
+    [Fact]
+    public async Task AlterarSenhaAsync_DeveLancarExcecao_QuandoIdentityFalhar()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-id-123";
+        var user = new Usuario { Id = userId, UserName = "cliente@email.com", Email = "cliente@email.com" };
+
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _mockUserManager.Setup(x => x.ChangePasswordAsync(user, "SenhaAtualErrada123!", "NovaSenha123!"))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Senha atual inválida" }));
+
+        var service = new ClienteService(context, _mockUserManager.Object);
+        var request = new ClienteAlterarSenhaRequest("SenhaAtualErrada123!", "NovaSenha123!", "NovaSenha123!");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<RegistrationException>(() => service.AlterarSenhaAsync(userId, request));
     }
 }

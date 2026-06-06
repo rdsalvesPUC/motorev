@@ -34,6 +34,13 @@ export const tokenManager = {
     localStorage.setItem('perfil', profile);
   },
 
+  updateUserData: (partialUserData: any) => {
+    const currentUserData = tokenManager.getUserData() || {};
+    const updatedUserData = { ...currentUserData, ...partialUserData };
+    localStorage.setItem('user', JSON.stringify(updatedUserData));
+    return updatedUserData;
+  },
+
   clearTokens: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');

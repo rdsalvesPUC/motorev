@@ -13,9 +13,14 @@ public static class TestJwtTokenFactory
 
     public static string CreateToken(string role)
     {
+        return CreateToken(role, Guid.NewGuid().ToString());
+    }
+
+    public static string CreateToken(string role, string userId)
+    {
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, Guid.NewGuid().ToString()),
+            new Claim(ClaimTypes.NameIdentifier, userId),
             new Claim(ClaimTypes.Role, role)
         };
 

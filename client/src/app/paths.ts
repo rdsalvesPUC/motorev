@@ -3,6 +3,7 @@ export const PATH_SEGMENTS = {
   CLIENTE_AGENDAMENTOS: 'agendamentos',
   CLIENTE_REVISOES: 'revisoes',
   CLIENTE_CONCESSIONARIAS: 'concessionarias',
+  PERFIL_USUARIO: 'perfil',
   
   CONCESSIONARIA_DASHBOARD: 'dashboard',
   CONCESSIONARIA_LOJAS: 'lojas',
