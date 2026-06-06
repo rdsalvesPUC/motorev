@@ -13,6 +13,7 @@ import {
   Radio,
   Skeleton,
   Space,
+  Spin,
   Switch,
   Typography,
   message,
@@ -35,6 +36,7 @@ import {
 } from '@ant-design/icons';
 import { clienteService } from '../../services/clienteService';
 import { tokenManager } from '../../services/tokenManager';
+import { viaCepService } from '../../services/viaCepService';
 import type {
   ClienteDadosPessoaisRequest,
   ClienteEndereco,
@@ -69,6 +71,12 @@ function formatCep(value?: string | null) {
   const digits = normalizeText(value).replace(/\D/g, '');
   if (digits.length !== 8) return normalizeText(value);
   return digits.replace(/(\d{5})(\d{3})/, '$1-$2');
+}
+
+function formatCepInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 5) return digits;
+  return digits.replace(/(\d{5})(\d{0,3})/, '$1-$2');
 }
 
 function hasEndereco(endereco?: ClienteEndereco | null) {
@@ -142,6 +150,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
   const [savingDados, setSavingDados] = useState(false);
   const [savingEndereco, setSavingEndereco] = useState(false);
   const [savingSenha, setSavingSenha] = useState(false);
+  const [loadingCep, setLoadingCep] = useState(false);
   const [senhaModalOpen, setSenhaModalOpen] = useState(false);
   const [temaEscuro, setTemaEscuro] = useState(false);
   const [idioma, setIdioma] = useState('pt-BR');
@@ -220,7 +229,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
 
   const handleEditEndereco = () => {
     formEndereco.setFieldsValue({
-      cep: normalizeText(profile?.endereco?.cep),
+      cep: formatCep(profile?.endereco?.cep),
       logradouro: normalizeText(profile?.endereco?.logradouro),
       numero: normalizeText(profile?.endereco?.numero),
       complemento: normalizeText(profile?.endereco?.complemento),
@@ -229,6 +238,35 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
       uf: normalizeText(profile?.endereco?.uf).toUpperCase(),
     });
     setEditingEndereco(true);
+  };
+
+  const handleBuscarCep = async () => {
+    const cep = normalizeText(formEndereco.getFieldValue('cep'));
+    const digits = cep.replace(/\D/g, '');
+    if (digits.length !== 8) return;
+
+    try {
+      setLoadingCep(true);
+      const endereco = await viaCepService.buscarEnderecoPorCep(digits);
+      if (!endereco) {
+        message.warning('CEP não encontrado');
+        return;
+      }
+
+      const complementoAtual = normalizeText(formEndereco.getFieldValue('complemento'));
+      formEndereco.setFieldsValue({
+        cep: endereco.cep,
+        logradouro: endereco.logradouro,
+        complemento: complementoAtual || endereco.complemento || undefined,
+        bairro: endereco.bairro,
+        cidade: endereco.cidade,
+        uf: endereco.uf.toUpperCase(),
+      });
+    } catch (error: any) {
+      message.error(error.message || 'Falha ao consultar CEP');
+    } finally {
+      setLoadingCep(false);
+    }
   };
 
   const handleSaveEndereco = async () => {
@@ -432,7 +470,14 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
                 rules={[{ required: true, message: 'Informe o CEP' }]}
                 style={{ flex: '0 0 160px' }}
               >
-                <Input placeholder="00000-000" />
+                <Input
+                  placeholder="00000-000"
+                  suffix={loadingCep ? <Spin size="small" /> : undefined}
+                  onBlur={handleBuscarCep}
+                  onChange={(event) => {
+                    formEndereco.setFieldValue('cep', formatCepInput(event.target.value));
+                  }}
+                />
               </Form.Item>
               <Form.Item
                 label="Rua / Avenida"
