@@ -12,7 +12,7 @@ public static class MapsterConfig
             .Map(dest => dest.NomeModelo, src => src.ModeloMoto.NomeModelo)
             .Map(dest => dest.Marca, src => src.ModeloMoto.Marca)
             .Map(dest => dest.NomeConcessionaria, src => src.Concessionaria != null ? src.Concessionaria.Nome : null)
-            .Map(dest => dest.Linha, src => src.ModeloMoto.Linha)
+            .Map(dest => dest.Linha, src => src.ModeloMoto.Linha != null ? src.ModeloMoto.Linha.Nome : string.Empty)
             .Map(dest => dest.Cilindrada, src => src.ModeloMoto.Cilindrada)
             .Map(dest => dest.Ano, src => src.ModeloMoto.Ano ?? 0);
     }

@@ -1,4 +1,4 @@
-﻿using Mapster;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
@@ -28,8 +28,12 @@ public class ModeloMotoServiceTests
     {
         // Arrange
         using var context = CreateContext();
+        var linha = new Linha { Nome = "Ninja", Ativo = true };
+        context.Linhas.Add(linha);
+        context.SaveChanges();
+
         var service = new ModeloMotoService(context);
-        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva", "Ninja", "400cc", 2023);
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva", linha.Id, "400cc", 2023);
 
         // Act
         var result = service.CadastrarModeloMoto(request);
@@ -37,12 +41,14 @@ public class ModeloMotoServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("Ninja", result.NomeModelo);
+        Assert.Equal(linha.Id, result.LinhaId);
         Assert.True(result.Ativo);
 
         // Verifica se realmente salvou no banco
         var savedModel = context.ModelosMotos.FirstOrDefault(m => m.Id == result.Id);
         Assert.NotNull(savedModel);
         Assert.Equal("Kawasaki", savedModel.Marca);
+        Assert.Equal(linha.Id, savedModel.LinhaId);
     }
 
     [Fact]
@@ -65,17 +71,14 @@ public class ModeloMotoServiceTests
     }
 
     [Fact]
-    public void ObterModeloMoto_DeveRetornarNull_QuandoNaoExiste()
+    public void ObterModeloMoto_DeveLancarNotFoundException_QuandoNaoExiste()
     {
         // Arrange
         using var context = CreateContext();
         var service = new ModeloMotoService(context);
 
-        // Act
-        var result = service.ObterModeloMoto(999); // ID inexistente
-
-        // Assert
-        Assert.Null(result);
+        // Act & Assert
+        Assert.Throws<MotoRevApi.Exceptions.NotFoundException>(() => service.ObterModeloMoto(999));
     }
 
     [Fact]
@@ -102,10 +105,14 @@ public class ModeloMotoServiceTests
     {
         // Arrange
         using var context = CreateContext();
+        var linha = new Linha { Nome = "YZF", Ativo = true };
+        context.Linhas.Add(linha);
         var modelo = new ModeloMoto { NomeModelo = "R1", Marca = "Yamaha", Categoria = "Esportiva", Ativo = true };
         context.ModelosMotos.Add(modelo);
+        context.SaveChanges();
+
         var service = new ModeloMotoService(context);
-        var request = new ModeloMotoRequest("R1 M", "Yamaha", "Super Esportiva", "YZF", "1000cc", 2024);
+        var request = new ModeloMotoRequest("R1 M", "Yamaha", "Super Esportiva", linha.Id, "1000cc", 2024);
 
         // Act
         var result = service.AtualizarModeloMoto(modelo.Id, request);
@@ -114,25 +121,25 @@ public class ModeloMotoServiceTests
         Assert.NotNull(result);
         Assert.Equal("R1 M", result.NomeModelo);
         Assert.Equal("Super Esportiva", result.Categoria);
+        Assert.Equal(linha.Id, result.LinhaId);
 
         // Verifica o banco de dados
         var updatedModel = context.ModelosMotos.Find(modelo.Id);
+        Assert.NotNull(updatedModel);
         Assert.Equal("R1 M", updatedModel.NomeModelo);
+        Assert.Equal(linha.Id, updatedModel.LinhaId);
     }
 
     [Fact]
-    public void AtualizarModeloMoto_DeveRetornarNull_QuandoNaoExiste()
+    public void AtualizarModeloMoto_DeveLancarNotFoundException_QuandoNaoExiste()
     {
         // Arrange
         using var context = CreateContext();
         var service = new ModeloMotoService(context);
-        var request = new ModeloMotoRequest("R1 M", "Yamaha", "Super Esportiva", null, null, null);
+        var request = new ModeloMotoRequest("R1 M", "Yamaha", "Super Esportiva", 1, null, null);
 
-        // Act
-        var result = service.AtualizarModeloMoto(999, request);
-
-        // Assert
-        Assert.Null(result);
+        // Act & Assert
+        Assert.Throws<MotoRevApi.Exceptions.NotFoundException>(() => service.AtualizarModeloMoto(999, request));
     }
 
     [Fact]
@@ -162,16 +169,41 @@ public class ModeloMotoServiceTests
     }
 
     [Fact]
-    public void AlternarStatus_DeveRetornarNull_QuandoNaoExiste()
+    public void AlternarStatus_DeveLancarNotFoundException_QuandoNaoExiste()
     {
         // Arrange
         using var context = CreateContext();
         var service = new ModeloMotoService(context);
 
-        // Act
-        var result = service.AlternarStatus(999);
+        // Act & Assert
+        Assert.Throws<MotoRevApi.Exceptions.NotFoundException>(() => service.AlternarStatus(999));
+    }
 
-        // Assert
-        Assert.Null(result);
+    [Fact]
+    public void CadastrarModeloMoto_DeveLancarNotFoundException_QuandoLinhaIdNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ModeloMotoService(context);
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva", 999, "400cc", 2023);
+
+        // Act & Assert
+        Assert.Throws<MotoRevApi.Exceptions.NotFoundException>(() => service.CadastrarModeloMoto(request));
+    }
+
+    [Fact]
+    public void AtualizarModeloMoto_DeveLancarNotFoundException_QuandoLinhaIdNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var modelo = new ModeloMoto { NomeModelo = "R1", Marca = "Yamaha", Categoria = "Esportiva", Ativo = true };
+        context.ModelosMotos.Add(modelo);
+        context.SaveChanges();
+
+        var service = new ModeloMotoService(context);
+        var request = new ModeloMotoRequest("R1", "Yamaha", "Esportiva", 999, "1000cc", 2023);
+
+        // Act & Assert
+        Assert.Throws<MotoRevApi.Exceptions.NotFoundException>(() => service.AtualizarModeloMoto(modelo.Id, request));
     }
 }

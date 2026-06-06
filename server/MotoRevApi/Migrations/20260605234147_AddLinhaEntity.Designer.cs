@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MotoRevApi.Data;
 
@@ -11,9 +12,11 @@ using MotoRevApi.Data;
 namespace MotoRevApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260605234147_AddLinhaEntity")]
+    partial class AddLinhaEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -254,7 +257,7 @@ namespace MotoRevApi.Migrations
                     b.Property<string>("Cilindrada")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("LinhaId")
+                    b.Property<int?>("LinhaId")
                         .HasColumnType("int");
 
                     b.Property<string>("Marca")
@@ -542,8 +545,7 @@ namespace MotoRevApi.Migrations
                     b.HasOne("MotoRevApi.Model.Linha", "Linha")
                         .WithMany()
                         .HasForeignKey("LinhaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Linha");
                 });

@@ -25,5 +25,10 @@ public class ModeloMotoConfiguration : IEntityTypeConfiguration<ModeloMoto>
 
         builder.Property(m => m.Categoria)
             .HasMaxLength(50);
+
+        builder.HasOne(m => m.Linha)
+            .WithMany()
+            .HasForeignKey(m => m.LinhaId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

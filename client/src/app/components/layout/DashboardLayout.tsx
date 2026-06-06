@@ -140,6 +140,10 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
           key: PATHS.CONCESSIONARIA_CATALOGOS_SERVICOS,
           label: t('dashboard.menu.catalogosServicos'),
         },
+        {
+          key: PATHS.CONCESSIONARIA_CATALOGOS_LINHAS,
+          label: t('dashboard.menu.catalogosLinhas'),
+        },
       ],
     },
   ];
