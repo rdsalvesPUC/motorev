@@ -13,12 +13,16 @@ import {
   UserOutlined,
   LogoutOutlined,
   SettingOutlined,
+  BulbOutlined,
+  BulbFilled,
+  GlobalOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router';
 import { PATHS } from '@/app/paths';
 import { authService } from '@/app/services/authService';
 import { t } from '@/app/i18n';
+import { useConfiguracoes } from '@/app/contexts/ConfiguracoesContext';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -49,6 +53,7 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { configuracoes, setIdioma, toggleTema } = useConfiguracoes();
 
   const handleLogout = async () => {
     try {
@@ -129,6 +134,10 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
           label: t('dashboard.menu.catalogosMotos'),
         },
         {
+          key: PATHS.CONCESSIONARIA_CATALOGOS_LINHAS,
+          label: t('dashboard.menu.catalogosLinhas'),
+        },
+        {
           key: PATHS.CONCESSIONARIA_CATALOGOS_REVISOES,
           label: t('dashboard.menu.catalogosRevisoes'),
         },
@@ -139,10 +148,6 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
         {
           key: PATHS.CONCESSIONARIA_CATALOGOS_SERVICOS,
           label: t('dashboard.menu.catalogosServicos'),
-        },
-        {
-          key: PATHS.CONCESSIONARIA_CATALOGOS_LINHAS,
-          label: t('dashboard.menu.catalogosLinhas'),
         },
       ],
     },
@@ -161,6 +166,32 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
       type: 'divider',
     },
     {
+      key: 'language',
+      icon: <GlobalOutlined />,
+      label: configuracoes.idioma === 'pt-BR' ? t('dashboard.userMenu.languagePtBr') : t('dashboard.userMenu.languageEnUs'),
+      children: [
+        {
+          key: 'language-pt-BR',
+          label: t('dashboard.userMenu.languagePtBrFull'),
+          onClick: () => setIdioma('pt-BR'),
+        },
+        {
+          key: 'language-en-US',
+          label: t('dashboard.userMenu.languageEnUsFull'),
+          onClick: () => setIdioma('en-US'),
+        },
+      ],
+    },
+    {
+      key: 'theme',
+      icon: configuracoes.tema === 'dark' ? <BulbFilled /> : <BulbOutlined />,
+      label: configuracoes.tema === 'dark' ? t('dashboard.userMenu.darkTheme') : t('dashboard.userMenu.lightTheme'),
+      onClick: toggleTema,
+    },
+    {
+      type: 'divider',
+    },
+    {
       key: 'logout',
       icon: <LogoutOutlined />,
       label: t('dashboard.userMenu.logout'),
@@ -170,7 +201,13 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider trigger={null} collapsible collapsed={collapsed} theme="light">
+      <Sider
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        theme="light"
+        style={{ position: 'sticky', top: 0, height: '100vh', overflow: 'hidden' }}
+      >
         <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           {!collapsed && (
             <div style={{ height: '24px' }}>
@@ -194,11 +231,11 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
 
         <div style={{ position: 'absolute', bottom: 0, width: '100%', padding: '16px', borderTop: '1px solid #f0f0f0' }}>
           <Dropdown menu={{ items: userMenuItems }} placement="topLeft" trigger={['click']}>
-            <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Avatar icon={<UserOutlined />} />
+            <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+              <Avatar icon={<UserOutlined />} style={{ flexShrink: 0 }} />
               {!collapsed && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-                  <Text strong>{userName}</Text>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 0, minWidth: 0 }}>
+                  <Text strong ellipsis style={{ display: 'block' }}>{userName}</Text>
                   <Text type="secondary" style={{ fontSize: '12px' }}>
                     {userType === 'cliente' ? t('dashboard.userType.client') : t('dashboard.userType.dealership')}
                   </Text>
