@@ -29,6 +29,7 @@ public record MotoRequest
     public string Cor { get; init; } = null!;
 
     [Required(ErrorMessage = "A quilometragem atual é obrigatória.")]
+    [Range(0, int.MaxValue, ErrorMessage = "A quilometragem deve ser um valor positivo.")]
     public int KilometragemAtual { get; init; }
 
     [Required(ErrorMessage = "A data de venda é obrigatória.")]
