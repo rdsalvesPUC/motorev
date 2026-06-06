@@ -56,12 +56,10 @@ public class MotoServiceTests
             "ABC-1234", 
             "CHASSI12345678901", 
             1, 
-            2023, 
             "Vermelha", 
             1500, 
             DateTime.Now.AddMonths(-6), 
             null, 
-            null,
             null
         );
 
@@ -94,9 +92,9 @@ public class MotoServiceTests
         await context.SaveChangesAsync();
 
         var service = new MotoService(context);
-        var request1 = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, 2023, "Preta", 0, DateTime.Now, null, null, null);
-        var request2 = new MotoRequest("ABC1234", "CHASSI99999999999", 1, 2023, "Preta", 0, DateTime.Now, null, null, null); // Placa duplicada (sem hífen)
-        var request3 = new MotoRequest("XYZ-9999", "CHASSI12345678901", 1, 2023, "Preta", 0, DateTime.Now, null, null, null); // Chassi duplicado
+        var request1 = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now, null, null);
+        var request2 = new MotoRequest("ABC1234", "CHASSI99999999999", 1, "Preta", 0, DateTime.Now, null, null); // Placa duplicada (sem hífen)
+        var request3 = new MotoRequest("XYZ-9999", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now, null, null); // Chassi duplicado
 
         await service.CadastrarMotoAsync(request1, "user123");
 
@@ -118,7 +116,7 @@ public class MotoServiceTests
         await context.SaveChangesAsync();
 
         var service = new MotoService(context);
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 999, 2023, "Preta", 0, DateTime.Now, null, null, null); // Modelo inexistente
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 999, "Preta", 0, DateTime.Now, null, null); // Modelo inexistente
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -135,7 +133,7 @@ public class MotoServiceTests
         await context.SaveChangesAsync();
 
         var service = new MotoService(context);
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, 2023, "Preta", 0, DateTime.Now, null, null, null);
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now, null, null);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(

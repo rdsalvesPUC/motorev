@@ -27,7 +27,7 @@ public class MotoControllerTests
     public async Task AdicionarMoto_DeveRetornarCreated_QuandoDadosValidos()
     {
         // Arrange
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, 2023, "Vermelha", 0, DateTime.Now, null, null, null);
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Vermelha", 0, DateTime.Now, null, null);
         var response = new MotoResponse(1, "ABC1234", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Vermelha", 0, DateTime.Now, "Linha", "100cc");
         
         var userId = "user-id-123";
@@ -57,7 +57,7 @@ public class MotoControllerTests
     public async Task AdicionarMoto_DeveRetornarUnauthorized_QuandoSemUserId()
     {
         // Arrange
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, 2023, "Vermelha", 0, DateTime.Now, null, null, null);
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Vermelha", 0, DateTime.Now, null, null);
         var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity()); // Sem NameIdentifier Claim
 
         _controller.ControllerContext = new ControllerContext
