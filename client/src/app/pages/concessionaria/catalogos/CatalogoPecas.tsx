@@ -28,8 +28,8 @@ import {
   type PecaUpdateRequest,
   type StatusCadastro,
   type StatusPecaFilter,
-} from '../../services/pecaService';
-import { PATHS } from '../../paths';
+} from '@/app/services/pecaService';
+import { PATHS } from '@/app/paths';
 
 const { Title, Text } = Typography;
 

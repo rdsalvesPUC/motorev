@@ -1,8 +1,8 @@
 import { Breadcrumb, Typography, Form, Input, Select, Button, Space, Flex, InputNumber, Card, message } from 'antd';
 import { HomeOutlined, ToolOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
-import { CATEGORIAS_PECA, pecaService, type PecaRequest } from '../../services/pecaService';
-import { PATHS } from '../../paths';
+import { CATEGORIAS_PECA, pecaService, type PecaRequest } from '@/app/services/pecaService';
+import { PATHS } from '@/app/paths';
 
 const { Title } = Typography;
 
