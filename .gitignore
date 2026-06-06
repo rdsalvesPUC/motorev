@@ -56,3 +56,4 @@ nunit-*.xml
 .idea
 
 server/MotoRevApi/wwwroot
+/figma-maker-files/

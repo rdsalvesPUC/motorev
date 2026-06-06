@@ -15,6 +15,7 @@ public class AppDbContext : IdentityDbContext<Usuario>
     public DbSet<Linha> Linhas { get; set; }
     public DbSet<Cliente> Clientes { get; set; }
     public DbSet<Concessionaria> Concessionarias { get; set; }
+    public DbSet<Peca> Pecas { get; set; }
     public DbSet<Servico> Servicos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
