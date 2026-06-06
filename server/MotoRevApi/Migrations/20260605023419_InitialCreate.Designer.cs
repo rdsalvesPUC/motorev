@@ -12,8 +12,8 @@ using MotoRevApi.Data;
 namespace MotoRevApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260505232211_CodigoIsNowUnique")]
-    partial class CodigoIsNowUnique
+    [Migration("20260605023419_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -235,6 +235,53 @@ namespace MotoRevApi.Migrations
                     b.ToTable("Motos");
                 });
 
+            modelBuilder.Entity("MotoRevApi.Model.Peca", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("Estoque")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<decimal>("Preco")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Codigo")
+                        .IsUnique();
+
+                    b.HasIndex("Nome");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("Pecas", (string)null);
+                });
+
             modelBuilder.Entity("MotoRevApi.Model.Servico", b =>
                 {
                     b.Property<int>("Id")
@@ -274,10 +321,12 @@ namespace MotoRevApi.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("Codigo")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Ativo] = 1");
 
                     b.HasIndex("Categoria", "Nome")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Ativo] = 1");
 
                     b.ToTable("Servicos");
                 });

@@ -48,6 +48,8 @@ export default function Cadastro() {
       await clienteService.register({
         nome: values.nomeProprietario,
         email: values.email,
+        cpf: values.cpf,
+        telefone: values.cel,
         password: values.senha
       });
       message.success(t('cadastro.cliente.success'));
