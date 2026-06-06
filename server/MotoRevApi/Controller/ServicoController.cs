@@ -52,10 +52,13 @@ public class ServicoController : ControllerBase
     /// <summary>
     /// Listar serviços disponíveis.
     /// </summary>
+    /// <remarks>
+    /// Endpoint público — não requer autenticação. Aceita filtro opcional por categoria.
+    /// </remarks>
     /// <param name="categoria">Filtro opcional por categoria do serviço.</param>
     /// <response code="200">Retorna a lista de serviços encontrados ou lista vazia.</response>
     [HttpGet]
-    [AllowAnonymous] // Ou [Authorize] dependendo dos requisitos.
+    [AllowAnonymous]
     [ProducesResponseType(typeof(IEnumerable<ServicoResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll([FromQuery] CategoriaServico? categoria)
     {
@@ -66,6 +69,9 @@ public class ServicoController : ControllerBase
     /// <summary>
     /// Consultar um serviço pelo ID.
     /// </summary>
+    /// <remarks>
+    /// Endpoint público — não requer autenticação.
+    /// </remarks>
     /// <param name="id">ID do serviço.</param>
     /// <response code="200">Retorna o serviço encontrado.</response>
     /// <response code="404">Se o serviço não for encontrado.</response>

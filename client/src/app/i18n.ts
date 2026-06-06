@@ -1,5 +1,5 @@
-import enUS from './locales/en-US.json';
-import ptBR from './locales/pt-BR.json';
+import enUS from '@/app/locales/en-US.json';
+import ptBR from '@/app/locales/pt-BR.json';
 
 const translations: Record<string, Record<string, string>> = {
   'en-US': enUS,

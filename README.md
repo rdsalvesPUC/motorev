@@ -59,9 +59,10 @@ Cada camada possui responsabilidade única e comunicação bem definida.
 - ASP.NET Core Web API
 - ASP.NET Core Identity
 - Entity Framework Core (Code First)
-- AutoMapper
+- Mapster (Mapeamento de objetos)
 - xUnit
 - Coverlet
+- Moq (Mocking para testes unitários)
 
 ### Banco de Dados
 - SQL Server
@@ -69,11 +70,11 @@ Cada camada possui responsabilidade única e comunicação bem definida.
 - LINQ
 
 ### Front-end
-- React
-- Vite
-- JavaScript
+- React 19
+- Vite 7
+- TypeScript
 - HTML
-- CSS
+- Ant Design v6
 
 ### DevOps e Ambiente
 - Docker
@@ -82,7 +83,7 @@ Cada camada possui responsabilidade única e comunicação bem definida.
 - GitHub Projects
 
 ### Documentação
-- OpenAPI / Swagger
+- OpenAPI / Scalar API Reference
 - UML
 - BDD em critérios de aceite
 
@@ -97,27 +98,33 @@ motorev/
 │  ├─ src/
 │  ├─ index.html
 │  ├─ package.json
-│  └─ vite.config.js
+│  ├─ tsconfig.json
+│  └─ vite.config.ts
 │
 ├─ server/
-│  └─ MotoRevApi/
-│     ├─ Controller/
-│     ├─ Data/
-│     ├─ Dto/
-│     │  ├─ Request/
-│     │  └─ Response/
-│     ├─ Enums/
-│     ├─ Migrations/
-│     ├─ Model/
-│     ├─ Profiles/
-│     ├─ Properties/
-│     ├─ Providers/
-│     ├─ Services/
-│     ├─ appsettings.json
-│     ├─ appsettings.Development.json
-│     ├─ MotoRevApi.csproj
-│     ├─ MotoRevApi.http
-│     └─ Program.cs
+│  ├─ MotoRevApi/
+│  │  ├─ Authorization/
+│  │  ├─ Controller/
+│  │  ├─ Data/
+│  │  ├─ Dto/
+│  │  │  ├─ Request/
+│  │  │  └─ Response/
+│  │  ├─ Enums/
+│  │  ├─ Exceptions/
+│  │  ├─ Handlers/
+│  │  ├─ Migrations/
+│  │  ├─ Model/
+│  │  ├─ Profiles/
+│  │  ├─ Properties/
+│  │  ├─ Providers/
+│  │  ├─ Services/
+│  │  ├─ appsettings.json
+│  │  ├─ appsettings.Development.json
+│  │  ├─ MotoRevApi.csproj
+│  │  ├─ MotoRevApi.http
+│  │  └─ Program.cs
+│  │
+│  └─ MotoRevApi.Tests/        # Testes automatizados (xUnit, Moq, InMemoryDb)
 │
 ├─ Docs/
 ├─ PrintScreen/
@@ -317,7 +324,7 @@ dotnet ef database update
 
 A API REST do projeto está em construção.
 
-A documentação dos endpoints será disponibilizada via OpenAPI / Swagger, contemplando:
+A documentação dos endpoints será disponibilizada via OpenAPI / Scalar, contemplando:
 
 - endpoints disponíveis;
 - métodos HTTP;

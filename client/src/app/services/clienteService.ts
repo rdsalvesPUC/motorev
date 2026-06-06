@@ -1,4 +1,4 @@
-import { BASE_URL, handleResponse, apiFetch } from './http';
+import { BASE_URL, handleResponse, apiFetch } from '@/app/services/http';
 
 export const clienteService = {
   async register(data: any) {
