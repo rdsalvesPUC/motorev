@@ -291,5 +291,9 @@
   "motoDetalhes.remove.success": "Motorcycle removed successfully!",
   "motoDetalhes.remove.error.title": "Could not remove motorcycle",
   "motoDetalhes.remove.error.pendingAppointments": "It is not possible to inactivate a motorcycle with pending appointments. Please cancel or complete them before proceeding.",
-  "error.deleteMoto": "Error removing motorcycle."
+  "error.deleteMoto": "Error removing motorcycle.",
+  "status.active": "Active",
+  "status.inactive": "Inactive",
+  "status.all": "All",
+  "status.placeholder": "Status"
 }

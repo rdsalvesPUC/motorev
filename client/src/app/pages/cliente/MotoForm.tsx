@@ -106,7 +106,7 @@ export default function MotoForm() {
       }
 
       try {
-        const linesData = await linhaService.getAll(false);
+        const linesData = await linhaService.getAll(true);
         setLinhas(linesData);
       } catch (error) {
         handleApiError(error, 'error.fetchLinhas');

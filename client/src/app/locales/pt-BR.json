@@ -291,5 +291,9 @@
   "motoDetalhes.remove.success": "Moto removida com sucesso!",
   "motoDetalhes.remove.error.title": "Não foi possível remover a moto",
   "motoDetalhes.remove.error.pendingAppointments": "Não é possível inativar uma moto com agendamentos pendentes. Por favor, cancele ou conclua os agendamentos antes de prosseguir.",
-  "error.deleteMoto": "Erro ao remover a moto."
+  "error.deleteMoto": "Erro ao remover a moto.",
+  "status.active": "Ativas",
+  "status.inactive": "Inativas",
+  "status.all": "Todas",
+  "status.placeholder": "Status"
 }

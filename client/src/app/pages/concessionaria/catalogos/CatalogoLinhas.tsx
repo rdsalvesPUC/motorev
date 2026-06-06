@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Breadcrumb, Typography, Input, Button, Table, Space, Flex, Form, Switch, Tag, Spin, message, Popconfirm } from 'antd';
+import { Breadcrumb, Typography, Input, Button, Table, Space, Flex, Form, Switch, Tag, Spin, message, Popconfirm, Select } from 'antd';
 import { HomeOutlined, ToolOutlined, SearchOutlined, EditOutlined } from '@ant-design/icons';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, ColumnType } from 'antd/es/table';
 import { linhaService } from '@/app/services/linhaService';
 import { modeloMotoService } from '@/app/services/modeloMotoService';
 import { Linha } from '@/app/models/Linha';
@@ -17,6 +17,10 @@ interface LinhaData extends Linha {
 
 interface CatalogoLinhasProps {
     onNavigateToForm?: () => void;
+}
+
+interface EditableColumn extends ColumnType<LinhaData> {
+    editable?: boolean;
 }
 
 interface EditableCellProps {
@@ -63,13 +67,20 @@ export default function CatalogoLinhas({ onNavigateToForm }: CatalogoLinhasProps
     const [loading, setLoading] = useState(true);
     const [editingKey, setEditingKey] = useState('');
     const [searchText, setSearchText] = useState('');
+    const [statusFilter, setStatusFilter] = useState<'Ativo' | 'Inativo' | 'Todos'>('Ativo');
 
     const fetchLinhas = async () => {
         try {
             setLoading(true);
-            const linhas = await linhaService.getAll(false);
+            const apenasAtivos = statusFilter === 'Ativo';
+            const linhas = await linhaService.getAll(apenasAtivos);
             const models = await modeloMotoService.getAll();
-            setData(linhas.map(l => ({ ...l, key: l.id.toString() })));
+            
+            const filteredLinhas = statusFilter === 'Inativo'
+                ? linhas.filter(l => !l.ativo)
+                : linhas;
+
+            setData(filteredLinhas.map(l => ({ ...l, key: l.id.toString() })));
             setModelos(models);
         } catch (error) {
             handleApiError(error, 'error.fetchLinhas');
@@ -80,7 +91,7 @@ export default function CatalogoLinhas({ onNavigateToForm }: CatalogoLinhasProps
 
     useEffect(() => {
         fetchLinhas();
-    }, []);
+    }, [statusFilter]);
 
     const filteredData = useMemo(() => {
         if (!searchText) return data;
@@ -144,7 +155,7 @@ export default function CatalogoLinhas({ onNavigateToForm }: CatalogoLinhasProps
         }
     };
 
-    const columns: ColumnsType<LinhaData> = [
+    const columns: EditableColumn[] = [
         {
             title: 'Nome da Linha',
             dataIndex: 'nome',
@@ -295,8 +306,20 @@ export default function CatalogoLinhas({ onNavigateToForm }: CatalogoLinhasProps
                             onChange={(e) => setSearchText(e.target.value)}
                         />
 
+                        <Select
+                            options={[
+                                { value: 'Ativo', label: t('status.active') },
+                                { value: 'Inativo', label: t('status.inactive') },
+                                { value: 'Todos', label: t('status.all') },
+                            ]}
+                            placeholder={t('status.placeholder')}
+                            style={{ width: 140 }}
+                            value={statusFilter}
+                            onChange={setStatusFilter}
+                        />
+
                         <Flex gap="small" style={{ marginLeft: 'auto' }}>
-                            <Button onClick={() => setSearchText('')}>Limpar</Button>
+                            <Button onClick={() => { setSearchText(''); setStatusFilter('Ativo'); }}>Limpar</Button>
                         </Flex>
                     </Flex>
                 </Flex>
