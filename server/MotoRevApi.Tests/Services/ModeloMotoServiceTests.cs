@@ -56,7 +56,11 @@ public class ModeloMotoServiceTests
     {
         // Arrange
         using var context = CreateContext();
-        var modelo = new ModeloMoto { NomeModelo = "R1", Marca = "Yamaha", Categoria = "Esportiva", Ativo = true };
+        var linha = new Linha { Nome = "Linha R1", Ativo = true };
+        context.Linhas.Add(linha);
+        context.SaveChanges();
+
+        var modelo = new ModeloMoto { NomeModelo = "R1", Marca = "Yamaha", Categoria = "Esportiva", LinhaId = linha.Id, Ativo = true };
         context.ModelosMotos.Add(modelo);
         context.SaveChanges();
 
