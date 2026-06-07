@@ -1,4 +1,5 @@
 import { BASE_URL, handleResponse, apiFetch } from './http';
+import { t } from '@/app/i18n';
 
 export type CategoriaPeca = 'Filtros' | 'Motor' | 'Freios' | 'Transmissão' | 'Elétrica';
 export type StatusPecaFilter = 'Todos' | 'Ativo' | 'Inativo';
@@ -42,7 +43,7 @@ export const pecaService = {
   async listar(status: StatusPecaFilter = 'Todos'): Promise<PecaResponse[]> {
     const query = status === 'Todos' ? '' : `?status=${encodeURIComponent(status)}`;
     const response = await apiFetch(`${BASE_URL}/Peca/listar${query}`);
-    return handleResponse(response, 'Falha ao carregar peças');
+    return handleResponse(response, t('partsCatalog.error.load'));
   },
 
   async criar(data: PecaRequest): Promise<PecaResponse> {
@@ -50,7 +51,7 @@ export const pecaService = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-    return handleResponse(response, 'Falha ao cadastrar peça');
+    return handleResponse(response, t('partsCatalog.create.error'));
   },
 
   async atualizar(id: number, data: PecaUpdateRequest): Promise<PecaResponse> {
@@ -58,7 +59,7 @@ export const pecaService = {
       method: 'PUT',
       body: JSON.stringify(data),
     });
-    return handleResponse(response, 'Falha ao atualizar peça');
+    return handleResponse(response, t('partsCatalog.update.error'));
   },
 
   async atualizarStatus(id: number, data: PecaStatusRequest): Promise<PecaResponse> {
@@ -66,6 +67,6 @@ export const pecaService = {
       method: 'PATCH',
       body: JSON.stringify(data),
     });
-    return handleResponse(response, 'Falha ao atualizar status da peça');
+    return handleResponse(response, t('partsCatalog.status.error'));
   },
 };

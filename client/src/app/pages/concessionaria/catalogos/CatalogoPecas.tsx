@@ -30,6 +30,7 @@ import {
   type StatusPecaFilter,
 } from '@/app/services/pecaService';
 import { PATHS } from '@/app/paths';
+import { getLocale, t } from '@/app/i18n';
 
 const { Title, Text } = Typography;
 
@@ -51,6 +52,27 @@ interface EditableCellProps {
   children: React.ReactNode;
 }
 
+const categoriaPecaKeys: Record<CategoriaPeca, string> = {
+  Filtros: 'partsCatalog.category.filters',
+  Motor: 'partsCatalog.category.engine',
+  Freios: 'partsCatalog.category.brakes',
+  Transmissão: 'partsCatalog.category.transmission',
+  Elétrica: 'partsCatalog.category.electrical',
+};
+
+function getCategoriaPecaOptions() {
+  return CATEGORIAS_PECA.map(({ value }) => ({
+    value,
+    label: t(categoriaPecaKeys[value]),
+  }));
+}
+
+function translateCategoria(categoria: string) {
+  return categoriaPecaKeys[categoria as CategoriaPeca]
+    ? t(categoriaPecaKeys[categoria as CategoriaPeca])
+    : categoria;
+}
+
 const EditableCell: React.FC<EditableCellProps> = ({
   editing,
   dataIndex,
@@ -62,12 +84,12 @@ const EditableCell: React.FC<EditableCellProps> = ({
   let inputNode: React.ReactNode;
 
   if (dataIndex === 'categoria') {
-    inputNode = <Select options={CATEGORIAS_PECA} />;
+    inputNode = <Select options={getCategoriaPecaOptions()} />;
   } else if (dataIndex === 'preco') {
     inputNode = (
       <InputNumber
         addonBefore="R$"
-        decimalSeparator=","
+        decimalSeparator={getDecimalSeparator()}
         min={0.01}
         precision={2}
         step={0.01}
@@ -89,7 +111,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
           rules={[
             {
               required: true,
-              message: `Por favor, insira ${title}`,
+              message: t('partsCatalog.enterField', { field: title }),
             },
           ]}
         >
@@ -103,19 +125,27 @@ const EditableCell: React.FC<EditableCellProps> = ({
 };
 
 function formatCurrency(value: number) {
-  return value.toLocaleString('pt-BR', {
+  return value.toLocaleString(getLocale(), {
     style: 'currency',
     currency: 'BRL',
   });
 }
 
+function getDecimalSeparator() {
+  return getLocale() === 'pt-BR' ? ',' : '.';
+}
+
 function getEstoqueTag(estoque: number) {
   const color = estoque > 10 ? 'green' : estoque > 0 ? 'orange' : 'red';
-  return <Tag color={color}>{estoque} unidades</Tag>;
+  return <Tag color={color}>{t('partsCatalog.stockUnits', { count: estoque })}</Tag>;
 }
 
 function getStatusTag(status: string) {
-  return <Tag color={status === 'Ativo' ? 'green' : 'red'}>{status}</Tag>;
+  return (
+    <Tag color={status === 'Ativo' ? 'green' : 'red'}>
+      {status === 'Ativo' ? t('partsCatalog.status.active') : t('partsCatalog.status.inactive')}
+    </Tag>
+  );
 }
 
 function toUpdateRequest(peca: PecaResponse, values?: Partial<PecaFormValues>): PecaUpdateRequest {
@@ -150,7 +180,7 @@ export default function CatalogoPecas() {
       const data = await pecaService.listar(status);
       setPecas(data);
     } catch (err: any) {
-      const errorMessage = err.message || 'Não foi possível carregar o catálogo de peças.';
+      const errorMessage = err.message || t('partsCatalog.error.load');
       setError(errorMessage);
       message.error(errorMessage);
     } finally {
@@ -205,10 +235,10 @@ export default function CatalogoPecas() {
 
   const cancel = () => {
     Modal.confirm({
-      title: 'Cancelar edição',
-      content: 'Tem certeza que deseja cancelar as alterações?',
-      okText: 'Sim',
-      cancelText: 'Não',
+      title: t('partsCatalog.cancelEdit.title'),
+      content: t('partsCatalog.cancelEdit.content'),
+      okText: t('yes'),
+      cancelText: t('no'),
       onOk() {
         form.resetFields();
         setEditingKey(null);
@@ -221,10 +251,10 @@ export default function CatalogoPecas() {
       const values = await form.validateFields();
 
       Modal.confirm({
-        title: 'Salvar alterações',
-        content: 'Tem certeza que deseja salvar as alterações?',
-        okText: 'Sim',
-        cancelText: 'Não',
+        title: t('partsCatalog.saveEdit.title'),
+        content: t('partsCatalog.saveEdit.content'),
+        okText: t('yes'),
+        cancelText: t('no'),
         async onOk() {
           setSavingKey(record.id);
 
@@ -235,16 +265,16 @@ export default function CatalogoPecas() {
             );
             form.resetFields();
             setEditingKey(null);
-            message.success('Peça atualizada com sucesso.');
+            message.success(t('partsCatalog.update.success'));
           } catch (err: any) {
-            message.error(err.message || 'Não foi possível atualizar a peça.');
+            message.error(err.message || t('partsCatalog.update.error'));
           } finally {
             setSavingKey(null);
           }
         },
       });
     } catch {
-      message.error('Verifique os campos antes de salvar.');
+      message.error(t('partsCatalog.save.validationError'));
     }
   };
 
@@ -259,9 +289,11 @@ export default function CatalogoPecas() {
         setPecas((currentPecas) =>
           currentPecas.map((peca) => (peca.id === record.id ? updatedPeca : peca)),
         );
-        message.success(nextStatus === 'Ativo' ? 'Peça ativada com sucesso.' : 'Peça inativada com sucesso.');
+        message.success(
+          nextStatus === 'Ativo' ? t('partsCatalog.activate.success') : t('partsCatalog.deactivate.success'),
+        );
       } catch (err: any) {
-        message.error(err.message || 'Não foi possível alterar o status da peça.');
+        message.error(err.message || t('partsCatalog.status.error'));
       } finally {
         setSavingKey(null);
       }
@@ -269,10 +301,10 @@ export default function CatalogoPecas() {
 
     if (nextStatus === 'Inativo') {
       Modal.confirm({
-        title: 'Inativar peça',
-        content: 'Tem certeza que deseja inativar esta peça?',
-        okText: 'Sim',
-        cancelText: 'Não',
+        title: t('partsCatalog.deactivate.title'),
+        content: t('partsCatalog.deactivate.content'),
+        okText: t('yes'),
+        cancelText: t('no'),
         onOk: updateStatus,
       });
       return;
@@ -283,49 +315,50 @@ export default function CatalogoPecas() {
 
   const emptyText =
     pecas.length === 0
-      ? 'Nenhuma peça cadastrada.'
-      : 'Nenhuma peça encontrada com os filtros selecionados.';
+      ? t('partsCatalog.empty.noData')
+      : t('partsCatalog.empty.filtered');
 
   const columns: ColumnsType<PecaResponse> = [
     {
-      title: 'Código',
+      title: t('partsCatalog.code'),
       dataIndex: 'codigo',
       key: 'codigo',
       sorter: (a, b) => a.codigo.localeCompare(b.codigo),
       onCell: (record) => ({
         record,
         dataIndex: 'codigo',
-        title: 'Código',
+        title: t('partsCatalog.code'),
         editing: isEditing(record),
       }),
     },
     {
-      title: 'Nome da Peça',
+      title: t('partsCatalog.partName'),
       dataIndex: 'nome',
       key: 'nome',
       sorter: (a, b) => a.nome.localeCompare(b.nome),
       onCell: (record) => ({
         record,
         dataIndex: 'nome',
-        title: 'Nome da Peça',
+        title: t('partsCatalog.partName'),
         editing: isEditing(record),
       }),
     },
     {
-      title: 'Categoria',
+      title: t('partsCatalog.category'),
       dataIndex: 'categoria',
       key: 'categoria',
-      filters: CATEGORIAS_PECA.map((item) => ({ text: item.label, value: item.value })),
+      filters: getCategoriaPecaOptions().map((item) => ({ text: item.label, value: item.value })),
       onFilter: (value, record) => record.categoria === value,
+      render: (categoriaValue: string) => translateCategoria(categoriaValue),
       onCell: (record) => ({
         record,
         dataIndex: 'categoria',
-        title: 'Categoria',
+        title: t('partsCatalog.category'),
         editing: isEditing(record),
       }),
     },
     {
-      title: 'Preço',
+      title: t('partsCatalog.price'),
       dataIndex: 'preco',
       key: 'preco',
       align: 'right',
@@ -334,12 +367,12 @@ export default function CatalogoPecas() {
       onCell: (record) => ({
         record,
         dataIndex: 'preco',
-        title: 'Preço',
+        title: t('partsCatalog.price'),
         editing: isEditing(record),
       }),
     },
     {
-      title: 'Estoque',
+      title: t('partsCatalog.stock'),
       dataIndex: 'estoque',
       key: 'estoque',
       render: getEstoqueTag,
@@ -347,12 +380,12 @@ export default function CatalogoPecas() {
       onCell: (record) => ({
         record,
         dataIndex: 'estoque',
-        title: 'Estoque',
+        title: t('partsCatalog.stock'),
         editing: isEditing(record),
       }),
     },
     {
-      title: 'Status',
+      title: t('partsCatalog.status'),
       dataIndex: 'status',
       key: 'status',
       width: 140,
@@ -363,16 +396,16 @@ export default function CatalogoPecas() {
         ) : (
           <Switch
             checked={record.status === 'Ativo'}
-            checkedChildren="Ativo"
+            checkedChildren={t('partsCatalog.status.active')}
             disabled={editingKey !== null || savingKey === record.id}
             loading={savingKey === record.id}
             onChange={() => toggleStatus(record)}
-            unCheckedChildren="Inativo"
+            unCheckedChildren={t('partsCatalog.status.inactive')}
           />
         ),
     },
     {
-      title: 'Ações',
+      title: t('partsCatalog.actions'),
       key: 'actions',
       width: 1,
       render: (_: unknown, record: PecaResponse) => {
@@ -380,10 +413,10 @@ export default function CatalogoPecas() {
         return editable ? (
           <Space>
             <Button type="link" loading={savingKey === record.id} onClick={() => save(record)}>
-              Salvar
+              {t('partsCatalog.save')}
             </Button>
             <Button type="link" danger onClick={cancel}>
-              Cancelar
+              {t('partsCatalog.cancel')}
             </Button>
           </Space>
         ) : (
@@ -393,7 +426,7 @@ export default function CatalogoPecas() {
             disabled={editingKey !== null}
             onClick={() => edit(record)}
           >
-            Editar
+            {t('partsCatalog.edit')}
           </Button>
         );
       },
@@ -412,24 +445,24 @@ export default function CatalogoPecas() {
               title: (
                 <>
                   <ToolOutlined />
-                  <span>Catálogos</span>
+                  <span>{t('dashboard.menu.catalogos')}</span>
                 </>
               ),
             },
             {
-              title: 'Peças',
+              title: t('partsCatalog.title'),
             },
           ]}
         />
 
         <Title level={2} style={{ margin: 0 }}>
-          Peças
+          {t('partsCatalog.title')}
         </Title>
 
         <Flex gap="middle" align="center" wrap="wrap">
           <Input
             allowClear
-            placeholder="Buscar peças..."
+            placeholder={t('partsCatalog.searchPlaceholder')}
             prefix={<SearchOutlined />}
             style={{ width: 300 }}
             value={search}
@@ -438,8 +471,8 @@ export default function CatalogoPecas() {
 
           <Select
             allowClear
-            options={CATEGORIAS_PECA}
-            placeholder="Categoria"
+            options={getCategoriaPecaOptions()}
+            placeholder={t('partsCatalog.category')}
             style={{ width: 160 }}
             value={categoria}
             onChange={setCategoria}
@@ -448,11 +481,11 @@ export default function CatalogoPecas() {
           <Select
             allowClear
             options={[
-              { value: 'disponivel', label: 'Disponível' },
-              { value: 'baixo', label: 'Estoque Baixo' },
-              { value: 'zerado', label: 'Sem Estoque' },
+              { value: 'disponivel', label: t('partsCatalog.stock.available') },
+              { value: 'baixo', label: t('partsCatalog.stock.low') },
+              { value: 'zerado', label: t('partsCatalog.stock.empty') },
             ]}
-            placeholder="Estoque"
+            placeholder={t('partsCatalog.stock')}
             style={{ width: 160 }}
             value={estoque}
             onChange={setEstoque}
@@ -460,20 +493,20 @@ export default function CatalogoPecas() {
 
           <Select
             options={[
-              { value: 'Ativo', label: 'Ativas' },
-              { value: 'Inativo', label: 'Inativas' },
-              { value: 'Todos', label: 'Todas' },
+              { value: 'Ativo', label: t('partsCatalog.status.activePlural') },
+              { value: 'Inativo', label: t('partsCatalog.status.inactivePlural') },
+              { value: 'Todos', label: t('partsCatalog.status.all') },
             ]}
-            placeholder="Status"
+            placeholder={t('partsCatalog.status')}
             style={{ width: 140 }}
             value={status}
             onChange={setStatus}
           />
 
           <Flex gap="small" style={{ marginLeft: 'auto' }}>
-            <Button onClick={clearFilters}>Limpar</Button>
+            <Button onClick={clearFilters}>{t('partsCatalog.clear')}</Button>
             <Button icon={<ReloadOutlined />} loading={loading} onClick={loadPecas}>
-              Atualizar
+              {t('partsCatalog.refresh')}
             </Button>
           </Flex>
         </Flex>
@@ -484,13 +517,13 @@ export default function CatalogoPecas() {
       <Card>
         <Flex vertical gap="middle" style={{ width: '100%' }}>
           <Flex justify="space-between" align="center" wrap="wrap" gap="middle">
-            <Text>Total: {filteredPecas.length} peças</Text>
+            <Text>{t('partsCatalog.totalParts', { count: filteredPecas.length })}</Text>
             <Button
               type="primary"
               disabled={editingKey !== null}
               onClick={() => navigate(PATHS.CONCESSIONARIA_CATALOGOS_PECAS_CREATE)}
             >
-              Adicionar Peça
+              {t('partsCatalog.addPart')}
             </Button>
           </Flex>
 
