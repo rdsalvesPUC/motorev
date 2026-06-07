@@ -100,7 +100,10 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
 
     try {
       setBuscandoCep(true);
-      const endereco = await viaCepService.getAddressByCep(cep);
+      const endereco = await viaCepService.buscarEnderecoPorCep(cep);
+      if (!endereco) {
+        throw new Error('CEP não encontrado');
+      }
       form.setFieldsValue({
         cep: formatCEP(endereco.cep),
         logradouro: endereco.logradouro,

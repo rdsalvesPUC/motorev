@@ -113,7 +113,10 @@ export default function Cadastro() {
 
     try {
       setBuscandoCep(true);
-      const endereco = await viaCepService.getAddressByCep(cep);
+      const endereco = await viaCepService.buscarEnderecoPorCep(cep);
+      if (!endereco) {
+        throw new Error('CEP não encontrado');
+      }
       formConcessionaria.setFieldsValue({
         cep: formatCEP(endereco.cep),
         logradouro: endereco.logradouro,
