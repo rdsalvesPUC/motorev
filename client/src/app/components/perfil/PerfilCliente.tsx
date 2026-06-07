@@ -314,6 +314,14 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
     }
   };
 
+  const handleIdiomaChange = (nextIdioma: Idioma) => {
+    setIdioma(nextIdioma);
+  };
+
+  const handleTemaChange = (checked: boolean) => {
+    setTema(checked ? 'dark' : 'light');
+  };
+
   if (loading) {
     return (
       <Card>
@@ -588,7 +596,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
             >
               <Radio.Group
                 value={configuracoes.idioma}
-                onChange={(event) => setIdioma(event.target.value as Idioma)}
+                onChange={(event) => handleIdiomaChange(event.target.value as Idioma)}
               >
                 <Space direction="vertical">
                   <Radio value="pt-BR">{t('perfil.preferencias.idioma.ptBr')}</Radio>
@@ -609,13 +617,13 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
                 <Text>{t('perfil.preferencias.tema.claro')}</Text>
                 <Switch
                   checked={configuracoes.tema === 'dark'}
-                  onChange={(checked) => setTema(checked ? 'dark' : 'light')}
+                  onChange={handleTemaChange}
                 />
                 <Text>{t('perfil.preferencias.tema.escuro')}</Text>
               </Flex>
             </Descriptions.Item>
           </Descriptions>
-          <Text type="secondary">{t('perfil.preferencias.frontOnly')}</Text>
+          <Text type="secondary">{t('perfil.preferencias.autoSave')}</Text>
         </Flex>
       </Card>
 

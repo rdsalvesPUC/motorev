@@ -170,7 +170,7 @@
   "perfil.preferencias.tema": "Tema",
   "perfil.preferencias.tema.claro": "Claro",
   "perfil.preferencias.tema.escuro": "Escuro",
-  "perfil.preferencias.frontOnly": "Preferências mantidas apenas no Front por enquanto. O backend será integrado em épico próprio.",
+  "perfil.preferencias.autoSave": "As preferências são aplicadas automaticamente e salvas neste dispositivo.",
 
   "error.apiError": "Ocorreu um erro no servidor. Tente novamente mais tarde.",
   "error.unexpected": "Ocorreu um erro inesperado. Tente novamente.",
