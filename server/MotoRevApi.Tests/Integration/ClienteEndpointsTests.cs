@@ -19,7 +19,7 @@ public class ClienteEndpointsTests : IDisposable
     {
         // Arrange
         var userId = "user-cliente-perfil";
-        SeedCliente(userId, "João Silva", "joao@email.com", "52998224725", "11999990000");
+        SeedClienteComEndereco(userId, "João Silva", "joao@email.com", "52998224725", "11999990000");
         var client = CreateClient(Roles.Cliente, userId);
 
         // Act
@@ -33,6 +33,27 @@ public class ClienteEndpointsTests : IDisposable
         Assert.Equal("joao@email.com", perfil.Email);
         Assert.Equal("52998224725", perfil.Cpf);
         Assert.Equal("11999990000", perfil.Telefone);
+        Assert.NotNull(perfil.Endereco);
+        Assert.Equal("04538132", perfil.Endereco.Cep);
+        Assert.Equal("Rua Funchal", perfil.Endereco.Logradouro);
+    }
+
+    [Fact]
+    public async Task GetMe_DeveRetornarEnderecoNulo_QuandoClienteNaoPossuirEndereco()
+    {
+        // Arrange
+        var userId = "user-cliente-sem-endereco";
+        SeedCliente(userId, "João Silva", "joao.sem.endereco@email.com", "52998224725", "11999990000");
+        var client = CreateClient(Roles.Cliente, userId);
+
+        // Act
+        var response = await client.GetAsync("/api/Cliente/me");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var perfil = await response.Content.ReadFromJsonAsync<ClientePerfilResponse>();
+        Assert.NotNull(perfil);
+        Assert.Null(perfil.Endereco);
     }
 
     [Fact]
@@ -113,6 +134,104 @@ public class ClienteEndpointsTests : IDisposable
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
+    [Fact]
+    public async Task UpdateEndereco_DeveCriarEnderecoFormal_QuandoPayloadForValido()
+    {
+        // Arrange
+        var userId = "user-cliente-criar-endereco";
+        SeedCliente(userId, "João Silva", "joao.criar.endereco@email.com", "52998224725", "11999990000");
+        var client = CreateClient(Roles.Cliente, userId);
+        var request = new
+        {
+            cep = "04538-132",
+            logradouro = "Rua Funchal",
+            numero = "418",
+            complemento = "Apto 52",
+            bairro = "Vila Olímpia",
+            cidade = "São Paulo",
+            uf = "sp"
+        };
+
+        // Act
+        var response = await client.PutAsJsonAsync("/api/Cliente/me/endereco", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var perfil = await response.Content.ReadFromJsonAsync<ClientePerfilResponse>();
+        Assert.NotNull(perfil?.Endereco);
+        Assert.Equal("04538132", perfil.Endereco.Cep);
+        Assert.Equal("SP", perfil.Endereco.Uf);
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var cliente = context.Clientes.Single(c => c.UsuarioId == userId);
+        Assert.NotNull(cliente.EnderecoId);
+        Assert.Single(context.Enderecos);
+    }
+
+    [Fact]
+    public async Task UpdateEndereco_DeveAtualizarEnderecoFormal_QuandoClienteJaPossuirEndereco()
+    {
+        // Arrange
+        var userId = "user-cliente-atualizar-endereco";
+        SeedClienteComEndereco(userId, "João Silva", "joao.atualizar.endereco@email.com", "52998224725", "11999990000");
+        int enderecoIdOriginal;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            enderecoIdOriginal = context.Enderecos.Single().Id;
+        }
+
+        var client = CreateClient(Roles.Cliente, userId);
+        var request = new
+        {
+            cep = "01310-100",
+            logradouro = "Avenida Paulista",
+            numero = "1000",
+            complemento = (string?)null,
+            bairro = "Bela Vista",
+            cidade = "São Paulo",
+            uf = "SP"
+        };
+
+        // Act
+        var response = await client.PutAsJsonAsync("/api/Cliente/me/endereco", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using var assertScope = _factory.Services.CreateScope();
+        var assertContext = assertScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var endereco = assertContext.Enderecos.Single();
+        Assert.Equal(enderecoIdOriginal, endereco.Id);
+        Assert.Equal("01310100", endereco.Cep);
+        Assert.Equal("Avenida Paulista", endereco.Logradouro);
+    }
+
+    [Fact]
+    public async Task UpdateEndereco_DeveRetornarBadRequest_QuandoPayloadForInvalido()
+    {
+        // Arrange
+        var userId = "user-cliente-endereco-invalido";
+        SeedCliente(userId, "João Silva", "joao.endereco.invalido@email.com", "52998224725", "11999990000");
+        var client = CreateClient(Roles.Cliente, userId);
+        var request = new
+        {
+            cep = "123",
+            logradouro = "Rua Funchal",
+            numero = "418",
+            bairro = "Vila Olímpia",
+            cidade = "São Paulo",
+            uf = "SP"
+        };
+
+        // Act
+        var response = await client.PutAsJsonAsync("/api/Cliente/me/endereco", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     public void Dispose()
     {
         _factory.Dispose();
@@ -147,6 +266,40 @@ public class ClienteEndpointsTests : IDisposable
             UsuarioId = userId,
             Nome = nome,
             Cpf = cpf
+        });
+        context.SaveChanges();
+    }
+
+    private void SeedClienteComEndereco(string userId, string nome, string email, string cpf, string telefone)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var usuario = new Usuario
+        {
+            Id = userId,
+            UserName = email,
+            NormalizedUserName = email.ToUpperInvariant(),
+            Email = email,
+            NormalizedEmail = email.ToUpperInvariant(),
+            PhoneNumber = telefone
+        };
+
+        context.Users.Add(usuario);
+        context.Clientes.Add(new Cliente
+        {
+            UsuarioId = userId,
+            Nome = nome,
+            Cpf = cpf,
+            Endereco = new Endereco
+            {
+                Cep = "04538132",
+                Logradouro = "Rua Funchal",
+                Numero = "418",
+                Bairro = "Vila Olímpia",
+                Cidade = "São Paulo",
+                Uf = "SP"
+            }
         });
         context.SaveChanges();
     }

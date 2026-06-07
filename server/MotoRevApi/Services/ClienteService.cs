@@ -135,14 +135,28 @@ public class ClienteService
         ClienteEnderecoRequest request)
     {
         var cliente = await GetClienteWithUsuarioAsync(userId);
+        var endereco = cliente.Endereco ?? new Endereco
+        {
+            Cep = string.Empty,
+            Logradouro = string.Empty,
+            Numero = string.Empty,
+            Bairro = string.Empty,
+            Cidade = string.Empty,
+            Uf = string.Empty
+        };
 
-        cliente.Cep = NormalizeNullableDigits(request.Cep, "CEP", 8);
-        cliente.Logradouro = NormalizeNullableText(request.Logradouro);
-        cliente.Numero = NormalizeNullableText(request.Numero);
-        cliente.Complemento = NormalizeNullableText(request.Complemento);
-        cliente.Bairro = NormalizeNullableText(request.Bairro);
-        cliente.Cidade = NormalizeNullableText(request.Cidade);
-        cliente.Uf = NormalizeUf(request.Uf);
+        endereco.Cep = NormalizeRequiredDigits(request.Cep, "CEP", 8);
+        endereco.Logradouro = NormalizeRequiredText(request.Logradouro, "Logradouro");
+        endereco.Numero = NormalizeRequiredText(request.Numero, "Número");
+        endereco.Complemento = NormalizeNullableText(request.Complemento);
+        endereco.Bairro = NormalizeRequiredText(request.Bairro, "Bairro");
+        endereco.Cidade = NormalizeRequiredText(request.Cidade, "Cidade");
+        endereco.Uf = NormalizeRequiredUf(request.Uf);
+
+        if (cliente.Endereco == null)
+        {
+            cliente.Endereco = endereco;
+        }
 
         await _context.SaveChangesAsync();
         return ToPerfilResponse(cliente);
@@ -172,6 +186,7 @@ public class ClienteService
     {
         var cliente = await _context.Clientes
             .Include(c => c.Usuario)
+            .Include(c => c.Endereco)
             .FirstOrDefaultAsync(c => c.UsuarioId == userId);
 
         return cliente ?? throw new NotFoundException("Cliente não encontrado.");
@@ -185,14 +200,16 @@ public class ClienteService
             cliente.Usuario.Email ?? string.Empty,
             cliente.Cpf ?? string.Empty,
             cliente.Usuario.PhoneNumber,
-            new ClienteEnderecoResponse(
-                cliente.Cep,
-                cliente.Logradouro,
-                cliente.Numero,
-                cliente.Complemento,
-                cliente.Bairro,
-                cliente.Cidade,
-                cliente.Uf));
+            cliente.Endereco == null
+                ? null
+                : new ClienteEnderecoResponse(
+                    cliente.Endereco.Cep,
+                    cliente.Endereco.Logradouro,
+                    cliente.Endereco.Numero,
+                    cliente.Endereco.Complemento,
+                    cliente.Endereco.Bairro,
+                    cliente.Endereco.Cidade,
+                    cliente.Endereco.Uf));
     }
 
     private static string NormalizeCpf(string cpf)
@@ -217,9 +234,12 @@ public class ClienteService
         return digits;
     }
 
-    private static string? NormalizeNullableDigits(string? value, string fieldName, int expectedLength)
+    private static string NormalizeRequiredDigits(string? value, string fieldName, int expectedLength)
     {
-        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ValidationException($"{fieldName} é obrigatório.");
+        }
 
         var digits = NormalizeDigits(value);
         if (digits.Length != expectedLength)
@@ -230,9 +250,12 @@ public class ClienteService
         return digits;
     }
 
-    private static string? NormalizeUf(string? uf)
+    private static string NormalizeRequiredUf(string? uf)
     {
-        if (string.IsNullOrWhiteSpace(uf)) return null;
+        if (string.IsNullOrWhiteSpace(uf))
+        {
+            throw new ValidationException("UF é obrigatória.");
+        }
 
         var normalized = uf.Trim().ToUpperInvariant();
         if (normalized.Length != 2)
@@ -241,6 +264,16 @@ public class ClienteService
         }
 
         return normalized;
+    }
+
+    private static string NormalizeRequiredText(string? value, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new ValidationException($"{fieldName} é obrigatório.");
+        }
+
+        return value.Trim();
     }
 
     private static string? NormalizeNullableText(string? value)

@@ -1,43 +1,46 @@
-export interface ViaCepAddress {
+interface ViaCepResponse {
+  cep?: string;
+  logradouro?: string;
+  complemento?: string;
+  bairro?: string;
+  localidade?: string;
+  uf?: string;
+  erro?: boolean | string;
+}
+
+export interface ViaCepEndereco {
   cep: string;
   logradouro: string;
+  complemento: string;
   bairro: string;
   cidade: string;
   uf: string;
 }
 
-interface ViaCepResponse {
-  cep?: string;
-  logradouro?: string;
-  bairro?: string;
-  localidade?: string;
-  uf?: string;
-  erro?: boolean;
-}
-
 export const viaCepService = {
-  async getAddressByCep(cep: string): Promise<ViaCepAddress> {
+  async buscarEnderecoPorCep(cep: string): Promise<ViaCepEndereco | null> {
     const digits = cep.replace(/\D/g, '');
     if (digits.length !== 8) {
-      throw new Error('CEP invalido');
+      throw new Error('CEP inválido');
     }
 
     const response = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
     if (!response.ok) {
-      throw new Error('Falha ao buscar CEP');
+      throw new Error('Falha ao consultar CEP');
     }
 
-    const data: ViaCepResponse = await response.json();
+    const data = (await response.json()) as ViaCepResponse;
     if (data.erro) {
-      throw new Error('CEP nao encontrado');
+      return null;
     }
 
     return {
-      cep: data.cep ?? cep,
-      logradouro: data.logradouro ?? '',
-      bairro: data.bairro ?? '',
-      cidade: data.localidade ?? '',
-      uf: data.uf ?? '',
+      cep: data.cep || digits,
+      logradouro: data.logradouro || '',
+      complemento: data.complemento || '',
+      bairro: data.bairro || '',
+      cidade: data.localidade || '',
+      uf: data.uf || '',
     };
   },
 };

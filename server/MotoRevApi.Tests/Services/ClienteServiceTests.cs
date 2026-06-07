@@ -142,7 +142,21 @@ public class ClienteServiceTests
         using var context = CreateContext();
         var userId = "user-id-123";
         context.Users.Add(new Usuario { Id = userId, UserName = "cliente@email.com", Email = "cliente@email.com", PhoneNumber = "11999990000" });
-        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Teste", Cpf = "52998224725" });
+        context.Clientes.Add(new Cliente
+        {
+            UsuarioId = userId,
+            Nome = "Cliente Teste",
+            Cpf = "52998224725",
+            Endereco = new Endereco
+            {
+                Cep = "04538132",
+                Logradouro = "Rua Funchal",
+                Numero = "418",
+                Bairro = "Vila Olímpia",
+                Cidade = "São Paulo",
+                Uf = "SP"
+            }
+        });
         await context.SaveChangesAsync();
 
         var service = new ClienteService(context, _mockUserManager.Object);
@@ -155,6 +169,28 @@ public class ClienteServiceTests
         Assert.Equal("cliente@email.com", result.Email);
         Assert.Equal("52998224725", result.Cpf);
         Assert.Equal("11999990000", result.Telefone);
+        Assert.NotNull(result.Endereco);
+        Assert.Equal("04538132", result.Endereco.Cep);
+        Assert.Equal("Rua Funchal", result.Endereco.Logradouro);
+    }
+
+    [Fact]
+    public async Task GetPerfilByUserIdAsync_DeveRetornarEnderecoNulo_QuandoClienteNaoPossuirEndereco()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-id-123";
+        context.Users.Add(new Usuario { Id = userId, UserName = "cliente@email.com", Email = "cliente@email.com", PhoneNumber = "11999990000" });
+        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Teste", Cpf = "52998224725" });
+        await context.SaveChangesAsync();
+
+        var service = new ClienteService(context, _mockUserManager.Object);
+
+        // Act
+        var result = await service.GetPerfilByUserIdAsync(userId);
+
+        // Assert
+        Assert.Null(result.Endereco);
     }
 
     [Fact]
@@ -226,7 +262,7 @@ public class ClienteServiceTests
     }
 
     [Fact]
-    public async Task UpdateEnderecoAsync_DeveAtualizarEndereco()
+    public async Task UpdateEnderecoAsync_DeveCriarEndereco_QuandoClienteNaoPossuirEndereco()
     {
         // Arrange
         using var context = CreateContext();
@@ -248,6 +284,55 @@ public class ClienteServiceTests
         Assert.Equal("Vila Olímpia", result.Endereco.Bairro);
         Assert.Equal("São Paulo", result.Endereco.Cidade);
         Assert.Equal("SP", result.Endereco.Uf);
+
+        var clienteNoDb = await context.Clientes.Include(c => c.Endereco).SingleAsync(c => c.UsuarioId == userId);
+        Assert.NotNull(clienteNoDb.EnderecoId);
+        Assert.NotNull(clienteNoDb.Endereco);
+        Assert.Equal("04538132", clienteNoDb.Endereco.Cep);
+        Assert.Single(context.Enderecos);
+    }
+
+    [Fact]
+    public async Task UpdateEnderecoAsync_DeveAtualizarEnderecoExistente_QuandoClienteJaPossuirEndereco()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-id-123";
+        context.Users.Add(new Usuario { Id = userId, UserName = "cliente@email.com", Email = "cliente@email.com" });
+        context.Clientes.Add(new Cliente
+        {
+            UsuarioId = userId,
+            Nome = "Cliente Teste",
+            Cpf = "52998224725",
+            Endereco = new Endereco
+            {
+                Cep = "01001000",
+                Logradouro = "Praça da Sé",
+                Numero = "1",
+                Bairro = "Sé",
+                Cidade = "São Paulo",
+                Uf = "SP"
+            }
+        });
+        await context.SaveChangesAsync();
+        var enderecoId = await context.Enderecos.Select(e => e.Id).SingleAsync();
+
+        var service = new ClienteService(context, _mockUserManager.Object);
+        var request = new ClienteEnderecoRequest("04538-132", "Rua Funchal", "418", "Apto 52", "Vila Olímpia", "São Paulo", "sp");
+
+        // Act
+        var result = await service.UpdateEnderecoAsync(userId, request);
+
+        // Assert
+        Assert.NotNull(result.Endereco);
+        Assert.Equal("04538132", result.Endereco.Cep);
+        Assert.Equal("Rua Funchal", result.Endereco.Logradouro);
+        Assert.Equal("Apto 52", result.Endereco.Complemento);
+
+        var clienteNoDb = await context.Clientes.Include(c => c.Endereco).SingleAsync(c => c.UsuarioId == userId);
+        Assert.Equal(enderecoId, clienteNoDb.EnderecoId);
+        Assert.Equal(enderecoId, clienteNoDb.Endereco!.Id);
+        Assert.Single(context.Enderecos);
     }
 
     [Fact]
@@ -279,6 +364,23 @@ public class ClienteServiceTests
 
         var service = new ClienteService(context, _mockUserManager.Object);
         var request = new ClienteEnderecoRequest("04538-132", "Rua Funchal", "418", null, "Vila Olímpia", "São Paulo", "SPO");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ValidationException>(() => service.UpdateEnderecoAsync(userId, request));
+    }
+
+    [Fact]
+    public async Task UpdateEnderecoAsync_DeveLancarExcecao_QuandoCampoObrigatorioEstiverVazio()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-id-123";
+        context.Users.Add(new Usuario { Id = userId, UserName = "cliente@email.com", Email = "cliente@email.com" });
+        context.Clientes.Add(new Cliente { UsuarioId = userId, Nome = "Cliente Teste", Cpf = "52998224725" });
+        await context.SaveChangesAsync();
+
+        var service = new ClienteService(context, _mockUserManager.Object);
+        var request = new ClienteEnderecoRequest("04538-132", "", "418", null, "Vila Olímpia", "São Paulo", "SP");
 
         // Act & Assert
         await Assert.ThrowsAsync<ValidationException>(() => service.UpdateEnderecoAsync(userId, request));

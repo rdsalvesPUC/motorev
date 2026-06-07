@@ -1,10 +1,30 @@
 import { Breadcrumb, Typography, Form, Input, Select, Button, Space, Flex, InputNumber, Card, message } from 'antd';
 import { HomeOutlined, ToolOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router';
-import { CATEGORIAS_PECA, pecaService, type PecaRequest } from '@/app/services/pecaService';
+import { CATEGORIAS_PECA, type CategoriaPeca, pecaService, type PecaRequest } from '@/app/services/pecaService';
 import { PATHS } from '@/app/paths';
+import { getLocale, t } from '@/app/i18n';
 
 const { Title } = Typography;
+
+const categoriaPecaKeys: Record<CategoriaPeca, string> = {
+  Filtros: 'partsCatalog.category.filters',
+  Motor: 'partsCatalog.category.engine',
+  Freios: 'partsCatalog.category.brakes',
+  Transmissão: 'partsCatalog.category.transmission',
+  Elétrica: 'partsCatalog.category.electrical',
+};
+
+function getCategoriaPecaOptions() {
+  return CATEGORIAS_PECA.map(({ value }) => ({
+    value,
+    label: t(categoriaPecaKeys[value]),
+  }));
+}
+
+function getDecimalSeparator() {
+  return getLocale() === 'pt-BR' ? ',' : '.';
+}
 
 export default function CatalogoPecasCreate() {
   const [form] = Form.useForm<PecaRequest>();
@@ -22,10 +42,10 @@ export default function CatalogoPecasCreate() {
         estoque: Number(values.estoque),
       });
 
-      message.success('Peça cadastrada com sucesso.');
+      message.success(t('partsCatalog.create.success'));
       goBack();
     } catch (err: any) {
-      message.error(err.message || 'Não foi possível cadastrar a peça.');
+      message.error(err.message || t('partsCatalog.create.error'));
     }
   };
 
@@ -46,15 +66,15 @@ export default function CatalogoPecasCreate() {
               title: (
                 <>
                   <ToolOutlined />
-                  <span>Catálogos</span>
+                  <span>{t('dashboard.menu.catalogos')}</span>
                 </>
               ),
             },
             {
-              title: 'Peças',
+              title: t('partsCatalog.title'),
             },
             {
-              title: 'Adicionar Peça',
+              title: t('partsCatalog.addPart'),
             },
           ]}
         />
@@ -62,7 +82,7 @@ export default function CatalogoPecasCreate() {
         <Flex align="center" gap="middle">
           <Button type="default" icon={<ArrowLeftOutlined />} onClick={goBack} />
           <Title level={2} style={{ margin: 0 }}>
-            Adicionar Peça
+            {t('partsCatalog.addPart')}
           </Title>
         </Flex>
       </Space>
@@ -75,66 +95,66 @@ export default function CatalogoPecasCreate() {
           style={{ maxWidth: '800px' }}
         >
           <Form.Item
-            label="Código"
+            label={t('partsCatalog.code')}
             name="codigo"
             rules={[
-              { required: true, message: 'Por favor, insira o código da peça' },
-              { min: 2, max: 20, message: 'O código deve ter entre 2 e 20 caracteres' },
+              { required: true, message: t('partsCatalog.code.required') },
+              { min: 2, max: 20, message: t('partsCatalog.code.length') },
             ]}
           >
-            <Input placeholder="Ex: P001, P002" />
+            <Input placeholder={t('partsCatalog.code.placeholder')} />
           </Form.Item>
 
           <Form.Item
-            label="Nome da Peça"
+            label={t('partsCatalog.partName')}
             name="nome"
             rules={[
-              { required: true, message: 'Por favor, insira o nome da peça' },
-              { min: 3, max: 150, message: 'O nome deve ter entre 3 e 150 caracteres' },
+              { required: true, message: t('partsCatalog.partName.required') },
+              { min: 3, max: 150, message: t('partsCatalog.partName.length') },
             ]}
           >
-            <Input placeholder="Ex: Filtro de Óleo, Vela de Ignição" />
+            <Input placeholder={t('partsCatalog.partName.placeholder')} />
           </Form.Item>
 
           <Form.Item
-            label="Categoria"
+            label={t('partsCatalog.category')}
             name="categoria"
-            rules={[{ required: true, message: 'Por favor, selecione a categoria' }]}
+            rules={[{ required: true, message: t('partsCatalog.category.required') }]}
           >
-            <Select placeholder="Selecione a categoria" options={CATEGORIAS_PECA} />
+            <Select placeholder={t('partsCatalog.category.placeholder')} options={getCategoriaPecaOptions()} />
           </Form.Item>
 
           <Form.Item
-            label="Preço"
+            label={t('partsCatalog.price')}
             name="preco"
-            rules={[{ required: true, message: 'Por favor, insira o preço' }]}
+            rules={[{ required: true, message: t('partsCatalog.price.required') }]}
           >
             <InputNumber
-              placeholder="Ex: 35,00"
+              placeholder={t('partsCatalog.price.placeholder')}
               addonBefore="R$"
               min={0.01}
               precision={2}
               step={0.01}
-              decimalSeparator=","
+              decimalSeparator={getDecimalSeparator()}
               style={{ width: '100%' }}
             />
           </Form.Item>
 
           <Form.Item
-            label="Estoque"
+            label={t('partsCatalog.stock')}
             name="estoque"
-            rules={[{ required: true, message: 'Por favor, insira a quantidade em estoque' }]}
+            rules={[{ required: true, message: t('partsCatalog.stock.required') }]}
           >
-            <InputNumber placeholder="Ex: 25, 50" style={{ width: '100%' }} min={0} precision={0} />
+            <InputNumber placeholder={t('partsCatalog.stock.placeholder')} style={{ width: '100%' }} min={0} precision={0} />
           </Form.Item>
 
           <Form.Item>
             <Flex gap="middle">
               <Button type="primary" htmlType="submit" size="large">
-                Salvar
+                {t('partsCatalog.save')}
               </Button>
               <Button size="large" onClick={handleCancel}>
-                Cancelar
+                {t('partsCatalog.cancel')}
               </Button>
             </Flex>
           </Form.Item>

@@ -80,7 +80,7 @@ public class ClienteControllerTests
             "john@test.com",
             "52998224725",
             "11999990000",
-            new ClienteEnderecoResponse(null, null, null, null, null, null, null));
+            null);
         _clienteServiceMock.Setup(s => s.GetPerfilByUserIdAsync(userId)).ReturnsAsync(response);
 
         // Act
@@ -106,7 +106,7 @@ public class ClienteControllerTests
             "john@test.com",
             "52998224725",
             "11999990000",
-            new ClienteEnderecoResponse(null, null, null, null, null, null, null));
+            null);
         _clienteServiceMock.Setup(s => s.UpdateDadosPessoaisAsync(userId, request)).ReturnsAsync(response);
 
         // Act

@@ -14,6 +14,7 @@ public class AppDbContext : IdentityDbContext<Usuario>
     public DbSet<ModeloMoto> ModelosMotos { get; set; }
     public DbSet<Linha> Linhas { get; set; }
     public DbSet<Cliente> Clientes { get; set; }
+    public DbSet<Endereco> Enderecos { get; set; }
     public DbSet<Concessionaria> Concessionarias { get; set; }
     public DbSet<Loja> Lojas { get; set; }
     public DbSet<Peca> Pecas { get; set; }
