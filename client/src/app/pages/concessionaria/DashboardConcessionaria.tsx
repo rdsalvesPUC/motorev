@@ -13,6 +13,7 @@ import CatalogoPecas from "@/app/pages/concessionaria/catalogos/CatalogoPecas";
 import CatalogoPecasCreate from "@/app/pages/concessionaria/catalogos/CatalogoPecasCreate";
 import Lojas from "@/app/pages/concessionaria/lojas/Lojas";
 import FormLojas from "@/app/pages/concessionaria/lojas/FormLojas";
+import PerfilConcessionaria from "@/app/pages/concessionaria/perfil/perfil";
 
 const {Title, Paragraph} = Typography;
 
@@ -38,6 +39,7 @@ export default function DashboardConcessionaria() {
         >
             <Routes>
                 <Route index element={<DashboardHome/>}/>
+                <Route path={PATH_SEGMENTS.PERFIL_USUARIO} element={<PerfilConcessionaria />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_LOJAS} element={<Lojas onNavigateToForm={() => navigate(PATHS.CONCESSIONARIA_LOJAS_NOVO)} onNavigateToEdit={(id) => navigate(`${PATHS.CONCESSIONARIA_LOJAS_EDITAR}/${id}`)} />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_LOJAS_NOVO} element={<FormLojas onBack={() => navigate(PATHS.CONCESSIONARIA_LOJAS)} />} />
                 <Route path={`${PATH_SEGMENTS.CONCESSIONARIA_LOJAS_EDITAR}/:id`} element={<FormLojas onBack={() => navigate(PATHS.CONCESSIONARIA_LOJAS)} />} />

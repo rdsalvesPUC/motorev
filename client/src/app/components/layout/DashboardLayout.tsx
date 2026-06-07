@@ -120,6 +120,11 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
       label: t('dashboard.menu.lojas'),
     },
     {
+      key: `${PATHS.DASHBOARD_CONCESSIONARIA}${PATHS.PERFIL_USUARIO}`,
+      icon: <UserOutlined />,
+      label: t('dashboard.userMenu.myProfile'),
+    },
+    {
       key: PATHS.CONCESSIONARIA_AGENDAMENTOS,
       icon: <CalendarOutlined />,
       label: t('dashboard.menu.agendamentos'),
