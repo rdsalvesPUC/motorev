@@ -5,6 +5,7 @@ namespace MotoRevApi.Dto.Request;
 public record LojaRequest(
     [Required] string Nome,
     [Required] string Cnpj,
+    [Required] string Telefone,
     [Required] string Cep,
     [Required] string Logradouro,
     [Required] string Numero,

@@ -370,6 +370,11 @@ namespace MotoRevApi.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<string>("Telefone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("Tipo")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -392,6 +397,9 @@ namespace MotoRevApi.Migrations
                     b.HasIndex("ConcessionariaId", "Tipo")
                         .IsUnique()
                         .HasFilter("[Tipo] = 'Matriz'");
+
+                    b.HasIndex("Telefone")
+                        .IsUnique();
 
                     b.ToTable("Lojas");
                 });

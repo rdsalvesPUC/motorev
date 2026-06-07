@@ -7,8 +7,8 @@ import { concessionariaService } from '@/app/services/concessionariaService';
 import { viaCepService } from '@/app/services/viaCepService';
 import { LojaRequest } from '@/app/models/LojaRequest';
 import { handleApiError } from '@/app/utils/errorHandler';
-import { formatCEP, formatCNPJ } from '@/app/utils/formatters';
-import { CEP_REGEX, CNPJ_REGEX, UF_REGEX, validateCNPJ } from '@/app/utils/validators';
+import { formatCEP, formatCNPJ, formatPhone } from '@/app/utils/formatters';
+import { CEP_REGEX, CNPJ_REGEX, PHONE_REGEX, UF_REGEX, validateCNPJ } from '@/app/utils/validators';
 import { PATH_SEGMENTS } from '@/app/paths';
 
 const { Title } = Typography;
@@ -22,7 +22,6 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
   const { id } = useParams();
   const lojaId = id ? Number(id) : undefined;
   const isEditing = lojaId !== undefined && !Number.isNaN(lojaId);
-  const [concessionariaId, setConcessionariaId] = useState<number>();
   const [loading, setLoading] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [enderecoBloqueado, setEnderecoBloqueado] = useState(false);
@@ -31,14 +30,12 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const concessionaria = await concessionariaService.getMe();
-        setConcessionariaId(concessionaria.id);
-
         if (isEditing && lojaId) {
-          const loja = await concessionariaService.getLojaById(concessionaria.id, lojaId);
+          const loja = await concessionariaService.getMinhaLojaById(lojaId);
           form.setFieldsValue({
             nome: loja.nome,
             cnpj: loja.cnpj,
+            telefone: loja.telefone,
             cep: loja.cep,
             logradouro: loja.logradouro,
             numero: loja.numero,
@@ -58,8 +55,6 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
   }, [form, isEditing, lojaId]);
 
   const handleSubmit = async (values: LojaRequest) => {
-    if (!concessionariaId) return;
-
     const payload = {
       ...values,
       uf: values.uf.toUpperCase(),
@@ -68,10 +63,10 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
     try {
       setLoading(true);
       if (isEditing && lojaId) {
-        await concessionariaService.updateLoja(concessionariaId, lojaId, payload);
+        await concessionariaService.updateMinhaLoja(lojaId, payload);
         message.success('Loja atualizada com sucesso!');
       } else {
-        await concessionariaService.createLoja(concessionariaId, payload);
+        await concessionariaService.createMinhaLoja(payload);
         message.success('Loja criada com sucesso!');
       }
       form.resetFields();
@@ -181,6 +176,18 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
               ]}
             >
               <Input placeholder="Ex: 12.345.678/0001-00" />
+            </Form.Item>
+
+            <Form.Item
+              label="Telefone"
+              name="telefone"
+              normalize={formatPhone}
+              rules={[
+                { required: true, message: 'Informe o telefone' },
+                { pattern: PHONE_REGEX, message: 'Telefone invalido' },
+              ]}
+            >
+              <Input placeholder="Ex: (11) 3000-0000" />
             </Form.Item>
 
             <Title level={5}>Endereco</Title>

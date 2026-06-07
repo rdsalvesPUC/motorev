@@ -5,6 +5,7 @@ public record LojaResponse(
     string Nome,
     string Tipo,
     string Cnpj,
+    string Telefone,
     string Cep,
     string Logradouro,
     string Numero,

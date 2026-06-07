@@ -22,17 +22,14 @@ const isMatriz = (loja: LojaData) => loja.tipo.toLowerCase() === 'matriz';
 
 export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps) {
   const [data, setData] = useState<LojaData[]>([]);
-  const [concessionariaId, setConcessionariaId] = useState<number>();
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
 
   const fetchLojas = async () => {
     try {
       setLoading(true);
-      const concessionaria = await concessionariaService.getMe();
-      const lojas = await concessionariaService.getLojas(concessionaria.id);
+      const lojas = await concessionariaService.getMinhasLojas();
 
-      setConcessionariaId(concessionaria.id);
       setData(lojas.map((loja) => ({ ...loja, key: loja.id.toString() })));
     } catch (error) {
       handleApiError(error);
@@ -52,6 +49,7 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
     return data.filter((loja) =>
       loja.nome.toLowerCase().includes(termo) ||
       loja.cnpj.includes(busca) ||
+      loja.telefone.includes(busca) ||
       loja.logradouro.toLowerCase().includes(termo) ||
       loja.bairro.toLowerCase().includes(termo) ||
       loja.cidade.toLowerCase().includes(termo) ||
@@ -60,11 +58,9 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
   }, [busca, data]);
 
   const handleStatusToggle = async (loja: LojaData) => {
-    if (!concessionariaId) return;
-
     try {
       setLoading(true);
-      await concessionariaService.alternarStatusLoja(concessionariaId, loja.id);
+      await concessionariaService.alternarStatusMinhaLoja(loja.id);
       await fetchLojas();
       message.success('Status da loja atualizado com sucesso!');
     } catch (error) {
@@ -90,6 +86,11 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
       title: 'CNPJ',
       dataIndex: 'cnpj',
       key: 'cnpj',
+    },
+    {
+      title: 'Telefone',
+      dataIndex: 'telefone',
+      key: 'telefone',
     },
     {
       title: 'Endereco',
@@ -172,7 +173,7 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
           </Flex>
 
           <Input
-            placeholder="Buscar por nome, CNPJ ou endereco..."
+            placeholder="Buscar por nome, CNPJ, telefone ou endereco..."
             prefix={<SearchOutlined />}
             value={busca}
             onChange={(event) => setBusca(event.target.value)}

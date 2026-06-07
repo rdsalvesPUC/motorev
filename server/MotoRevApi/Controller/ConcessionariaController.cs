@@ -129,7 +129,7 @@ public class ConcessionariaController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> AlterarSenha([FromBody] ConcessionariaAlterarSenhaRequest request)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = ObterUserId();
         if (userId == null)
         {
             return Unauthorized();
@@ -152,6 +152,130 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
+    /// Obter lojas ativas disponiveis para clientes.
+    /// </summary>
+    /// <response code="200">Retorna matriz e filiais ativas.</response>
+    [HttpGet("lojas/ativas")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(IEnumerable<LojaResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetLojasAtivas()
+    {
+        var response = await _concessionariaService.GetLojasAtivasAsync();
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Cadastrar uma loja filial para a concessionaria matriz autenticada.
+    /// </summary>
+    [HttpPost("me/lojas")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AddMinhaLoja([FromBody] LojaRequest request)
+    {
+        var userId = ObterUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _concessionariaService.AddLojaAsync(userId, request);
+        return CreatedAtAction(nameof(GetMinhaLojaById), new { lojaId = response.Id }, response);
+    }
+
+    /// <summary>
+    /// Obter todas as lojas da concessionaria matriz autenticada.
+    /// </summary>
+    [HttpGet("me/lojas")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(IEnumerable<LojaResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMinhasLojas()
+    {
+        var userId = ObterUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _concessionariaService.GetLojasAsync(userId);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Obter uma loja da concessionaria matriz autenticada.
+    /// </summary>
+    [HttpGet("me/lojas/{lojaId}")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetMinhaLojaById(int lojaId)
+    {
+        var userId = ObterUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _concessionariaService.GetLojaByIdAsync(userId, lojaId);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Atualizar uma loja filial da concessionaria matriz autenticada.
+    /// </summary>
+    [HttpPut("me/lojas/{lojaId}")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateMinhaLoja(int lojaId, [FromBody] LojaRequest request)
+    {
+        var userId = ObterUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _concessionariaService.UpdateLojaAsync(userId, lojaId, request);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Alternar status ativo/inativo de uma loja da concessionaria matriz autenticada.
+    /// </summary>
+    [HttpPatch("me/lojas/{lojaId}/alternar-status")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AlternarStatusMinhaLoja(int lojaId)
+    {
+        var userId = ObterUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _concessionariaService.AlternarStatusLojaAsync(userId, lojaId);
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Cadastrar uma loja filial para uma concessionaria matriz.
     /// </summary>
     /// <param name="id">O ID da concessionaria matriz.</param>
@@ -168,6 +292,12 @@ public class ConcessionariaController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> AddLoja(int id, [FromBody] LojaRequest request)
     {
+        var ownershipResult = await ValidarOwnershipAsync(id);
+        if (ownershipResult != null)
+        {
+            return ownershipResult;
+        }
+
         var response = await _concessionariaService.AddLojaAsync(id, request);
         return CreatedAtAction(nameof(GetLojaById), new { id, lojaId = response.Id }, response);
     }
@@ -179,10 +309,19 @@ public class ConcessionariaController : ControllerBase
     /// <response code="200">Retorna a lista de lojas da concessionaria.</response>
     /// <response code="404">Se a concessionaria matriz nao for encontrada.</response>
     [HttpGet("{id}/lojas")]
+    [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(IEnumerable<LojaResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLojas(int id)
     {
+        var ownershipResult = await ValidarOwnershipAsync(id);
+        if (ownershipResult != null)
+        {
+            return ownershipResult;
+        }
+
         var response = await _concessionariaService.GetLojasAsync(id);
         return Ok(response);
     }
@@ -195,10 +334,19 @@ public class ConcessionariaController : ControllerBase
     /// <response code="200">Retorna os dados da loja.</response>
     /// <response code="404">Se a loja nao for encontrada.</response>
     [HttpGet("{id}/lojas/{lojaId}")]
+    [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetLojaById(int id, int lojaId)
     {
+        var ownershipResult = await ValidarOwnershipAsync(id);
+        if (ownershipResult != null)
+        {
+            return ownershipResult;
+        }
+
         var response = await _concessionariaService.GetLojaByIdAsync(id, lojaId);
         return Ok(response);
     }
@@ -217,10 +365,18 @@ public class ConcessionariaController : ControllerBase
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdateLoja(int id, int lojaId, [FromBody] LojaRequest request)
     {
+        var ownershipResult = await ValidarOwnershipAsync(id);
+        if (ownershipResult != null)
+        {
+            return ownershipResult;
+        }
+
         var response = await _concessionariaService.UpdateLojaAsync(id, lojaId, request);
         return Ok(response);
     }
@@ -235,10 +391,36 @@ public class ConcessionariaController : ControllerBase
     [HttpPatch("{id}/lojas/{lojaId}/alternar-status")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AlternarStatusLoja(int id, int lojaId)
     {
+        var ownershipResult = await ValidarOwnershipAsync(id);
+        if (ownershipResult != null)
+        {
+            return ownershipResult;
+        }
+
         var response = await _concessionariaService.AlternarStatusLojaAsync(id, lojaId);
         return Ok(response);
+    }
+
+    private string? ObterUserId()
+    {
+        return User.FindFirstValue(ClaimTypes.NameIdentifier);
+    }
+
+    private async Task<IActionResult?> ValidarOwnershipAsync(int concessionariaId)
+    {
+        var userId = ObterUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        return await _concessionariaService.ConcessionariaPertenceAoUsuarioAsync(userId, concessionariaId)
+            ? null
+            : Forbid();
     }
 }

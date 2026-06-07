@@ -91,6 +91,7 @@ namespace MotoRevApi.Migrations
                     Nome = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     Tipo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Filial"),
                     Cnpj = table.Column<string>(type: "nvarchar(18)", maxLength: 18, nullable: false),
+                    Telefone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
                     Cep = table.Column<string>(type: "nvarchar(9)", maxLength: 9, nullable: false),
                     Logradouro = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     Numero = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
@@ -112,10 +113,11 @@ namespace MotoRevApi.Migrations
                 });
 
             migrationBuilder.Sql("UPDATE Concessionarias SET Cnpj = CONCAT('MIGRADO-', Id) WHERE Cnpj = ''");
+            migrationBuilder.Sql("UPDATE Concessionarias SET Telefone = CONCAT('MIGRADO-', Id) WHERE Telefone = ''");
 
             migrationBuilder.Sql("""
-                INSERT INTO Lojas (Nome, Tipo, Cnpj, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Ativo, ConcessionariaId)
-                SELECT Nome, 'Matriz', Cnpj, Cep, Logradouro, Numero, Bairro, Cidade, Uf, CAST(1 AS bit), Id
+                INSERT INTO Lojas (Nome, Tipo, Cnpj, Telefone, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Ativo, ConcessionariaId)
+                SELECT Nome, 'Matriz', Cnpj, Telefone, Cep, Logradouro, Numero, Bairro, Cidade, Uf, CAST(1 AS bit), Id
                 FROM Concessionarias
                 WHERE NOT EXISTS (
                     SELECT 1
@@ -148,6 +150,12 @@ namespace MotoRevApi.Migrations
                 columns: new[] { "ConcessionariaId", "Tipo" },
                 unique: true,
                 filter: "[Tipo] = 'Matriz'");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Lojas_Telefone",
+                table: "Lojas",
+                column: "Telefone",
+                unique: true);
         }
 
         /// <inheritdoc />

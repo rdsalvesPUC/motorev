@@ -216,8 +216,11 @@ public class ConcessionariaControllerTests
     public async Task AddLoja_DeveRetornarCreated_QuandoSucesso()
     {
         // Arrange
-        var request = new LojaRequest("Loja", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
-        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true);
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true);
+        _serviceMock.Setup(s => s.ConcessionariaPertenceAoUsuarioAsync(userId, 1)).ReturnsAsync(true);
         _serviceMock.Setup(s => s.AddLojaAsync(1, request)).ReturnsAsync(response);
 
         // Act
@@ -233,8 +236,11 @@ public class ConcessionariaControllerTests
     public async Task UpdateLoja_DeveRetornarOk_QuandoSucesso()
     {
         // Arrange
-        var request = new LojaRequest("Loja", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
-        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true);
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true);
+        _serviceMock.Setup(s => s.ConcessionariaPertenceAoUsuarioAsync(userId, 1)).ReturnsAsync(true);
         _serviceMock.Setup(s => s.UpdateLojaAsync(1, 1, request)).ReturnsAsync(response);
 
         // Act
@@ -250,7 +256,10 @@ public class ConcessionariaControllerTests
     public async Task AlternarStatusLoja_DeveRetornarOk_QuandoSucesso()
     {
         // Arrange
-        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, false);
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, false);
+        _serviceMock.Setup(s => s.ConcessionariaPertenceAoUsuarioAsync(userId, 1)).ReturnsAsync(true);
         _serviceMock.Setup(s => s.AlternarStatusLojaAsync(1, 1)).ReturnsAsync(response);
 
         // Act
@@ -259,6 +268,78 @@ public class ConcessionariaControllerTests
         // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task AddMinhaLoja_DeveUsarUsuarioAutenticado()
+    {
+        // Arrange
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true);
+        _serviceMock.Setup(s => s.AddLojaAsync(userId, request)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.AddMinhaLoja(request);
+
+        // Assert
+        var createdAtActionResult = Assert.IsType<CreatedAtActionResult>(result);
+        Assert.Equal(response, createdAtActionResult.Value);
+    }
+
+    [Fact]
+    public async Task GetMinhasLojas_DeveUsarUsuarioAutenticado()
+    {
+        // Arrange
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var response = new[]
+        {
+            new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true)
+        };
+        _serviceMock.Setup(s => s.GetLojasAsync(userId)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.GetMinhasLojas();
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task AddLoja_DeveRetornarForbid_QuandoConcessionariaNaoPertenceAoUsuario()
+    {
+        // Arrange
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+        _serviceMock.Setup(s => s.ConcessionariaPertenceAoUsuarioAsync(userId, 99)).ReturnsAsync(false);
+
+        // Act
+        var result = await _controller.AddLoja(99, request);
+
+        // Assert
+        Assert.IsType<ForbidResult>(result);
+    }
+
+    [Fact]
+    public async Task GetLojasAtivas_DeveRetornarOk()
+    {
+        // Arrange
+        var response = new[]
+        {
+            new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true)
+        };
+        _serviceMock.Setup(s => s.GetLojasAtivasAsync()).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.GetLojasAtivas();
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(response, okResult.Value);
     }
 }

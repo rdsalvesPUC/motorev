@@ -101,6 +101,7 @@ public class ConcessionariaServiceTests
         Assert.Equal("Matriz", lojaMatrizNoDb.Tipo);
         Assert.Equal(concessionariaNoDb.Id, lojaMatrizNoDb.ConcessionariaId);
         Assert.Equal(concessionariaNoDb.Cnpj, lojaMatrizNoDb.Cnpj);
+        Assert.Equal(concessionariaNoDb.Telefone, lojaMatrizNoDb.Telefone);
     }
 
     [Fact]
@@ -217,6 +218,7 @@ public class ConcessionariaServiceTests
         var lojaMatriz = await context.Lojas.SingleOrDefaultAsync(l => l.ConcessionariaId == 1 && l.Tipo == "Matriz");
         Assert.NotNull(lojaMatriz);
         Assert.Equal("Concessionaria Atualizada", lojaMatriz.Nome);
+        Assert.Equal("(21) 98888-7777", lojaMatriz.Telefone);
         Assert.Equal("RJ", lojaMatriz.Uf);
     }
 
@@ -366,6 +368,7 @@ public class ConcessionariaServiceTests
         var request = new LojaRequest(
             "Loja Zona Sul",
             "11.222.333/0001-44",
+            "(11) 3000-0000",
             "04000-000",
             "Avenida Teste",
             "200",
@@ -379,6 +382,7 @@ public class ConcessionariaServiceTests
 
         // Assert
         Assert.Equal("Loja Zona Sul", result.Nome);
+        Assert.Equal("(11) 3000-0000", result.Telefone);
         Assert.Equal("Filial", result.Tipo);
         Assert.Equal(1, result.ConcessionariaId);
         Assert.True(result.Ativo);
@@ -391,7 +395,7 @@ public class ConcessionariaServiceTests
         // Arrange
         using var context = CreateContext();
         var service = new ConcessionariaService(context, _mockUserManager.Object);
-        var request = new LojaRequest("Loja", "11.222.333/0001-44", "04000-000", "Rua", "1", "Bairro", "Cidade", "SP");
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "1", "Bairro", "Cidade", "SP");
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.AddLojaAsync(99, request));
@@ -406,10 +410,60 @@ public class ConcessionariaServiceTests
         await context.SaveChangesAsync();
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);
-        var request = new LojaRequest("Loja", "11.222.333/0001-44", "04000-000", "Rua", "1", "Bairro", "Cidade", "SP");
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "1", "Bairro", "Cidade", "SP");
 
         // Act & Assert
         await Assert.ThrowsAsync<DuplicateDataException>(() => service.AddLojaAsync(1, request));
+    }
+
+    [Fact]
+    public async Task AddLojaAsync_DeveLancarExcecao_QuandoTelefoneJaExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(CreateConcessionaria());
+        context.Lojas.Add(new Loja
+        {
+            Id = 10,
+            Nome = "Loja Existente",
+            Tipo = "Filial",
+            Cnpj = "11.222.333/0001-44",
+            Telefone = "(11) 3000-0000",
+            Cep = "04000-000",
+            Logradouro = "Rua",
+            Numero = "1",
+            Bairro = "Bairro",
+            Cidade = "Cidade",
+            Uf = "SP",
+            ConcessionariaId = 1
+        });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new LojaRequest("Loja", "22.333.444/0001-55", "(11) 3000-0000", "04000-000", "Rua", "1", "Bairro", "Cidade", "SP");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.AddLojaAsync(1, request));
+    }
+
+    [Fact]
+    public async Task AddLojaAsync_ComUserId_DeveCriarLojaNaConcessionariaAutenticada()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.AddRange(
+            CreateConcessionaria(id: 1, usuarioId: "user-1"),
+            CreateConcessionaria(id: 2, usuarioId: "user-2", cnpj: "22.333.444/0001-55"));
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new LojaRequest("Loja", "33.444.555/0001-66", "(11) 3000-0000", "04000-000", "Rua", "1", "Bairro", "Cidade", "SP");
+
+        // Act
+        var result = await service.AddLojaAsync("user-1", request);
+
+        // Assert
+        Assert.Equal(1, result.ConcessionariaId);
     }
 
     [Fact]
@@ -435,15 +489,62 @@ public class ConcessionariaServiceTests
         await context.SaveChangesAsync();
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);
-        var request = new LojaRequest("Loja Nova", "11.222.333/0001-44", "05000-000", "Rua Nova", "20", "Novo Bairro", "Nova Cidade", "RJ");
+        var request = new LojaRequest("Loja Nova", "11.222.333/0001-44", "(11) 3000-0000", "05000-000", "Rua Nova", "20", "Novo Bairro", "Nova Cidade", "RJ");
 
         // Act
         var result = await service.UpdateLojaAsync(1, 10, request);
 
         // Assert
         Assert.Equal("Loja Nova", result.Nome);
+        Assert.Equal("(11) 3000-0000", result.Telefone);
         Assert.Equal("Filial", result.Tipo);
         Assert.Equal("RJ", result.Uf);
+    }
+
+    [Fact]
+    public async Task UpdateLojaAsync_DeveLancarExcecao_QuandoTelefoneJaExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(CreateConcessionaria());
+        context.Lojas.AddRange(
+            new Loja
+            {
+                Id = 10,
+                Nome = "Loja Antiga",
+                Tipo = "Filial",
+                Cnpj = "11.222.333/0001-44",
+                Telefone = "(11) 3000-0000",
+                Cep = "04000-000",
+                Logradouro = "Rua Antiga",
+                Numero = "10",
+                Bairro = "Bairro",
+                Cidade = "Cidade",
+                Uf = "SP",
+                ConcessionariaId = 1
+            },
+            new Loja
+            {
+                Id = 11,
+                Nome = "Outra Loja",
+                Tipo = "Filial",
+                Cnpj = "22.333.444/0001-55",
+                Telefone = "(11) 4000-0000",
+                Cep = "04000-000",
+                Logradouro = "Rua",
+                Numero = "20",
+                Bairro = "Bairro",
+                Cidade = "Cidade",
+                Uf = "SP",
+                ConcessionariaId = 1
+            });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new LojaRequest("Loja Nova", "11.222.333/0001-44", "(11) 4000-0000", "05000-000", "Rua Nova", "20", "Novo Bairro", "Nova Cidade", "RJ");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.UpdateLojaAsync(1, 10, request));
     }
 
     [Fact]
@@ -469,7 +570,7 @@ public class ConcessionariaServiceTests
         await context.SaveChangesAsync();
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);
-        var request = new LojaRequest("Matriz Nova", "98.765.432/0001-10", "01001-000", "Rua", "1", "Bairro", "Cidade", "SP");
+        var request = new LojaRequest("Matriz Nova", "98.765.432/0001-10", "(11) 99999-9999", "01001-000", "Rua", "1", "Bairro", "Cidade", "SP");
 
         // Act & Assert
         await Assert.ThrowsAsync<BusinessRuleException>(() => service.UpdateLojaAsync(1, 10, request));
@@ -521,6 +622,88 @@ public class ConcessionariaServiceTests
         Assert.Equal(2, result.Count);
         Assert.Equal("Matriz", result[0].Tipo);
         Assert.Equal("Filial", result[1].Tipo);
+    }
+
+    [Fact]
+    public async Task GetLojasAtivasAsync_DeveRetornarSomenteLojasAtivas()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(CreateConcessionaria());
+        context.Lojas.AddRange(
+            new Loja
+            {
+                Id = 10,
+                Nome = "Ativa",
+                Tipo = "Filial",
+                Cnpj = "11.222.333/0001-44",
+                Telefone = "(11) 3000-0000",
+                Cep = "04000-000",
+                Logradouro = "Rua",
+                Numero = "10",
+                Bairro = "Bairro",
+                Cidade = "Cidade",
+                Uf = "SP",
+                Ativo = true,
+                ConcessionariaId = 1
+            },
+            new Loja
+            {
+                Id = 11,
+                Nome = "Inativa",
+                Tipo = "Filial",
+                Cnpj = "22.333.444/0001-55",
+                Telefone = "(11) 4000-0000",
+                Cep = "04000-000",
+                Logradouro = "Rua",
+                Numero = "20",
+                Bairro = "Bairro",
+                Cidade = "Cidade",
+                Uf = "SP",
+                Ativo = false,
+                ConcessionariaId = 1
+            });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act
+        var result = (await service.GetLojasAtivasAsync()).ToList();
+
+        // Assert
+        Assert.Single(result);
+        Assert.Equal("Ativa", result[0].Nome);
+    }
+
+    [Fact]
+    public async Task GetLojaByIdAsync_ComUserId_DeveLancarExcecao_QuandoLojaForDeOutraConcessionaria()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.AddRange(
+            CreateConcessionaria(id: 1, usuarioId: "user-1"),
+            CreateConcessionaria(id: 2, usuarioId: "user-2", cnpj: "22.333.444/0001-55"));
+        context.Lojas.Add(new Loja
+        {
+            Id = 10,
+            Nome = "Loja Outra Matriz",
+            Tipo = "Filial",
+            Cnpj = "33.444.555/0001-66",
+            Telefone = "(11) 3000-0000",
+            Cep = "04000-000",
+            Logradouro = "Rua",
+            Numero = "10",
+            Bairro = "Bairro",
+            Cidade = "Cidade",
+            Uf = "SP",
+            ConcessionariaId = 2
+        });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => service.GetLojaByIdAsync("user-1", 10));
     }
 
     [Fact]

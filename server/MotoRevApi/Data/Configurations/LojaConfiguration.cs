@@ -13,6 +13,8 @@ public class LojaConfiguration : IEntityTypeConfiguration<Loja>
         builder.Property(l => l.Tipo).IsRequired().HasMaxLength(20).HasDefaultValue("Filial");
         builder.Property(l => l.Cnpj).IsRequired().HasMaxLength(18);
         builder.HasIndex(l => l.Cnpj).IsUnique();
+        builder.Property(l => l.Telefone).IsRequired().HasMaxLength(20);
+        builder.HasIndex(l => l.Telefone).IsUnique();
         builder.Property(l => l.Cep).IsRequired().HasMaxLength(9);
         builder.Property(l => l.Logradouro).IsRequired().HasMaxLength(150);
         builder.Property(l => l.Numero).IsRequired().HasMaxLength(20);
