@@ -89,8 +89,8 @@ export default function CatalogoMotosCreate({ onBack }: CatalogoMotosCreateProps
               {
                 title: t('modeloMotoCatalog.title'),
                 icon: <CarOutlined />,
-                path: PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_MOTOS,
-              },
+                path: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_MOTOS}`,
+              }
               {
                 title: t('modeloMotoCatalog.new'),
               },
