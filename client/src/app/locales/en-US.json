@@ -170,7 +170,7 @@
   "perfil.preferencias.tema": "Theme",
   "perfil.preferencias.tema.claro": "Light",
   "perfil.preferencias.tema.escuro": "Dark",
-  "perfil.preferencias.frontOnly": "Preferences are kept only in the Front for now. Backend integration will be handled in a dedicated epic.",
+  "perfil.preferencias.autoSave": "Preferences are applied automatically and saved on this device.",
 
   "error.apiError": "An error occurred on the server. Please try again later.",
   "error.unexpected": "An unexpected error occurred. Please try again.",
