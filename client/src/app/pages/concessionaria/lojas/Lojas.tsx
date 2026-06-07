@@ -18,6 +18,8 @@ interface LojasProps {
   onNavigateToEdit: (id: number) => void;
 }
 
+const isMatriz = (loja: LojaData) => loja.tipo.toLowerCase() === 'matriz';
+
 export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps) {
   const [data, setData] = useState<LojaData[]>([]);
   const [concessionariaId, setConcessionariaId] = useState<number>();
@@ -82,7 +84,7 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
       title: 'Tipo',
       dataIndex: 'tipo',
       key: 'tipo',
-      render: (tipo: string) => <Tag color="blue">{tipo}</Tag>,
+      render: (tipo: string) => <Tag color={tipo.toLowerCase() === 'matriz' ? 'gold' : 'blue'}>{tipo}</Tag>,
     },
     {
       title: 'CNPJ',
@@ -105,19 +107,24 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
       key: 'status',
       width: 120,
       align: 'center',
-      render: (_: unknown, loja: LojaData) => (
-        <Popconfirm
-          title={loja.ativo ? 'Desativar loja' : 'Ativar loja'}
-          description={`Tem certeza que deseja ${loja.ativo ? 'desativar' : 'ativar'} "${loja.nome}"?`}
-          onConfirm={() => handleStatusToggle(loja)}
-          okText="Sim"
-          cancelText="Nao"
-        >
-          <Tag color={loja.ativo ? 'green' : 'red'}>
-            {loja.ativo ? 'Ativo' : 'Inativo'}
-          </Tag>
-        </Popconfirm>
-      ),
+      render: (_: unknown, loja: LojaData) => {
+        const statusTag = <Tag color={loja.ativo ? 'green' : 'red'}>{loja.ativo ? 'Ativo' : 'Inativo'}</Tag>;
+        if (isMatriz(loja)) {
+          return statusTag;
+        }
+
+        return (
+          <Popconfirm
+            title={loja.ativo ? 'Desativar loja' : 'Ativar loja'}
+            description={`Tem certeza que deseja ${loja.ativo ? 'desativar' : 'ativar'} "${loja.nome}"?`}
+            onConfirm={() => handleStatusToggle(loja)}
+            okText="Sim"
+            cancelText="Nao"
+          >
+            {statusTag}
+          </Popconfirm>
+        );
+      },
     },
     {
       title: 'Acoes',
@@ -133,9 +140,11 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
             <Button type="link" icon={<CompassOutlined />} href={mapsUrl} target="_blank">
               Ir Para
             </Button>
-            <Button type="link" icon={<EditOutlined />} onClick={() => onNavigateToEdit(loja.id)}>
-              Editar
-            </Button>
+            {!isMatriz(loja) && (
+              <Button type="link" icon={<EditOutlined />} onClick={() => onNavigateToEdit(loja.id)}>
+                Editar
+              </Button>
+            )}
           </Space>
         );
       },

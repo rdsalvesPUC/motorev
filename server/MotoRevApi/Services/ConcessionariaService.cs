@@ -64,6 +64,11 @@ public class ConcessionariaService
 
             _context.Concessionarias.Add(concessionaria);
             await _context.SaveChangesAsync();
+
+            var lojaMatriz = CreateLojaMatriz(concessionaria);
+            concessionaria.Lojas.Add(lojaMatriz);
+            _context.Lojas.Add(lojaMatriz);
+            await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
             return MapConcessionariaResponse(concessionaria);
@@ -121,7 +126,9 @@ public class ConcessionariaService
 
         var cnpjEmUsoPorOutraMatriz = await _context.Concessionarias
             .AnyAsync(c => c.Cnpj == request.Cnpj && c.Id != concessionaria.Id);
-        var cnpjEmUsoPorLoja = await _context.Lojas.AnyAsync(l => l.Cnpj == request.Cnpj);
+        var cnpjEmUsoPorLoja = await _context.Lojas.AnyAsync(l =>
+            l.Cnpj == request.Cnpj &&
+            !(l.ConcessionariaId == concessionaria.Id && l.Tipo == "Matriz"));
         if (cnpjEmUsoPorOutraMatriz || cnpjEmUsoPorLoja)
         {
             throw new DuplicateDataException($"O CNPJ {request.Cnpj} ja esta em uso.");
@@ -138,6 +145,7 @@ public class ConcessionariaService
         concessionaria.Cidade = request.Cidade;
         concessionaria.Uf = request.Uf.ToUpperInvariant();
 
+        SincronizarLojaMatriz(concessionaria);
         await _context.SaveChangesAsync();
 
         return MapConcessionariaResponse(concessionaria);
@@ -206,6 +214,11 @@ public class ConcessionariaService
             throw new NotFoundException($"Loja com ID {lojaId} nao encontrada.");
         }
 
+        if (loja.Tipo == "Matriz")
+        {
+            throw new BusinessRuleException("A loja matriz deve ser atualizada pelo perfil da concessionaria.");
+        }
+
         var cnpjEmUsoPorMatriz = await _context.Concessionarias.AnyAsync(c => c.Cnpj == request.Cnpj);
         var cnpjEmUsoPorOutraLoja = await _context.Lojas.AnyAsync(l => l.Cnpj == request.Cnpj && l.Id != lojaId);
         if (cnpjEmUsoPorMatriz || cnpjEmUsoPorOutraLoja)
@@ -238,6 +251,11 @@ public class ConcessionariaService
             throw new NotFoundException($"Loja com ID {lojaId} nao encontrada.");
         }
 
+        if (loja.Tipo == "Matriz")
+        {
+            throw new BusinessRuleException("O status da loja matriz nao pode ser alterado pela listagem de lojas.");
+        }
+
         loja.Ativo = !loja.Ativo;
         await _context.SaveChangesAsync();
 
@@ -254,6 +272,8 @@ public class ConcessionariaService
 
         var lojas = await _context.Lojas
             .Where(l => l.ConcessionariaId == concessionariaId)
+            .OrderByDescending(l => l.Tipo == "Matriz")
+            .ThenBy(l => l.Nome)
             .ToListAsync();
 
         return lojas.Select(MapLojaResponse);
@@ -275,6 +295,47 @@ public class ConcessionariaService
             || await _context.Lojas.AnyAsync(l => l.Cnpj == cnpj);
     }
 
+    private static Loja CreateLojaMatriz(Concessionaria concessionaria)
+    {
+        return new Loja
+        {
+            Nome = concessionaria.Nome,
+            Tipo = "Matriz",
+            Cnpj = concessionaria.Cnpj,
+            Cep = concessionaria.Cep,
+            Logradouro = concessionaria.Logradouro,
+            Numero = concessionaria.Numero,
+            Bairro = concessionaria.Bairro,
+            Cidade = concessionaria.Cidade,
+            Uf = concessionaria.Uf,
+            Ativo = true,
+            ConcessionariaId = concessionaria.Id
+        };
+    }
+
+    private void SincronizarLojaMatriz(Concessionaria concessionaria)
+    {
+        var lojaMatriz = concessionaria.Lojas.FirstOrDefault(l => l.Tipo == "Matriz");
+        if (lojaMatriz == null)
+        {
+            lojaMatriz = CreateLojaMatriz(concessionaria);
+            concessionaria.Lojas.Add(lojaMatriz);
+            _context.Lojas.Add(lojaMatriz);
+            return;
+        }
+
+        lojaMatriz.Nome = concessionaria.Nome;
+        lojaMatriz.Tipo = "Matriz";
+        lojaMatriz.Cnpj = concessionaria.Cnpj;
+        lojaMatriz.Cep = concessionaria.Cep;
+        lojaMatriz.Logradouro = concessionaria.Logradouro;
+        lojaMatriz.Numero = concessionaria.Numero;
+        lojaMatriz.Bairro = concessionaria.Bairro;
+        lojaMatriz.Cidade = concessionaria.Cidade;
+        lojaMatriz.Uf = concessionaria.Uf;
+        lojaMatriz.Ativo = true;
+    }
+
     private static ConcessionariaResponse MapConcessionariaResponse(Concessionaria concessionaria)
     {
         return new ConcessionariaResponse(
@@ -289,7 +350,10 @@ public class ConcessionariaService
             concessionaria.Bairro,
             concessionaria.Cidade,
             concessionaria.Uf,
-            concessionaria.Lojas.Select(MapLojaResponse)
+            concessionaria.Lojas
+                .OrderByDescending(l => l.Tipo == "Matriz")
+                .ThenBy(l => l.Nome)
+                .Select(MapLojaResponse)
         );
     }
 

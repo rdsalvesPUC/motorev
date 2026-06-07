@@ -113,6 +113,18 @@ namespace MotoRevApi.Migrations
 
             migrationBuilder.Sql("UPDATE Concessionarias SET Cnpj = CONCAT('MIGRADO-', Id) WHERE Cnpj = ''");
 
+            migrationBuilder.Sql("""
+                INSERT INTO Lojas (Nome, Tipo, Cnpj, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Ativo, ConcessionariaId)
+                SELECT Nome, 'Matriz', Cnpj, Cep, Logradouro, Numero, Bairro, Cidade, Uf, CAST(1 AS bit), Id
+                FROM Concessionarias
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM Lojas
+                    WHERE Lojas.ConcessionariaId = Concessionarias.Id
+                      AND Lojas.Tipo = 'Matriz'
+                )
+                """);
+
             migrationBuilder.CreateIndex(
                 name: "IX_Concessionarias_Cnpj",
                 table: "Concessionarias",
@@ -129,6 +141,13 @@ namespace MotoRevApi.Migrations
                 name: "IX_Lojas_ConcessionariaId",
                 table: "Lojas",
                 column: "ConcessionariaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Lojas_ConcessionariaId_Tipo",
+                table: "Lojas",
+                columns: new[] { "ConcessionariaId", "Tipo" },
+                unique: true,
+                filter: "[Tipo] = 'Matriz'");
         }
 
         /// <inheritdoc />

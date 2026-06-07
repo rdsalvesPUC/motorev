@@ -224,11 +224,6 @@ namespace MotoRevApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<bool>("Ativo")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
                     b.Property<string>("Bairro")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -332,6 +327,11 @@ namespace MotoRevApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("Ativo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Bairro")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -388,6 +388,10 @@ namespace MotoRevApi.Migrations
                         .IsUnique();
 
                     b.HasIndex("ConcessionariaId");
+
+                    b.HasIndex("ConcessionariaId", "Tipo")
+                        .IsUnique()
+                        .HasFilter("[Tipo] = 'Matriz'");
 
                     b.ToTable("Lojas");
                 });
