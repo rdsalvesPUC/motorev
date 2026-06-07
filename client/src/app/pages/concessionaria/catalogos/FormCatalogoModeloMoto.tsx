@@ -39,7 +39,7 @@ const categoriaOptions = [
 const currentYear = new Date().getFullYear();
 const minModelYear = 1901;
 
-export default function CatalogoMotosCreate({ onBack }: CatalogoMotosCreateProps) {
+export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreateProps) {
   const [form] = Form.useForm<ModeloMotoRequest>();
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [loading, setLoading] = useState(false);
