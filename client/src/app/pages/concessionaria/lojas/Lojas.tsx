@@ -108,22 +108,18 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
       width: 160,
       align: 'center',
       render: (_: unknown, loja: LojaData) => {
-        const statusLabel = loja.ativo ? 'Ativo' : 'Inativo';
         const statusAction = loja.ativo ? 'inativar' : 'ativar';
 
         return (
-          <Space size="small">
-            <Tag color={loja.ativo ? 'green' : 'red'}>{statusLabel}</Tag>
-            <Popconfirm
-              title={loja.ativo ? 'Inativar loja' : 'Ativar loja'}
-              description={`Tem certeza que deseja ${statusAction} "${loja.nome}"?`}
-              onConfirm={() => handleStatusToggle(loja)}
-              okText="Sim"
-              cancelText="Nao"
-            >
-              <Switch checked={loja.ativo} checkedChildren="Ativo" unCheckedChildren="Inativo" />
-            </Popconfirm>
-          </Space>
+          <Popconfirm
+            title={loja.ativo ? 'Inativar loja' : 'Ativar loja'}
+            description={`Tem certeza que deseja ${statusAction} "${loja.nome}"?`}
+            onConfirm={() => handleStatusToggle(loja)}
+            okText="Sim"
+            cancelText="Nao"
+          >
+            <Switch checked={loja.ativo} checkedChildren="Ativo" unCheckedChildren="Inativo" />
+          </Popconfirm>
         );
       },
     },
