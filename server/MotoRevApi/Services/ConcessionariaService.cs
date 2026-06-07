@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using MotoRevApi.Authorization;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
@@ -105,6 +106,61 @@ public class ConcessionariaService
             .ToListAsync();
 
         return concessionarias.Select(MapConcessionariaResponse);
+    }
+
+    public virtual async Task<ConcessionariaResponse> UpdatePerfilAsync(string userId, ConcessionariaPerfilRequest request)
+    {
+        var concessionaria = await _context.Concessionarias
+            .Include(c => c.Lojas)
+            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+        if (concessionaria == null)
+        {
+            throw new NotFoundException("Concessionaria nao encontrada.");
+        }
+
+        var cnpjEmUsoPorOutraMatriz = await _context.Concessionarias
+            .AnyAsync(c => c.Cnpj == request.Cnpj && c.Id != concessionaria.Id);
+        var cnpjEmUsoPorLoja = await _context.Lojas.AnyAsync(l => l.Cnpj == request.Cnpj);
+        if (cnpjEmUsoPorOutraMatriz || cnpjEmUsoPorLoja)
+        {
+            throw new DuplicateDataException($"O CNPJ {request.Cnpj} ja esta em uso.");
+        }
+
+        concessionaria.Nome = request.Nome;
+        concessionaria.Cnpj = request.Cnpj;
+        concessionaria.Telefone = request.Telefone;
+        concessionaria.Tipo = "Matriz";
+        concessionaria.Cep = request.Cep;
+        concessionaria.Logradouro = request.Logradouro;
+        concessionaria.Numero = request.Numero;
+        concessionaria.Bairro = request.Bairro;
+        concessionaria.Cidade = request.Cidade;
+        concessionaria.Uf = request.Uf.ToUpperInvariant();
+
+        await _context.SaveChangesAsync();
+
+        return MapConcessionariaResponse(concessionaria);
+    }
+
+    public virtual async Task AlterarSenhaAsync(string userId, ConcessionariaAlterarSenhaRequest request)
+    {
+        if (request.NovaSenha != request.ConfirmarNovaSenha)
+        {
+            throw new ValidationException("A confirmacao da nova senha nao confere.");
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            throw new NotFoundException("Usuario nao encontrado.");
+        }
+
+        var result = await _userManager.ChangePasswordAsync(user, request.SenhaAtual, request.NovaSenha);
+        if (!result.Succeeded)
+        {
+            throw new RegistrationException(result.Errors);
+        }
     }
 
     public virtual async Task<LojaResponse> AddLojaAsync(int concessionariaId, LojaRequest request)

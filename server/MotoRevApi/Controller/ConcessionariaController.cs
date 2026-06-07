@@ -86,6 +86,60 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
+    /// Atualizar os dados da concessionaria matriz autenticada.
+    /// </summary>
+    /// <param name="request">Dados atualizados da matriz.</param>
+    /// <response code="200">Retorna os dados atualizados da concessionaria.</response>
+    /// <response code="400">Se os dados fornecidos forem invalidos.</response>
+    /// <response code="401">Se o usuario nao estiver autenticado.</response>
+    /// <response code="403">Se o usuario nao tiver permissao de concessionaria.</response>
+    /// <response code="409">Se o CNPJ ja estiver em uso.</response>
+    [HttpPut("me")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(ConcessionariaResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> UpdateMe([FromBody] ConcessionariaPerfilRequest request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _concessionariaService.UpdatePerfilAsync(userId, request);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Alterar a senha da concessionaria autenticada.
+    /// </summary>
+    /// <param name="request">Senha atual, nova senha e confirmacao.</param>
+    /// <response code="204">Senha alterada com sucesso.</response>
+    /// <response code="400">Se a senha atual ou a nova senha forem invalidas.</response>
+    /// <response code="401">Se o usuario nao estiver autenticado.</response>
+    /// <response code="403">Se o usuario nao tiver permissao de concessionaria.</response>
+    [HttpPut("me/senha")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> AlterarSenha([FromBody] ConcessionariaAlterarSenhaRequest request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        await _concessionariaService.AlterarSenhaAsync(userId, request);
+        return NoContent();
+    }
+
+    /// <summary>
     /// Obter todas as concessionárias cadastradas.
     /// </summary>
     /// <response code="200">Retorna a lista de concessionárias.</response>

@@ -179,6 +179,113 @@ public class ConcessionariaServiceTests
     }
 
     [Fact]
+    public async Task UpdatePerfilAsync_DeveAtualizarDadosDaMatriz()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        context.Concessionarias.Add(CreateConcessionaria(usuarioId: userId));
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new ConcessionariaPerfilRequest(
+            "Concessionaria Atualizada",
+            "98.765.432/0001-10",
+            "(21) 98888-7777",
+            "20000-000",
+            "Avenida Nova",
+            "500",
+            "Centro",
+            "Rio de Janeiro",
+            "rj"
+        );
+
+        // Act
+        var result = await service.UpdatePerfilAsync(userId, request);
+
+        // Assert
+        Assert.Equal("Concessionaria Atualizada", result.Nome);
+        Assert.Equal("(21) 98888-7777", result.Telefone);
+        Assert.Equal("RJ", result.Uf);
+        Assert.Equal("Matriz", result.Tipo);
+    }
+
+    [Fact]
+    public async Task UpdatePerfilAsync_DeveLancarExcecao_QuandoCnpjDeLojaJaExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        context.Concessionarias.Add(CreateConcessionaria(usuarioId: userId));
+        context.Lojas.Add(new Loja
+        {
+            Id = 10,
+            Nome = "Loja",
+            Tipo = "Filial",
+            Cnpj = "11.222.333/0001-44",
+            Cep = "04000-000",
+            Logradouro = "Rua",
+            Numero = "10",
+            Bairro = "Bairro",
+            Cidade = "Cidade",
+            Uf = "SP",
+            ConcessionariaId = 1
+        });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new ConcessionariaPerfilRequest(
+            "Concessionaria",
+            "11.222.333/0001-44",
+            "(11) 99999-9999",
+            "01001-000",
+            "Rua Teste",
+            "100",
+            "Centro",
+            "Sao Paulo",
+            "SP"
+        );
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.UpdatePerfilAsync(userId, request));
+    }
+
+    [Fact]
+    public async Task AlterarSenhaAsync_DeveAlterarSenha()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        var user = new Usuario { Id = userId, UserName = "conc@test.com", Email = "conc@test.com" };
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _mockUserManager
+            .Setup(x => x.ChangePasswordAsync(user, "Atual123!", "Nova123!"))
+            .ReturnsAsync(IdentityResult.Success);
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new ConcessionariaAlterarSenhaRequest("Atual123!", "Nova123!", "Nova123!");
+
+        // Act
+        await service.AlterarSenhaAsync(userId, request);
+
+        // Assert
+        _mockUserManager.Verify(x => x.ChangePasswordAsync(user, "Atual123!", "Nova123!"), Times.Once);
+    }
+
+    [Fact]
+    public async Task AlterarSenhaAsync_DeveLancarExcecao_QuandoConfirmacaoNaoConfere()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new ConcessionariaAlterarSenhaRequest("Atual123!", "Nova123!", "Outra123!");
+
+        // Act & Assert
+        await Assert.ThrowsAsync<System.ComponentModel.DataAnnotations.ValidationException>(() =>
+            service.AlterarSenhaAsync("user-1", request));
+    }
+
+    [Fact]
     public async Task AddLojaAsync_DeveCriarLojaComoFilial()
     {
         // Arrange

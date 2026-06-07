@@ -58,6 +58,12 @@ public class ConcessionariaControllerTests
         );
     }
 
+    private void SetAuthenticatedConcessionaria(string userId = "user-123")
+    {
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock"));
+        _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
+    }
+
     [Fact]
     public async Task Register_DeveRetornarCreated_QuandoSucesso()
     {
@@ -95,8 +101,7 @@ public class ConcessionariaControllerTests
     {
         // Arrange
         var userId = "user-123";
-        var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock"));
-        _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
+        SetAuthenticatedConcessionaria(userId);
         
         var response = CreateConcessionariaResponse(nome: "Conc 1");
         _serviceMock.Setup(s => s.GetByUserIdAsync(userId)).ReturnsAsync(response);
@@ -129,6 +134,78 @@ public class ConcessionariaControllerTests
         var method = typeof(ConcessionariaController).GetMethod(nameof(ConcessionariaController.GetMe));
         var attribute = method.GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), true)
             .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
+            .FirstOrDefault();
+
+        Assert.NotNull(attribute);
+        Assert.Equal(Authorization.Roles.Concessionaria, attribute.Roles);
+    }
+
+    [Fact]
+    public async Task UpdateMe_DeveRetornarOk_QuandoAutenticado()
+    {
+        // Arrange
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var request = new ConcessionariaPerfilRequest(
+            "Conc Atualizada",
+            "12.345.678/0001-90",
+            "(11) 99999-9999",
+            "01001-000",
+            "Rua Teste",
+            "100",
+            "Centro",
+            "Sao Paulo",
+            "SP"
+        );
+        var response = CreateConcessionariaResponse(nome: "Conc Atualizada");
+        _serviceMock.Setup(s => s.UpdatePerfilAsync(userId, request)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.UpdateMe(request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task UpdateMe_DeveRetornarUnauthorized_QuandoSemUserId()
+    {
+        // Arrange
+        var user = new ClaimsPrincipal(new ClaimsIdentity());
+        _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
+        var request = new ConcessionariaPerfilRequest("Conc", "12.345.678/0001-90", "(11) 99999-9999", "01001-000", "Rua", "1", "Bairro", "Cidade", "SP");
+
+        // Act
+        var result = await _controller.UpdateMe(request);
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task AlterarSenha_DeveRetornarNoContent_QuandoAutenticado()
+    {
+        // Arrange
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var request = new ConcessionariaAlterarSenhaRequest("Atual123!", "Nova123!", "Nova123!");
+        _serviceMock.Setup(s => s.AlterarSenhaAsync(userId, request)).Returns(Task.CompletedTask);
+
+        // Act
+        var result = await _controller.AlterarSenha(request);
+
+        // Assert
+        Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public void Atributo_UpdateMe_DeveTerRoleConcessionaria()
+    {
+        var method = typeof(ConcessionariaController).GetMethod(nameof(ConcessionariaController.UpdateMe));
+        var attribute = method.GetCustomAttributes(typeof(AuthorizeAttribute), true)
+            .Cast<AuthorizeAttribute>()
             .FirstOrDefault();
 
         Assert.NotNull(attribute);

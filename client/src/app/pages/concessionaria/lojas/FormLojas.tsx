@@ -4,6 +4,7 @@ import { Typography, Form, Input, Button, Space, message, Card, Spin, Tag } from
 import { ShopOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { concessionariaService } from '@/app/services/concessionariaService';
+import { viaCepService } from '@/app/services/viaCepService';
 import { LojaRequest } from '@/app/models/LojaRequest';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { formatCEP, formatCNPJ } from '@/app/utils/formatters';
@@ -23,6 +24,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
   const isEditing = lojaId !== undefined && !Number.isNaN(lojaId);
   const [concessionariaId, setConcessionariaId] = useState<number>();
   const [loading, setLoading] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,6 +85,32 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
   const handleCancel = () => {
     form.resetFields();
     onBack();
+  };
+
+  const handleBuscarCep = async () => {
+    const cep = form.getFieldValue('cep');
+    const digits = String(cep || '').replace(/\D/g, '');
+    if (digits.length === 0) return;
+    if (digits.length !== 8) {
+      message.warning('Informe um CEP com 8 digitos');
+      return;
+    }
+
+    try {
+      setBuscandoCep(true);
+      const endereco = await viaCepService.getAddressByCep(cep);
+      form.setFieldsValue({
+        cep: formatCEP(endereco.cep),
+        logradouro: endereco.logradouro,
+        bairro: endereco.bairro,
+        cidade: endereco.cidade,
+        uf: endereco.uf,
+      });
+    } catch (error: any) {
+      message.warning(error.message || 'CEP nao encontrado');
+    } finally {
+      setBuscandoCep(false);
+    }
   };
 
   return (
@@ -157,7 +185,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
                 { pattern: CEP_REGEX, message: 'CEP invalido' },
               ]}
             >
-              <Input placeholder="Ex: 01310-100" />
+              <Input placeholder="Ex: 01310-100" onBlur={handleBuscarCep} />
             </Form.Item>
 
             <Form.Item
@@ -165,7 +193,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
               name="logradouro"
               rules={[{ required: true, message: 'Informe o logradouro' }]}
             >
-              <Input placeholder="Ex: Av. Paulista" />
+              <Input placeholder="Ex: Av. Paulista" disabled={buscandoCep} />
             </Form.Item>
 
             <Form.Item
@@ -181,7 +209,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
               name="bairro"
               rules={[{ required: true, message: 'Informe o bairro' }]}
             >
-              <Input placeholder="Ex: Bela Vista" />
+              <Input placeholder="Ex: Bela Vista" disabled={buscandoCep} />
             </Form.Item>
 
             <Form.Item
@@ -189,7 +217,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
               name="cidade"
               rules={[{ required: true, message: 'Informe a cidade' }]}
             >
-              <Input placeholder="Ex: Sao Paulo" />
+              <Input placeholder="Ex: Sao Paulo" disabled={buscandoCep} />
             </Form.Item>
 
             <Form.Item
@@ -200,7 +228,12 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
                 { pattern: UF_REGEX, message: 'UF deve conter 2 letras' },
               ]}
             >
-              <Input placeholder="Ex: SP" maxLength={2} />
+              <Input
+                placeholder="Ex: SP"
+                maxLength={2}
+                disabled={buscandoCep}
+                onChange={(event) => form.setFieldValue('uf', event.target.value.toUpperCase())}
+              />
             </Form.Item>
 
             <Form.Item style={{ marginBottom: 0 }}>

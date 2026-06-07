@@ -2,6 +2,8 @@ import { BASE_URL, handleResponse, apiFetch } from '@/app/services/http';
 import { Concessionaria } from '@/app/models/Concessionaria';
 import { Loja } from '@/app/models/Loja';
 import { LojaRequest } from '@/app/models/LojaRequest';
+import { ConcessionariaPerfilRequest } from '@/app/models/ConcessionariaPerfilRequest';
+import { ConcessionariaAlterarSenhaRequest } from '@/app/models/ConcessionariaAlterarSenhaRequest';
 
 export const concessionariaService = {
   async register(data: any) {
@@ -20,6 +22,22 @@ export const concessionariaService = {
   async getMe(): Promise<Concessionaria> {
     const response = await apiFetch(`${BASE_URL}/Concessionaria/me`);
     return handleResponse(response, 'Falha ao buscar concessionaria autenticada');
+  },
+
+  async updateMe(data: ConcessionariaPerfilRequest): Promise<Concessionaria> {
+    const response = await apiFetch(`${BASE_URL}/Concessionaria/me`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return handleResponse(response, 'Falha ao atualizar concessionaria');
+  },
+
+  async alterarSenha(data: ConcessionariaAlterarSenhaRequest): Promise<void> {
+    const response = await apiFetch(`${BASE_URL}/Concessionaria/me/senha`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    await handleResponse(response, 'Falha ao alterar senha');
   },
 
   async getLojas(concessionariaId: number): Promise<Loja[]> {
