@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, Input, Button, Table, Space, Flex, Popconfirm, message, Spin, Tag, Empty } from 'antd';
+import { Typography, Input, Button, Table, Space, Flex, Popconfirm, message, Spin, Tag, Empty, Switch } from 'antd';
 import { ShopOutlined, SearchOutlined, PlusOutlined, EditOutlined, CompassOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
@@ -105,20 +105,25 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
     {
       title: 'Status',
       key: 'status',
-      width: 120,
+      width: 160,
       align: 'center',
       render: (_: unknown, loja: LojaData) => {
-        const statusTag = <Tag color={loja.ativo ? 'green' : 'red'}>{loja.ativo ? 'Ativo' : 'Inativo'}</Tag>;
+        const statusLabel = loja.ativo ? 'Ativo' : 'Inativo';
+        const statusAction = loja.ativo ? 'inativar' : 'ativar';
+
         return (
-          <Popconfirm
-            title={loja.ativo ? 'Desativar loja' : 'Ativar loja'}
-            description={`Tem certeza que deseja ${loja.ativo ? 'desativar' : 'ativar'} "${loja.nome}"?`}
-            onConfirm={() => handleStatusToggle(loja)}
-            okText="Sim"
-            cancelText="Nao"
-          >
-            {statusTag}
-          </Popconfirm>
+          <Space size="small">
+            <Tag color={loja.ativo ? 'green' : 'red'}>{statusLabel}</Tag>
+            <Popconfirm
+              title={loja.ativo ? 'Inativar loja' : 'Ativar loja'}
+              description={`Tem certeza que deseja ${statusAction} "${loja.nome}"?`}
+              onConfirm={() => handleStatusToggle(loja)}
+              okText="Sim"
+              cancelText="Nao"
+            >
+              <Switch checked={loja.ativo} checkedChildren="Ativo" unCheckedChildren="Inativo" />
+            </Popconfirm>
+          </Space>
         );
       },
     },
