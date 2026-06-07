@@ -6,5 +6,5 @@ public record ClientePerfilResponse(
     string Email,
     string Cpf,
     string? Telefone,
-    ClienteEnderecoResponse Endereco
+    ClienteEnderecoResponse? Endereco
 );

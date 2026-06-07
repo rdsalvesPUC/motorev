@@ -13,6 +13,7 @@ import {
   Radio,
   Skeleton,
   Space,
+  Spin,
   Switch,
   Typography,
   message,
@@ -35,6 +36,9 @@ import {
 } from '@ant-design/icons';
 import { clienteService } from '../../services/clienteService';
 import { tokenManager } from '../../services/tokenManager';
+import { viaCepService } from '../../services/viaCepService';
+import { useConfiguracoes, type Idioma } from '../../contexts/ConfiguracoesContext';
+import { t } from '../../i18n';
 import type {
   ClienteDadosPessoaisRequest,
   ClienteEndereco,
@@ -69,6 +73,12 @@ function formatCep(value?: string | null) {
   const digits = normalizeText(value).replace(/\D/g, '');
   if (digits.length !== 8) return normalizeText(value);
   return digits.replace(/(\d{5})(\d{3})/, '$1-$2');
+}
+
+function formatCepInput(value: string) {
+  const digits = value.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 5) return digits;
+  return digits.replace(/(\d{5})(\d{0,3})/, '$1-$2');
 }
 
 function hasEndereco(endereco?: ClienteEndereco | null) {
@@ -116,15 +126,15 @@ function SectionCard({
         editing ? (
           <Flex gap={8} wrap="wrap">
             <Button size="small" icon={<CloseOutlined />} onClick={onCancel} disabled={saving}>
-              Cancelar
+              {t('perfil.actions.cancel')}
             </Button>
             <Button size="small" type="primary" icon={<SaveOutlined />} onClick={onSave} loading={saving}>
-              Salvar
+              {t('perfil.actions.save')}
             </Button>
           </Flex>
         ) : (
           <Button size="small" icon={<EditOutlined />} onClick={onEdit}>
-            Editar
+            {t('perfil.actions.edit')}
           </Button>
         )
       }
@@ -142,9 +152,9 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
   const [savingDados, setSavingDados] = useState(false);
   const [savingEndereco, setSavingEndereco] = useState(false);
   const [savingSenha, setSavingSenha] = useState(false);
+  const [loadingCep, setLoadingCep] = useState(false);
   const [senhaModalOpen, setSenhaModalOpen] = useState(false);
-  const [temaEscuro, setTemaEscuro] = useState(false);
-  const [idioma, setIdioma] = useState('pt-BR');
+  const { configuracoes, setIdioma, setTema } = useConfiguracoes();
 
   const [formDados] = Form.useForm<ClienteDadosPessoaisRequest>();
   const [formEndereco] = Form.useForm<ClienteEnderecoRequest>();
@@ -166,7 +176,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
         onProfileUpdated?.(data);
       } catch (error: any) {
         if (mounted) {
-          message.error(error.message || 'Falha ao carregar perfil');
+          message.error(error.message || t('perfil.loading.error'));
         }
       } finally {
         if (mounted) {
@@ -209,10 +219,10 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
       });
       updateProfile(updatedProfile);
       setEditingDados(false);
-      message.success('Dados pessoais atualizados');
+      message.success(t('perfil.dados.updated'));
     } catch (error: any) {
       if (error?.errorFields) return;
-      message.error(error.message || 'Falha ao atualizar dados pessoais');
+      message.error(error.message || t('perfil.dados.updateError'));
     } finally {
       setSavingDados(false);
     }
@@ -220,7 +230,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
 
   const handleEditEndereco = () => {
     formEndereco.setFieldsValue({
-      cep: normalizeText(profile?.endereco?.cep),
+      cep: formatCep(profile?.endereco?.cep),
       logradouro: normalizeText(profile?.endereco?.logradouro),
       numero: normalizeText(profile?.endereco?.numero),
       complemento: normalizeText(profile?.endereco?.complemento),
@@ -229,6 +239,35 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
       uf: normalizeText(profile?.endereco?.uf).toUpperCase(),
     });
     setEditingEndereco(true);
+  };
+
+  const handleBuscarCep = async () => {
+    const cep = normalizeText(formEndereco.getFieldValue('cep'));
+    const digits = cep.replace(/\D/g, '');
+    if (digits.length !== 8) return;
+
+    try {
+      setLoadingCep(true);
+      const endereco = await viaCepService.buscarEnderecoPorCep(digits);
+      if (!endereco) {
+        message.warning(t('perfil.endereco.cep.notFound'));
+        return;
+      }
+
+      const complementoAtual = normalizeText(formEndereco.getFieldValue('complemento'));
+      formEndereco.setFieldsValue({
+        cep: endereco.cep,
+        logradouro: endereco.logradouro,
+        complemento: complementoAtual || endereco.complemento || undefined,
+        bairro: endereco.bairro,
+        cidade: endereco.cidade,
+        uf: endereco.uf.toUpperCase(),
+      });
+    } catch {
+      message.error(t('perfil.endereco.cep.fetchError'));
+    } finally {
+      setLoadingCep(false);
+    }
   };
 
   const handleSaveEndereco = async () => {
@@ -246,10 +285,10 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
       });
       updateProfile(updatedProfile);
       setEditingEndereco(false);
-      message.success('Endereço atualizado');
+      message.success(t('perfil.endereco.updated'));
     } catch (error: any) {
       if (error?.errorFields) return;
-      message.error(error.message || 'Falha ao atualizar endereço');
+      message.error(error.message || t('perfil.endereco.updateError'));
     } finally {
       setSavingEndereco(false);
     }
@@ -266,10 +305,10 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
       });
       setSenhaModalOpen(false);
       formSenha.resetFields();
-      message.success('Senha alterada com sucesso');
+      message.success(t('perfil.senha.updated'));
     } catch (error: any) {
       if (error?.errorFields) return;
-      message.error(error.message || 'Falha ao alterar senha');
+      message.error(error.message || t('perfil.senha.updateError'));
     } finally {
       setSavingSenha(false);
     }
@@ -286,7 +325,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
   if (!profile) {
     return (
       <Card>
-        <Text type="danger">Não foi possível carregar os dados do perfil.</Text>
+        <Text type="danger">{t('perfil.load.empty')}</Text>
       </Card>
     );
   }
@@ -300,7 +339,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
             {
               title: (
                 <>
-                  <UserOutlined /> <span>Perfil</span>
+                  <UserOutlined /> <span>{t('perfil.breadcrumb')}</span>
                 </>
               ),
             },
@@ -319,7 +358,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
       </Flex>
 
       <SectionCard
-        title="Dados Pessoais"
+        title={t('perfil.dados.title')}
         icon={<UserOutlined />}
         editing={editingDados}
         saving={savingDados}
@@ -330,24 +369,24 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
         {editingDados ? (
           <Form form={formDados} layout="vertical" style={{ maxWidth: 680 }}>
             <Form.Item
-              label="Nome Completo"
+              label={t('perfil.dados.nome.label')}
               name="nome"
-              rules={[{ required: true, whitespace: true, message: 'Informe o nome completo' }]}
+              rules={[{ required: true, whitespace: true, message: t('perfil.dados.nome.required') }]}
             >
               <Input prefix={<UserOutlined />} />
             </Form.Item>
 
             <Flex gap="large" wrap="wrap">
-              <Form.Item label="CPF" style={{ flex: '1 1 180px' }}>
+              <Form.Item label={t('perfil.dados.cpf.label')} style={{ flex: '1 1 180px' }}>
                 <Input prefix={<IdcardOutlined />} value={formatCPF(profile.cpf)} disabled />
               </Form.Item>
 
               <Form.Item
-                label="Telefone"
+                label={t('perfil.dados.telefone.label')}
                 name="telefone"
                 rules={[
-                  { required: true, message: 'Informe o telefone' },
-                  { pattern: PHONE_REGEX, message: 'Telefone inválido' },
+                  { required: true, message: t('perfil.dados.telefone.required') },
+                  { pattern: PHONE_REGEX, message: t('perfil.dados.telefone.invalid') },
                 ]}
                 style={{ flex: '1 1 180px' }}
               >
@@ -362,11 +401,11 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
             </Flex>
 
             <Form.Item
-              label="E-mail"
+              label={t('perfil.dados.email.label')}
               name="email"
               rules={[
-                { required: true, message: 'Informe o e-mail' },
-                { type: 'email', message: 'E-mail inválido' },
+                { required: true, message: t('perfil.dados.email.required') },
+                { type: 'email', message: t('perfil.dados.email.invalid') },
               ]}
             >
               <Input prefix={<MailOutlined />} />
@@ -375,22 +414,22 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
         ) : (
           <Flex vertical gap="middle">
             <Descriptions column={{ xs: 1, sm: 2 }} size="small">
-              <Descriptions.Item label="Nome Completo">
+              <Descriptions.Item label={t('perfil.dados.nome.label')}>
                 <Text strong>{profile.nome}</Text>
               </Descriptions.Item>
-              <Descriptions.Item label="CPF">
+              <Descriptions.Item label={t('perfil.dados.cpf.label')}>
                 <Flex align="center" gap={6}>
                   <IdcardOutlined style={{ color: '#8c8c8c' }} />
                   <Text>{formatCPF(profile.cpf)}</Text>
                 </Flex>
               </Descriptions.Item>
-              <Descriptions.Item label="Telefone">
+              <Descriptions.Item label={t('perfil.dados.telefone.label')}>
                 <Flex align="center" gap={6}>
                   <PhoneOutlined style={{ color: '#8c8c8c' }} />
                   <Text>{profile.telefone ? formatPhone(profile.telefone) : '-'}</Text>
                 </Flex>
               </Descriptions.Item>
-              <Descriptions.Item label="E-mail">
+              <Descriptions.Item label={t('perfil.dados.email.label')}>
                 <Flex align="center" gap={6}>
                   <MailOutlined style={{ color: '#8c8c8c' }} />
                   <Text>{profile.email}</Text>
@@ -403,11 +442,11 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
             <Flex align="center" justify="space-between" gap="middle" wrap="wrap">
               <Flex align="center" gap={8}>
                 <LockOutlined style={{ color: '#8c8c8c' }} />
-                <Text type="secondary">Senha</Text>
+                <Text type="secondary">{t('perfil.senha.label')}</Text>
                 <Text>********</Text>
               </Flex>
               <Button size="small" icon={<LockOutlined />} onClick={() => setSenhaModalOpen(true)}>
-                Alterar Senha
+                {t('perfil.senha.change')}
               </Button>
             </Flex>
           </Flex>
@@ -415,7 +454,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
       </SectionCard>
 
       <SectionCard
-        title="Endereço"
+        title={t('perfil.endereco.title')}
         icon={<EnvironmentOutlined />}
         editing={editingEndereco}
         saving={savingEndereco}
@@ -427,39 +466,50 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
           <Form form={formEndereco} layout="vertical" style={{ maxWidth: 760 }}>
             <Flex gap="large" wrap="wrap">
               <Form.Item
-                label="CEP"
+                label={t('perfil.endereco.cep.label')}
                 name="cep"
-                rules={[{ required: true, message: 'Informe o CEP' }]}
+                rules={[{ required: true, message: t('perfil.endereco.cep.required') }]}
                 style={{ flex: '0 0 160px' }}
               >
-                <Input placeholder="00000-000" />
+                <Input
+                  placeholder="00000-000"
+                  suffix={loadingCep ? <Spin size="small" /> : undefined}
+                  onBlur={handleBuscarCep}
+                  onChange={(event) => {
+                    formEndereco.setFieldValue('cep', formatCepInput(event.target.value));
+                  }}
+                />
               </Form.Item>
               <Form.Item
-                label="Rua / Avenida"
+                label={t('perfil.endereco.logradouro.label')}
                 name="logradouro"
-                rules={[{ required: true, whitespace: true, message: 'Informe o logradouro' }]}
+                rules={[{ required: true, whitespace: true, message: t('perfil.endereco.logradouro.required') }]}
                 style={{ flex: '1 1 280px' }}
               >
-                <Input placeholder="Ex: Rua das Flores" />
+                <Input placeholder={t('perfil.endereco.logradouro.placeholder')} />
               </Form.Item>
               <Form.Item
-                label="Número"
+                label={t('perfil.endereco.numero.label')}
                 name="numero"
-                rules={[{ required: true, whitespace: true, message: 'Informe o número' }]}
+                rules={[{ required: true, whitespace: true, message: t('perfil.endereco.numero.required') }]}
                 style={{ flex: '0 0 120px' }}
               >
-                <Input placeholder="Ex: 100" />
+                <Input placeholder={t('perfil.endereco.numero.placeholder')} />
               </Form.Item>
             </Flex>
 
             <Flex gap="large" wrap="wrap">
-              <Form.Item label="Complemento" name="complemento" style={{ flex: '1 1 200px' }}>
-                <Input placeholder="Ex: Apto 52, Bloco B" />
+              <Form.Item
+                label={t('perfil.endereco.complemento.label')}
+                name="complemento"
+                style={{ flex: '1 1 200px' }}
+              >
+                <Input placeholder={t('perfil.endereco.complemento.placeholder')} />
               </Form.Item>
               <Form.Item
-                label="Bairro"
+                label={t('perfil.endereco.bairro.label')}
                 name="bairro"
-                rules={[{ required: true, whitespace: true, message: 'Informe o bairro' }]}
+                rules={[{ required: true, whitespace: true, message: t('perfil.endereco.bairro.required') }]}
                 style={{ flex: '1 1 200px' }}
               >
                 <Input />
@@ -468,24 +518,24 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
 
             <Flex gap="large" wrap="wrap">
               <Form.Item
-                label="Cidade"
+                label={t('perfil.endereco.cidade.label')}
                 name="cidade"
-                rules={[{ required: true, whitespace: true, message: 'Informe a cidade' }]}
+                rules={[{ required: true, whitespace: true, message: t('perfil.endereco.cidade.required') }]}
                 style={{ flex: '1 1 240px' }}
               >
-                <Input placeholder="Ex: São Paulo" />
+                <Input placeholder={t('perfil.endereco.cidade.placeholder')} />
               </Form.Item>
               <Form.Item
-                label="UF"
+                label={t('perfil.endereco.uf.label')}
                 name="uf"
                 rules={[
-                  { required: true, message: 'Informe a UF' },
-                  { len: 2, message: 'Use a sigla com 2 letras' },
+                  { required: true, message: t('perfil.endereco.uf.required') },
+                  { len: 2, message: t('perfil.endereco.uf.invalid') },
                 ]}
                 style={{ flex: '0 0 100px' }}
               >
                 <Input
-                  placeholder="Ex: SP"
+                  placeholder={t('perfil.endereco.uf.placeholder')}
                   maxLength={2}
                   style={{ textTransform: 'uppercase' }}
                   onChange={(event) => {
@@ -503,14 +553,16 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
               {enderecoDescription.complemento && <Text type="secondary">{enderecoDescription.complemento}</Text>}
               {enderecoDescription.bairro && <Text type="secondary">{enderecoDescription.bairro}</Text>}
               {enderecoDescription.cidadeUf && <Text type="secondary">{enderecoDescription.cidadeUf}</Text>}
-              {enderecoDescription.cep && <Text type="secondary">CEP {enderecoDescription.cep}</Text>}
+              {enderecoDescription.cep && (
+                <Text type="secondary">{t('perfil.endereco.cepDisplay', { cep: enderecoDescription.cep })}</Text>
+              )}
             </Flex>
           </Flex>
         ) : (
           <Flex vertical align="flex-start" gap={8}>
-            <Text type="secondary">Nenhum endereço cadastrado ainda.</Text>
+            <Text type="secondary">{t('perfil.endereco.empty')}</Text>
             <Button type="dashed" icon={<PlusOutlined />} onClick={handleEditEndereco}>
-              Cadastrar Endereço
+              {t('perfil.endereco.create')}
             </Button>
           </Flex>
         )}
@@ -520,7 +572,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
         title={
           <Flex align="center" gap={8}>
             <SettingOutlined />
-            <span>Preferências</span>
+            <span>{t('perfil.preferencias.title')}</span>
           </Flex>
         }
       >
@@ -530,14 +582,17 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
               label={
                 <Flex align="center" gap={8}>
                   <GlobalOutlined />
-                  <span>Idioma</span>
+                  <span>{t('perfil.preferencias.idioma')}</span>
                 </Flex>
               }
             >
-              <Radio.Group value={idioma} onChange={(event) => setIdioma(event.target.value)}>
+              <Radio.Group
+                value={configuracoes.idioma}
+                onChange={(event) => setIdioma(event.target.value as Idioma)}
+              >
                 <Space direction="vertical">
-                  <Radio value="pt-BR">Português (Brasil)</Radio>
-                  <Radio value="en-US">English (United States)</Radio>
+                  <Radio value="pt-BR">{t('perfil.preferencias.idioma.ptBr')}</Radio>
+                  <Radio value="en-US">{t('perfil.preferencias.idioma.enUs')}</Radio>
                 </Space>
               </Radio.Group>
             </Descriptions.Item>
@@ -546,20 +601,21 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
               label={
                 <Flex align="center" gap={8}>
                   <BulbOutlined />
-                  <span>Tema</span>
+                  <span>{t('perfil.preferencias.tema')}</span>
                 </Flex>
               }
             >
               <Flex align="center" gap={12}>
-                <Text>Claro</Text>
-                <Switch checked={temaEscuro} onChange={setTemaEscuro} />
-                <Text>Escuro</Text>
+                <Text>{t('perfil.preferencias.tema.claro')}</Text>
+                <Switch
+                  checked={configuracoes.tema === 'dark'}
+                  onChange={(checked) => setTema(checked ? 'dark' : 'light')}
+                />
+                <Text>{t('perfil.preferencias.tema.escuro')}</Text>
               </Flex>
             </Descriptions.Item>
           </Descriptions>
-          <Text type="secondary">
-            Preferências mantidas apenas no Front por enquanto. O backend será integrado em épico próprio.
-          </Text>
+          <Text type="secondary">{t('perfil.preferencias.frontOnly')}</Text>
         </Flex>
       </Card>
 
@@ -567,7 +623,7 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
         title={
           <Flex align="center" gap={8}>
             <LockOutlined />
-            <span>Alterar Senha</span>
+            <span>{t('perfil.senha.change')}</span>
           </Flex>
         }
         open={senhaModalOpen}
@@ -577,40 +633,40 @@ export default function PerfilCliente({ onProfileUpdated }: PerfilClienteProps) 
         }}
         onOk={handleAlterarSenha}
         confirmLoading={savingSenha}
-        okText="Alterar Senha"
-        cancelText="Cancelar"
+        okText={t('perfil.senha.change')}
+        cancelText={t('perfil.actions.cancel')}
         destroyOnHidden
       >
         <Form form={formSenha} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
-            label="Senha Atual"
+            label={t('perfil.senha.current.label')}
             name="senhaAtual"
-            rules={[{ required: true, message: 'Informe a senha atual' }]}
+            rules={[{ required: true, message: t('perfil.senha.current.required') }]}
           >
             <Input.Password />
           </Form.Item>
           <Form.Item
-            label="Nova Senha"
+            label={t('perfil.senha.new.label')}
             name="novaSenha"
             rules={[
-              { required: true, message: 'Informe a nova senha' },
-              { min: 6, message: 'A senha deve ter no mínimo 6 caracteres' },
+              { required: true, message: t('perfil.senha.new.required') },
+              { min: 6, message: t('perfil.senha.new.min') },
             ]}
           >
             <Input.Password />
           </Form.Item>
           <Form.Item
-            label="Confirmar Nova Senha"
+            label={t('perfil.senha.confirm.label')}
             name="confirmarNovaSenha"
             dependencies={['novaSenha']}
             rules={[
-              { required: true, message: 'Confirme a nova senha' },
+              { required: true, message: t('perfil.senha.confirm.required') },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || getFieldValue('novaSenha') === value) {
                     return Promise.resolve();
                   }
-                  return Promise.reject(new Error('As senhas não coincidem'));
+                  return Promise.reject(new Error(t('perfil.senha.confirm.match')));
                 },
               }),
             ]}
