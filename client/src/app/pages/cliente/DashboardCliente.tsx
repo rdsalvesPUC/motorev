@@ -4,6 +4,7 @@ import DashboardLayout from '@/app/components/layout/DashboardLayout';
 import MinhasMotos from '@/app/pages/cliente/MinhasMotos';
 import MotoForm from '@/app/pages/cliente/MotoForm';
 import MotoDetalhes from '@/app/pages/cliente/MotoDetalhes';
+import ConcessionariasCliente from '@/app/pages/cliente/Concessionarias';
 import PerfilCliente from '@/app/components/perfil/PerfilCliente';
 import { Typography } from 'antd';
 import {tokenManager} from "@/app/services/tokenManager";
@@ -46,6 +47,7 @@ export default function DashboardCliente() {
         <Route path={PATH_SEGMENTS.CLIENTE_MOTOS_NOVA} element={<MotoForm />} />
         <Route path={`${PATH_SEGMENTS.CLIENTE_MOTOS_EDITAR}/:id`} element={<MotoForm />} />
         <Route path={`${PATH_SEGMENTS.CLIENTE_MOTOS_DETALHES}/:id`} element={<MotoDetalhes />} />
+        <Route path={PATH_SEGMENTS.CLIENTE_CONCESSIONARIAS} element={<ConcessionariasCliente />} />
         <Route path="*" element={<Navigate to={PATHS.DASHBOARD_CLIENTE} replace />} />
       </Routes>
     </DashboardLayout>
