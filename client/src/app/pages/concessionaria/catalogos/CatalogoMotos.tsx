@@ -179,10 +179,10 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
   const buildRequest = (record: ModeloMotoData, values: Partial<ModeloMotoRequest>): ModeloMotoRequest => ({
     nomeModelo: values.nomeModelo ?? record.nomeModelo,
     marca: values.marca ?? record.marca,
-    categoria: values.categoria ?? record.categoria,
+    categoria: values.categoria,
     linhaId: values.linhaId ?? record.linhaId,
-    cilindrada: values.cilindrada ?? record.cilindrada,
-    ano: values.ano ?? record.ano,
+    cilindrada: values.cilindrada,
+    ano: values.ano,
   });
 
   const save = async (key: string) => {
