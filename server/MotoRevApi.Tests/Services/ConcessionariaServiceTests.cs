@@ -221,6 +221,51 @@ public class ConcessionariaServiceTests
     }
 
     [Fact]
+    public async Task UpdatePerfilAsync_DevePreservarStatusDaLojaMatriz()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        context.Concessionarias.Add(CreateConcessionaria(usuarioId: userId));
+        context.Lojas.Add(new Loja
+        {
+            Id = 10,
+            Nome = "Matriz",
+            Tipo = "Matriz",
+            Cnpj = "98.765.432/0001-10",
+            Cep = "01001-000",
+            Logradouro = "Rua Teste",
+            Numero = "100",
+            Bairro = "Centro",
+            Cidade = "Sao Paulo",
+            Uf = "SP",
+            Ativo = false,
+            ConcessionariaId = 1
+        });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new ConcessionariaPerfilRequest(
+            "Concessionaria Atualizada",
+            "98.765.432/0001-10",
+            "(21) 98888-7777",
+            "20000-000",
+            "Avenida Nova",
+            "500",
+            "Centro",
+            "Rio de Janeiro",
+            "RJ"
+        );
+
+        // Act
+        await service.UpdatePerfilAsync(userId, request);
+
+        // Assert
+        var lojaMatriz = await context.Lojas.SingleAsync(l => l.ConcessionariaId == 1 && l.Tipo == "Matriz");
+        Assert.False(lojaMatriz.Ativo);
+    }
+
+    [Fact]
     public async Task UpdatePerfilAsync_DeveLancarExcecao_QuandoCnpjDeLojaJaExiste()
     {
         // Arrange
@@ -511,7 +556,7 @@ public class ConcessionariaServiceTests
     }
 
     [Fact]
-    public async Task AlternarStatusLojaAsync_DeveLancarExcecao_QuandoLojaForMatriz()
+    public async Task AlternarStatusLojaAsync_DeveAlternarAtivo_QuandoLojaForMatriz()
     {
         // Arrange
         using var context = CreateContext();
@@ -535,8 +580,11 @@ public class ConcessionariaServiceTests
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);
 
-        // Act & Assert
-        await Assert.ThrowsAsync<BusinessRuleException>(() => service.AlternarStatusLojaAsync(1, 10));
+        // Act
+        var result = await service.AlternarStatusLojaAsync(1, 10);
+
+        // Assert
+        Assert.False(result.Ativo);
     }
 
     [Fact]

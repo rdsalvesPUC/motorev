@@ -251,11 +251,6 @@ public class ConcessionariaService
             throw new NotFoundException($"Loja com ID {lojaId} nao encontrada.");
         }
 
-        if (loja.Tipo == "Matriz")
-        {
-            throw new BusinessRuleException("O status da loja matriz nao pode ser alterado pela listagem de lojas.");
-        }
-
         loja.Ativo = !loja.Ativo;
         await _context.SaveChangesAsync();
 
@@ -333,7 +328,6 @@ public class ConcessionariaService
         lojaMatriz.Bairro = concessionaria.Bairro;
         lojaMatriz.Cidade = concessionaria.Cidade;
         lojaMatriz.Uf = concessionaria.Uf;
-        lojaMatriz.Ativo = true;
     }
 
     private static ConcessionariaResponse MapConcessionariaResponse(Concessionaria concessionaria)

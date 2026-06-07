@@ -20,6 +20,7 @@ export default function Cadastro() {
   const [formConcessionaria] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [enderecoBloqueado, setEnderecoBloqueado] = useState(false);
   const [, forceUpdate] = useState({});
 
   const revalidateTouchedFields = (form: any) => {
@@ -105,6 +106,7 @@ export default function Cadastro() {
     const digits = String(cep || '').replace(/\D/g, '');
     if (digits.length === 0) return;
     if (digits.length !== 8) {
+      setEnderecoBloqueado(false);
       message.warning('Informe um CEP com 8 digitos');
       return;
     }
@@ -119,11 +121,17 @@ export default function Cadastro() {
         cidade: endereco.cidade,
         uf: endereco.uf,
       });
+      setEnderecoBloqueado(true);
     } catch (error: any) {
+      setEnderecoBloqueado(false);
       message.warning(error.message || 'CEP nao encontrado');
     } finally {
       setBuscandoCep(false);
     }
+  };
+
+  const handleCepConcessionariaChange = () => {
+    setEnderecoBloqueado(false);
   };
 
   const clienteTab = (
@@ -285,7 +293,7 @@ export default function Cadastro() {
             { pattern: CEP_REGEX, message: 'CEP invalido' }
           ]}
         >
-          <Input placeholder="00000-000" onBlur={handleBuscarCepConcessionaria} />
+          <Input placeholder="00000-000" onChange={handleCepConcessionariaChange} onBlur={handleBuscarCepConcessionaria} />
         </Form.Item>
 
         <Form.Item
@@ -293,7 +301,7 @@ export default function Cadastro() {
           name="logradouro"
           rules={[{ required: true, message: 'Por favor, insira o logradouro' }]}
         >
-          <Input placeholder="Rua ou Avenida" disabled={buscandoCep} />
+          <Input placeholder="Rua ou Avenida" disabled={buscandoCep || enderecoBloqueado} />
         </Form.Item>
 
         <Form.Item
@@ -309,7 +317,7 @@ export default function Cadastro() {
           name="bairro"
           rules={[{ required: true, message: 'Por favor, insira o bairro' }]}
         >
-          <Input placeholder="Bairro" disabled={buscandoCep} />
+          <Input placeholder="Bairro" disabled={buscandoCep || enderecoBloqueado} />
         </Form.Item>
 
         <Form.Item
@@ -317,7 +325,7 @@ export default function Cadastro() {
           name="cidade"
           rules={[{ required: true, message: 'Por favor, insira a cidade' }]}
         >
-          <Input placeholder="Cidade" disabled={buscandoCep} />
+          <Input placeholder="Cidade" disabled={buscandoCep || enderecoBloqueado} />
         </Form.Item>
 
         <Form.Item
@@ -331,7 +339,7 @@ export default function Cadastro() {
           <Input
             placeholder="SP"
             maxLength={2}
-            disabled={buscandoCep}
+            disabled={buscandoCep || enderecoBloqueado}
             onChange={(event) => formConcessionaria.setFieldValue('uf', event.target.value.toUpperCase())}
           />
         </Form.Item>

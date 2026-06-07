@@ -121,6 +121,7 @@ export default function PerfilConcessionaria() {
   const [savingEndereco, setSavingEndereco] = useState(false);
   const [savingSenha, setSavingSenha] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [enderecoBloqueado, setEnderecoBloqueado] = useState(false);
   const [senhaModalOpen, setSenhaModalOpen] = useState(false);
   const [temaEscuro, setTemaEscuro] = useState(false);
   const [idioma, setIdioma] = useState('pt-BR');
@@ -240,6 +241,7 @@ export default function PerfilConcessionaria() {
       cidade: profile.cidade,
       uf: profile.uf,
     });
+    setEnderecoBloqueado(false);
     setEditingEndereco(true);
   };
 
@@ -263,6 +265,7 @@ export default function PerfilConcessionaria() {
       );
       updateProfile(updatedProfile);
       setEditingEndereco(false);
+      setEnderecoBloqueado(false);
       message.success('Endereco da matriz atualizado');
     } catch (error: any) {
       if (error?.errorFields) return;
@@ -277,6 +280,7 @@ export default function PerfilConcessionaria() {
     const digits = normalizeText(cep).replace(/\D/g, '');
     if (digits.length === 0) return;
     if (digits.length !== 8) {
+      setEnderecoBloqueado(false);
       message.warning('Informe um CEP com 8 digitos');
       return;
     }
@@ -291,11 +295,17 @@ export default function PerfilConcessionaria() {
         cidade: endereco.cidade,
         uf: endereco.uf,
       });
+      setEnderecoBloqueado(true);
     } catch (error: any) {
+      setEnderecoBloqueado(false);
       message.warning(error.message || 'CEP nao encontrado');
     } finally {
       setBuscandoCep(false);
     }
+  };
+
+  const handleCepChange = () => {
+    setEnderecoBloqueado(false);
   };
 
   const handleAlterarSenha = async () => {
@@ -464,7 +474,10 @@ export default function PerfilConcessionaria() {
         saving={savingEndereco}
         onEdit={handleEditEndereco}
         onSave={handleSaveEndereco}
-        onCancel={() => setEditingEndereco(false)}
+        onCancel={() => {
+          setEditingEndereco(false);
+          setEnderecoBloqueado(false);
+        }}
       >
         {editingEndereco ? (
           <Form form={formEndereco} layout="vertical" style={{ maxWidth: 760 }}>
@@ -479,7 +492,7 @@ export default function PerfilConcessionaria() {
                 ]}
                 style={{ flex: '0 0 170px' }}
               >
-                <Input placeholder="00000-000" onBlur={handleBuscarCep} />
+                <Input placeholder="00000-000" onChange={handleCepChange} onBlur={handleBuscarCep} />
               </Form.Item>
 
               <Form.Item
@@ -488,7 +501,7 @@ export default function PerfilConcessionaria() {
                 rules={[{ required: true, whitespace: true, message: 'Informe o logradouro' }]}
                 style={{ flex: '1 1 280px' }}
               >
-                <Input placeholder="Ex: Av. Paulista" disabled={buscandoCep} />
+                <Input placeholder="Ex: Av. Paulista" disabled={buscandoCep || enderecoBloqueado} />
               </Form.Item>
 
               <Form.Item
@@ -508,7 +521,7 @@ export default function PerfilConcessionaria() {
                 rules={[{ required: true, whitespace: true, message: 'Informe o bairro' }]}
                 style={{ flex: '1 1 220px' }}
               >
-                <Input disabled={buscandoCep} />
+                <Input disabled={buscandoCep || enderecoBloqueado} />
               </Form.Item>
 
               <Form.Item
@@ -517,7 +530,7 @@ export default function PerfilConcessionaria() {
                 rules={[{ required: true, whitespace: true, message: 'Informe a cidade' }]}
                 style={{ flex: '1 1 220px' }}
               >
-                <Input disabled={buscandoCep} />
+                <Input disabled={buscandoCep || enderecoBloqueado} />
               </Form.Item>
 
               <Form.Item
@@ -532,7 +545,7 @@ export default function PerfilConcessionaria() {
                 <Input
                   placeholder="SP"
                   maxLength={2}
-                  disabled={buscandoCep}
+                  disabled={buscandoCep || enderecoBloqueado}
                   onChange={(event) => formEndereco.setFieldValue('uf', event.target.value.toUpperCase())}
                 />
               </Form.Item>

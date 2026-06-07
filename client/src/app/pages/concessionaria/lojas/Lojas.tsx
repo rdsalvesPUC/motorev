@@ -109,10 +109,6 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
       align: 'center',
       render: (_: unknown, loja: LojaData) => {
         const statusTag = <Tag color={loja.ativo ? 'green' : 'red'}>{loja.ativo ? 'Ativo' : 'Inativo'}</Tag>;
-        if (isMatriz(loja)) {
-          return statusTag;
-        }
-
         return (
           <Popconfirm
             title={loja.ativo ? 'Desativar loja' : 'Ativar loja'}

@@ -25,6 +25,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
   const [concessionariaId, setConcessionariaId] = useState<number>();
   const [loading, setLoading] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
+  const [enderecoBloqueado, setEnderecoBloqueado] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -84,7 +85,12 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
 
   const handleCancel = () => {
     form.resetFields();
+    setEnderecoBloqueado(false);
     onBack();
+  };
+
+  const handleCepChange = () => {
+    setEnderecoBloqueado(false);
   };
 
   const handleBuscarCep = async () => {
@@ -92,6 +98,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
     const digits = String(cep || '').replace(/\D/g, '');
     if (digits.length === 0) return;
     if (digits.length !== 8) {
+      setEnderecoBloqueado(false);
       message.warning('Informe um CEP com 8 digitos');
       return;
     }
@@ -106,7 +113,9 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
         cidade: endereco.cidade,
         uf: endereco.uf,
       });
+      setEnderecoBloqueado(true);
     } catch (error: any) {
+      setEnderecoBloqueado(false);
       message.warning(error.message || 'CEP nao encontrado');
     } finally {
       setBuscandoCep(false);
@@ -185,7 +194,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
                 { pattern: CEP_REGEX, message: 'CEP invalido' },
               ]}
             >
-              <Input placeholder="Ex: 01310-100" onBlur={handleBuscarCep} />
+              <Input placeholder="Ex: 01310-100" onChange={handleCepChange} onBlur={handleBuscarCep} />
             </Form.Item>
 
             <Form.Item
@@ -193,7 +202,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
               name="logradouro"
               rules={[{ required: true, message: 'Informe o logradouro' }]}
             >
-              <Input placeholder="Ex: Av. Paulista" disabled={buscandoCep} />
+              <Input placeholder="Ex: Av. Paulista" disabled={buscandoCep || enderecoBloqueado} />
             </Form.Item>
 
             <Form.Item
@@ -209,7 +218,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
               name="bairro"
               rules={[{ required: true, message: 'Informe o bairro' }]}
             >
-              <Input placeholder="Ex: Bela Vista" disabled={buscandoCep} />
+              <Input placeholder="Ex: Bela Vista" disabled={buscandoCep || enderecoBloqueado} />
             </Form.Item>
 
             <Form.Item
@@ -217,7 +226,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
               name="cidade"
               rules={[{ required: true, message: 'Informe a cidade' }]}
             >
-              <Input placeholder="Ex: Sao Paulo" disabled={buscandoCep} />
+              <Input placeholder="Ex: Sao Paulo" disabled={buscandoCep || enderecoBloqueado} />
             </Form.Item>
 
             <Form.Item
@@ -231,7 +240,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
               <Input
                 placeholder="Ex: SP"
                 maxLength={2}
-                disabled={buscandoCep}
+                disabled={buscandoCep || enderecoBloqueado}
                 onChange={(event) => form.setFieldValue('uf', event.target.value.toUpperCase())}
               />
             </Form.Item>
