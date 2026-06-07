@@ -90,7 +90,7 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
                 title: t('modeloMotoCatalog.title'),
                 icon: <CarOutlined />,
                 path: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_MOTOS}`,
-              }
+              },
               {
                 title: t('modeloMotoCatalog.new'),
               },
