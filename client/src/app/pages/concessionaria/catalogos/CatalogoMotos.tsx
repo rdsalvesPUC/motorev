@@ -85,9 +85,10 @@ const EditableCell: React.FC<EditableCellProps> = ({
   };
 
   const inputNode = inputNodeMap[dataIndex] || <Input />;
+  const { record: _record, index: _index, ...tdProps } = restProps as any;
 
   return (
-    <td {...restProps}>
+    <td {...tdProps}>
       {editing ? (
         <Form.Item
           name={dataIndex}
