@@ -4,8 +4,9 @@ import { useNavigate } from 'react-router';
 import { useState, useEffect } from 'react';
 import { clienteService } from '@/app/services/clienteService';
 import { concessionariaService } from '@/app/services/concessionariaService';
-import { formatCNPJ, formatCPF, formatPhone } from '@/app/utils/formatters';
-import { validateCNPJ, validateCPF, CPF_REGEX, CNPJ_REGEX, PHONE_REGEX } from '@/app/utils/validators';
+import { viaCepService } from '@/app/services/viaCepService';
+import { formatCEP, formatCNPJ, formatCPF, formatPhone } from '@/app/utils/formatters';
+import { validateCNPJ, validateCPF, CPF_REGEX, CNPJ_REGEX, PHONE_REGEX, CEP_REGEX, UF_REGEX } from '@/app/utils/validators';
 import { t } from '@/app/i18n';
 import LanguageSelector from '@/app/components/layout/LanguageSelector';
 import { PATHS } from '@/app/paths';
@@ -18,6 +19,8 @@ export default function Cadastro() {
   const [formCliente] = Form.useForm();
   const [formConcessionaria] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [buscandoCep, setBuscandoCep] = useState(false);
+  const [enderecoBloqueado, setEnderecoBloqueado] = useState(false);
   const [, forceUpdate] = useState({});
 
   const revalidateTouchedFields = (form: any) => {
@@ -73,7 +76,15 @@ export default function Cadastro() {
       await concessionariaService.register({
         nome: values.nomeConcessionaria,
         email: values.email,
-        password: values.senha
+        password: values.senha,
+        cnpj: values.cnpj,
+        telefone: values.tel,
+        cep: values.cep,
+        logradouro: values.logradouro,
+        numero: values.numero,
+        bairro: values.bairro,
+        cidade: values.cidade,
+        uf: values.uf.toUpperCase(),
       });
       message.success(t('cadastro.concessionaria.success'));
       navigate(PATHS.LOGIN);
@@ -88,6 +99,42 @@ export default function Cadastro() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBuscarCepConcessionaria = async () => {
+    const cep = formConcessionaria.getFieldValue('cep');
+    const digits = String(cep || '').replace(/\D/g, '');
+    if (digits.length === 0) return;
+    if (digits.length !== 8) {
+      setEnderecoBloqueado(false);
+      message.warning('Informe um CEP com 8 digitos');
+      return;
+    }
+
+    try {
+      setBuscandoCep(true);
+      const endereco = await viaCepService.buscarEnderecoPorCep(cep);
+      if (!endereco) {
+        throw new Error('CEP não encontrado');
+      }
+      formConcessionaria.setFieldsValue({
+        cep: formatCEP(endereco.cep),
+        logradouro: endereco.logradouro,
+        bairro: endereco.bairro,
+        cidade: endereco.cidade,
+        uf: endereco.uf,
+      });
+      setEnderecoBloqueado(true);
+    } catch (error: any) {
+      setEnderecoBloqueado(false);
+      message.warning(error.message || 'CEP nao encontrado');
+    } finally {
+      setBuscandoCep(false);
+    }
+  };
+
+  const handleCepConcessionariaChange = () => {
+    setEnderecoBloqueado(false);
   };
 
   const clienteTab = (
@@ -238,6 +285,66 @@ export default function Cadastro() {
           ]}
         >
           <Input prefix={<PhoneOutlined />} placeholder={t('cadastro.concessionaria.telefone.placeholder')} />
+        </Form.Item>
+
+        <Form.Item
+          label="CEP"
+          name="cep"
+          normalize={formatCEP}
+          rules={[
+            { required: true, message: 'Por favor, insira o CEP' },
+            { pattern: CEP_REGEX, message: 'CEP invalido' }
+          ]}
+        >
+          <Input placeholder="00000-000" onChange={handleCepConcessionariaChange} onBlur={handleBuscarCepConcessionaria} />
+        </Form.Item>
+
+        <Form.Item
+          label="Rua / Avenida"
+          name="logradouro"
+          rules={[{ required: true, message: 'Por favor, insira o logradouro' }]}
+        >
+          <Input placeholder="Rua ou Avenida" disabled={buscandoCep || enderecoBloqueado} />
+        </Form.Item>
+
+        <Form.Item
+          label="Numero"
+          name="numero"
+          rules={[{ required: true, message: 'Por favor, insira o numero' }]}
+        >
+          <Input placeholder="Numero" />
+        </Form.Item>
+
+        <Form.Item
+          label="Bairro"
+          name="bairro"
+          rules={[{ required: true, message: 'Por favor, insira o bairro' }]}
+        >
+          <Input placeholder="Bairro" disabled={buscandoCep || enderecoBloqueado} />
+        </Form.Item>
+
+        <Form.Item
+          label="Cidade"
+          name="cidade"
+          rules={[{ required: true, message: 'Por favor, insira a cidade' }]}
+        >
+          <Input placeholder="Cidade" disabled={buscandoCep || enderecoBloqueado} />
+        </Form.Item>
+
+        <Form.Item
+          label="UF"
+          name="uf"
+          rules={[
+            { required: true, message: 'Por favor, insira a UF' },
+            { pattern: UF_REGEX, message: 'UF deve conter 2 letras' }
+          ]}
+        >
+          <Input
+            placeholder="SP"
+            maxLength={2}
+            disabled={buscandoCep || enderecoBloqueado}
+            onChange={(event) => formConcessionaria.setFieldValue('uf', event.target.value.toUpperCase())}
+          />
         </Form.Item>
 
         <Form.Item

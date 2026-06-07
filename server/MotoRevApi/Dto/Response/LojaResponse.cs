@@ -1,16 +1,17 @@
 namespace MotoRevApi.Dto.Response;
 
-public record ConcessionariaResponse(
+public record LojaResponse(
     int Id,
     string Nome,
+    string Tipo,
     string Cnpj,
     string Telefone,
-    string Tipo,
     string Cep,
     string Logradouro,
     string Numero,
     string Bairro,
     string Cidade,
     string Uf,
-    IEnumerable<LojaResponse> Lojas
+    int ConcessionariaId,
+    bool Ativo
 );

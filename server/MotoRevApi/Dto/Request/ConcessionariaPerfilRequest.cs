@@ -2,9 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MotoRevApi.Dto.Request;
 
-public record RegisterConcessionariaRequest(
-    [Required, EmailAddress] string Email,
-    [Required] string Password,
+public record ConcessionariaPerfilRequest(
     [Required] string Nome,
     [Required] string Cnpj,
     [Required] string Telefone,

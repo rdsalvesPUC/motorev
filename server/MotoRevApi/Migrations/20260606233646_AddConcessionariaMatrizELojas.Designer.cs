@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MotoRevApi.Data;
 
@@ -11,9 +12,11 @@ using MotoRevApi.Data;
 namespace MotoRevApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260606233646_AddConcessionariaMatrizELojas")]
+    partial class AddConcessionariaMatrizELojas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -163,17 +166,42 @@ namespace MotoRevApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Bairro")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Cep")
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<string>("Cidade")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Complemento")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Cpf")
                         .HasMaxLength(11)
                         .HasColumnType("nvarchar(11)");
 
-                    b.Property<int?>("EnderecoId")
-                        .HasColumnType("int");
+                    b.Property<string>("Logradouro")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Numero")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Uf")
+                        .HasMaxLength(2)
+                        .HasColumnType("nvarchar(2)");
 
                     b.Property<string>("UsuarioId")
                         .IsRequired()
@@ -184,10 +212,6 @@ namespace MotoRevApi.Migrations
                     b.HasIndex("Cpf")
                         .IsUnique()
                         .HasFilter("[Cpf] IS NOT NULL");
-
-                    b.HasIndex("EnderecoId")
-                        .IsUnique()
-                        .HasFilter("[EnderecoId] IS NOT NULL");
 
                     b.HasIndex("UsuarioId")
                         .IsUnique();
@@ -268,53 +292,6 @@ namespace MotoRevApi.Migrations
                         .IsUnique();
 
                     b.ToTable("Concessionarias");
-                });
-
-            modelBuilder.Entity("MotoRevApi.Model.Endereco", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Bairro")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Cep")
-                        .IsRequired()
-                        .HasMaxLength(8)
-                        .HasColumnType("nvarchar(8)");
-
-                    b.Property<string>("Cidade")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Complemento")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Logradouro")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("Numero")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("Uf")
-                        .IsRequired()
-                        .HasMaxLength(2)
-                        .HasColumnType("nvarchar(2)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Enderecos");
                 });
 
             modelBuilder.Entity("MotoRevApi.Model.Linha", b =>
@@ -761,18 +738,11 @@ namespace MotoRevApi.Migrations
 
             modelBuilder.Entity("MotoRevApi.Model.Cliente", b =>
                 {
-                    b.HasOne("MotoRevApi.Model.Endereco", "Endereco")
-                        .WithOne()
-                        .HasForeignKey("MotoRevApi.Model.Cliente", "EnderecoId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.HasOne("MotoRevApi.Model.Usuario", "Usuario")
                         .WithOne()
                         .HasForeignKey("MotoRevApi.Model.Cliente", "UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Endereco");
 
                     b.Navigation("Usuario");
                 });
