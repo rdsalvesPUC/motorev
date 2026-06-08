@@ -32,7 +32,7 @@ public class RevisaoPadraoControllerTests
     public async Task GetById_DeveRetornarOk_QuandoSucesso()
     {
         // Arrange
-        var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1, "Ninja", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>());
+        var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1000, 6, 1, "Ninja", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>());
         _revisaoServiceMock.Setup(s => s.GetByIdAsync(1, 1)).ReturnsAsync(response);
 
         // Act
@@ -48,8 +48,8 @@ public class RevisaoPadraoControllerTests
     public async Task Post_DeveRetornarCreated_QuandoSucesso()
     {
         // Arrange
-        var request = new RevisaoPadraoRequest("Revisão 1000km", 1, 1, new List<int> { 1, 2 });
-        var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1, "Ninja", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>());
+        var request = new RevisaoPadraoRequest("Revisão 1000km", 1, 1000, 6, 1, new List<int> { 1, 2 });
+        var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1000, 6, 1, "Ninja", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>());
         
         _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, 1)).ReturnsAsync(response);
 
@@ -66,7 +66,7 @@ public class RevisaoPadraoControllerTests
     public async Task Post_DeveLancarNotFoundException_QuandoEntidadeNaoExiste()
     {
         // Arrange
-        var request = new RevisaoPadraoRequest("Revisão com erro", 99, 1, new List<int> { 99 });
+        var request = new RevisaoPadraoRequest("Revisão com erro", 99, 1000, 6, 1, new List<int> { 99 });
         _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, 1))
             .ThrowsAsync(new NotFoundException("Modelo de moto não encontrado."));
 
@@ -79,7 +79,7 @@ public class RevisaoPadraoControllerTests
     public async Task Post_DeveLancarDuplicateDataException_QuandoOrdemDuplicada()
     {
         // Arrange
-        var request = new RevisaoPadraoRequest("Revisão duplicada", 1, 1, new List<int> { 1 });
+        var request = new RevisaoPadraoRequest("Revisão duplicada", 1, 1000, 6, 1, new List<int> { 1 });
         _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, 1))
             .ThrowsAsync(new DuplicateDataException("Ordem de revisão já existe."));
 
@@ -94,7 +94,7 @@ public class RevisaoPadraoControllerTests
         // Arrange
         var user = new ClaimsPrincipal(new ClaimsIdentity()); // Usuário sem claims
         _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
-        var request = new RevisaoPadraoRequest("Revisão 1000km", 1, 1, new List<int> { 1 });
+        var request = new RevisaoPadraoRequest("Revisão 1000km", 1, 1000, 6, 1, new List<int> { 1 });
 
         // Act & Assert
         // O controller agora usa o ! (null-forgiving operator), então ele lança NullReferenceException se o claim faltar.
@@ -110,5 +110,70 @@ public class RevisaoPadraoControllerTests
 
         Assert.NotNull(attribute);
         Assert.Equal("Concessionaria", attribute.Roles);
+    }
+
+    [Fact]
+    public async Task Get_DeveRepassarFiltroDeLinha_QuandoInformado()
+    {
+        // Arrange
+        var response = new List<RevisaoPadraoListResponse>
+        {
+            new(1, "Revisão 1000km", 1, "Ninja", 2, "Street", 1, 1000, 6, true)
+        };
+
+        _revisaoServiceMock.Setup(s => s.ListarRevisoesAsync(1, null, 2)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.Get(null, 2);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task PostPorLinha_DeveRetornarCreated_QuandoSucesso()
+    {
+        // Arrange
+        var request = new RevisaoPadraoLinhaRequest(
+            "Plano Street",
+            2,
+            new List<RevisaoPadraoLinhaItemRequest>
+            {
+                new("Revisão 1000km", 1, 1000, 6, new List<int> { 1 })
+            });
+        var response = new List<RevisaoPadraoResponse>
+        {
+            new(1, "Revisão 1000km", 1, 1000, 6, 1, "Ninja", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>())
+        };
+
+        _revisaoServiceMock.Setup(s => s.CadastrarRevisoesPorLinhaAsync(request, 1)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.PostPorLinha(request);
+
+        // Assert
+        var createdResult = Assert.IsType<CreatedAtActionResult>(result);
+        Assert.Equal(201, createdResult.StatusCode);
+        Assert.Equal(response, createdResult.Value);
+    }
+
+    [Fact]
+    public async Task AlternarStatusPorLinha_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var response = new List<RevisaoPadraoListResponse>
+        {
+            new(1, "Revisão 1000km", 1, "Ninja", 2, "Street", 1, 1000, 6, false)
+        };
+
+        _revisaoServiceMock.Setup(s => s.AlternarStatusPorLinhaAsync(2, 1)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.AlternarStatusPorLinha(2);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(response, okResult.Value);
     }
 }

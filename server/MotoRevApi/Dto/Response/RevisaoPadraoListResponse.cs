@@ -3,5 +3,12 @@
 public record RevisaoPadraoListResponse(
     int Id,
     string Nome,
-    string NomeModeloMoto
+    int ModeloMotoId,
+    string NomeModeloMoto,
+    int LinhaId,
+    string NomeLinha,
+    int Ordem,
+    int Quilometragem,
+    int TempoMeses,
+    bool Ativo
 );

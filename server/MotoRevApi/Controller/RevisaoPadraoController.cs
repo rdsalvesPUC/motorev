@@ -28,6 +28,7 @@ public class RevisaoPadraoController : ControllerBase
     /// Opcionalmente, os resultados podem ser filtrados por um modelo de moto específico.
     /// </remarks>
     /// <param name="modeloMotoId">ID opcional do modelo de moto para filtrar a listagem.</param>
+    /// <param name="linhaId">ID opcional da linha para filtrar a listagem.</param>
     /// <response code="200">Retorna a lista de revisões (pode estar vazia).</response>
     /// <response code="401">Se o usuário não estiver autenticado.</response>
     /// <response code="403">Se o usuário não for do tipo Concessionaria.</response>
@@ -35,10 +36,10 @@ public class RevisaoPadraoController : ControllerBase
     [ProducesResponseType(typeof(List<RevisaoPadraoListResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Get([FromQuery] int? modeloMotoId)
+    public async Task<IActionResult> Get([FromQuery] int? modeloMotoId, [FromQuery] int? linhaId)
     {
         var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        var revisoes = await _revisaoPadraoService.ListarRevisoesAsync(concessionariaId, modeloMotoId);
+        var revisoes = await _revisaoPadraoService.ListarRevisoesAsync(concessionariaId, modeloMotoId, linhaId);
         return Ok(revisoes);
     }
 
@@ -84,5 +85,49 @@ public class RevisaoPadraoController : ControllerBase
         var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
         var response = await _revisaoPadraoService.CadastrarRevisaoAsync(request, concessionariaId);
         return CreatedAtAction(nameof(GetById), new { id = response.Id }, response); // Atualizado para apontar para o GetById
+    }
+
+    /// <summary>
+    /// Cadastrar revisões padrão para todos os modelos ativos de uma linha.
+    /// </summary>
+    /// <param name="request">Dados das revisões padrão por linha.</param>
+    /// <response code="201">Revisões criadas com sucesso.</response>
+    /// <response code="400">Dados de entrada inválidos.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem permissão.</response>
+    /// <response code="404">Linha, modelo, serviço ou peça não encontrado.</response>
+    /// <response code="409">Já existe revisão com alguma ordem informada.</response>
+    [HttpPost("por-linha")]
+    [ProducesResponseType(typeof(List<RevisaoPadraoResponse>), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> PostPorLinha([FromBody] RevisaoPadraoLinhaRequest request)
+    {
+        var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var response = await _revisaoPadraoService.CadastrarRevisoesPorLinhaAsync(request, concessionariaId);
+        return CreatedAtAction(nameof(Get), new { linhaId = request.LinhaId }, response);
+    }
+
+    /// <summary>
+    /// Alternar status ativo/inativo das revisões padrão de uma linha.
+    /// </summary>
+    /// <param name="linhaId">ID da linha.</param>
+    /// <response code="200">Retorna as revisões com status atualizado.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem permissão.</response>
+    /// <response code="404">Nenhuma revisão encontrada para a linha.</response>
+    [HttpPatch("linha/{linhaId}/alternar-status")]
+    [ProducesResponseType(typeof(List<RevisaoPadraoListResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AlternarStatusPorLinha(int linhaId)
+    {
+        var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+        var response = await _revisaoPadraoService.AlternarStatusPorLinhaAsync(linhaId, concessionariaId);
+        return Ok(response);
     }
 }

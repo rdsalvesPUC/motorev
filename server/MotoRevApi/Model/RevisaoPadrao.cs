@@ -5,6 +5,8 @@ public class RevisaoPadrao
     public int Id { get; set; }
     public required string Nome { get; set; } // Ex: Revisão de 1000km
     public int Ordem { get; set; } // Ordem da revisão (1 = Primeira, 2 = Segunda, etc.)
+    public int Quilometragem { get; set; }
+    public int TempoMeses { get; set; }
     
     public int ModeloMotoId { get; set; }
     public virtual ModeloMoto ModeloMoto { get; set; } = null!;

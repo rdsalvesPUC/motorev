@@ -22,6 +22,8 @@ namespace MotoRevApi.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Nome = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Ordem = table.Column<int>(type: "int", nullable: false),
+                    Quilometragem = table.Column<int>(type: "int", nullable: false),
+                    TempoMeses = table.Column<int>(type: "int", nullable: false),
                     ModeloMotoId = table.Column<int>(type: "int", nullable: false),
                     ConcessionariaId = table.Column<int>(type: "int", nullable: false),
                     Ativo = table.Column<bool>(type: "bit", nullable: false)
