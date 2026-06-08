@@ -318,6 +318,42 @@ dotnet ef migrations add nome-da-sua-migration
 dotnet ef database update
 ```
 
+### Carga de dados de desenvolvimento
+
+Para aplicar migrations e executar as cargas em ordem:
+
+```powershell
+.\scripts\seed-database.ps1
+```
+
+Ordem executada:
+
+```text
+seed-linhas.sql
+seed-modelos-motos.sql
+seed-clientes-motos.sql
+seed-pecas-servicos.sql
+```
+
+Os clientes criados por `seed-clientes-motos.sql` usam a senha padrao:
+
+```text
+Cliente@123
+```
+
+Para executar junto com o prelaunch:
+
+```powershell
+.\scripts\prelaunch.ps1 -SeedDatabase
+```
+
+Ou habilite por variavel de ambiente:
+
+```powershell
+$env:MOTOREV_SEED_DATABASE = "true"
+.\scripts\prelaunch.ps1
+```
+
 ---
 
 ## 12. API
