@@ -36,7 +36,7 @@ public class ServicoService
         {
             await _context.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627))
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
             throw new DuplicateDataException(
                 $"Já existe um serviço ativo com o código '{request.Codigo}' ou com o nome '{request.Nome}' nesta categoria.");
@@ -124,7 +124,7 @@ public class ServicoService
         {
             await _context.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627))
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
             throw new DuplicateDataException(
                 $"Já existe outro serviço ativo com o código '{request.Codigo}' ou com o nome '{request.Nome}' nesta categoria.");
@@ -148,7 +148,15 @@ public class ServicoService
         }
 
         servico.Ativo = !servico.Ativo;
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            throw new DuplicateDataException(
+                $"Já existe outro serviço ativo com o código '{servico.Codigo}' ou com o nome '{servico.Nome}' nesta categoria.");
+        }
 
         return servico.Adapt<ServicoResponse>();
     }
@@ -180,5 +188,10 @@ public class ServicoService
                 s.Ativo &&
                 (!idIgnorado.HasValue || s.Id != idIgnorado.Value) &&
                 (s.Codigo == codigo || (s.Nome == nome && s.Categoria == categoria)));
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        return ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627);
     }
 }

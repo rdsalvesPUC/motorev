@@ -48,6 +48,7 @@ interface ServicoFormValues {
 interface EditableCellProps {
   editing: boolean;
   dataIndex: keyof ServicoFormValues;
+  record?: Servico;
   title: string;
   children: React.ReactNode;
 }
@@ -102,6 +103,7 @@ function toUpdateRequest(values: ServicoFormValues): ServicoRequest {
 const EditableCell: React.FC<EditableCellProps> = ({
   editing,
   dataIndex,
+  record: _record,
   title,
   children,
   ...restProps
