@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace MotoRevApi.Dto.Request;
 
@@ -7,5 +7,10 @@ public record ModeloMotoRequest(
     string NomeModelo,
     [Required(ErrorMessage = "A marca é obrigatória.")]
     string Marca,
-    string? Categoria
+    string? Categoria,
+    [Required(ErrorMessage = "A linha é obrigatória.")]
+    [Range(1, int.MaxValue, ErrorMessage = "Código da linha inválido.")]
+    int LinhaId,
+    string? Cilindrada,
+    int? Ano
 );

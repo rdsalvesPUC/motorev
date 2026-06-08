@@ -1,4 +1,4 @@
-﻿namespace MotoRevApi.Model;
+namespace MotoRevApi.Model;
 
 public class Endereco
 {
@@ -9,12 +9,5 @@ public class Endereco
     public string? Complemento { get; set; }
     public required string Bairro { get; set; }
     public required string Cidade { get; set; }
-    public required string Estado { get; set; } // UF
-    
-    // Controle de Soft Delete
-    public bool Ativo { get; set; } = true;
-    
-    // Relacionamento com Concessionaria (1:N)
-    public int ConcessionariaId { get; set; }
-    public virtual Concessionaria Concessionaria { get; set; } = null!;
+    public required string Uf { get; set; }
 }

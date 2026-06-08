@@ -8,10 +8,13 @@ public static class MapsterConfig
 {
     public static void RegisterMapsterConfiguration()
     {
-        TypeAdapterConfig<Concessionaria, ConcessionariaResponse>
-            .NewConfig()
-            .Map(dest => dest.Email, src => src.Usuario.Email) // Mapeia o e-mail do Identity para o DTO
-            .Map(dest => dest.Enderecos, src => src.Enderecos);
+        TypeAdapterConfig<Moto, MotoResponse>.NewConfig()
+            .Map(dest => dest.NomeModelo, src => src.ModeloMoto.NomeModelo)
+            .Map(dest => dest.Marca, src => src.ModeloMoto.Marca)
+            .Map(dest => dest.NomeConcessionaria, src => src.Concessionaria != null ? src.Concessionaria.Nome : null)
+            .Map(dest => dest.Linha, src => src.ModeloMoto.Linha != null ? src.ModeloMoto.Linha.Nome : string.Empty)
+            .Map(dest => dest.Cilindrada, src => src.ModeloMoto.Cilindrada ?? string.Empty)
+            .Map(dest => dest.Ano, src => src.ModeloMoto.Ano ?? 0);
 
         TypeAdapterConfig<RevisaoPadrao, RevisaoPadraoResponse>
             .NewConfig()

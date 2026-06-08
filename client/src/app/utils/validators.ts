@@ -1,6 +1,8 @@
 export const CPF_REGEX = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
 export const CNPJ_REGEX = /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/;
 export const PHONE_REGEX = /^\(\d{2}\) \d{4,5}-\d{4}$/;
+export const CEP_REGEX = /^\d{5}-\d{3}$/;
+export const UF_REGEX = /^[A-Za-z]{2}$/;
 
 export const validateCPF = (cpf: string) => {
   const digits = cpf.replace(/\D/g, '');

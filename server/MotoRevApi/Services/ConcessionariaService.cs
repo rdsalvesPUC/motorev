@@ -1,6 +1,6 @@
-using Mapster;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using MotoRevApi.Authorization;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
@@ -10,45 +10,34 @@ using MotoRevApi.Model;
 
 namespace MotoRevApi.Services;
 
-/// <summary>
-/// Serviço de gerenciamento de Concessionárias.
-/// </summary>
 public class ConcessionariaService
 {
-#pragma warning disable CS8618
     private readonly AppDbContext _context;
     private readonly UserManager<Usuario> _userManager;
 
-    /// <summary>
-    /// Construtor vazio utilizado para Mocks em testes unitários.
-    /// </summary>
     public ConcessionariaService() { } // Construtor para Moq
-#pragma warning restore CS8618
 
-    /// <summary>
-    /// Construtor principal.
-    /// </summary>
     public ConcessionariaService(AppDbContext context, UserManager<Usuario> userManager)
     {
         _context = context;
         _userManager = userManager;
     }
 
-    /// <summary>
-    /// Realiza o cadastro de uma nova concessionária com validações de unicidade.
-    /// </summary>
     public virtual async Task<ConcessionariaResponse> RegisterAsync(RegisterConcessionariaRequest request)
     {
         if (await _userManager.FindByEmailAsync(request.Email) != null)
         {
-            throw new DuplicateDataException($"O email {request.Email} já está em uso.");
+            throw new DuplicateDataException($"O email {request.Email} ja esta em uso.");
         }
 
-        // Nova verificação: Validar se o CNPJ já está cadastrado
-        var cnpjExiste = await _context.Concessionarias.IgnoreQueryFilters().AnyAsync(c => c.Cnpj == request.Cnpj);
-        if (cnpjExiste)
+        if (await CnpjJaExisteAsync(request.Cnpj))
         {
-            throw new DuplicateDataException($"O CNPJ {request.Cnpj} já está cadastrado no sistema.");
+            throw new DuplicateDataException($"O CNPJ {request.Cnpj} ja esta em uso.");
+        }
+
+        if (await TelefoneLojaJaExisteAsync(request.Telefone))
+        {
+            throw new DuplicateDataException($"O telefone {request.Telefone} ja esta em uso.");
         }
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -61,16 +50,33 @@ public class ConcessionariaService
 
             var roleResult = await _userManager.AddToRoleAsync(user, Roles.Concessionaria);
 
-            if(!roleResult.Succeeded) throw new RegistrationException(roleResult.Errors);
+            if (!roleResult.Succeeded) throw new RegistrationException(roleResult.Errors);
 
-            var concessionaria = request.Adapt<Concessionaria>();
-            concessionaria.UsuarioId = user.Id;
+            var concessionaria = new Concessionaria
+            {
+                Nome = request.Nome,
+                Cnpj = request.Cnpj,
+                Telefone = request.Telefone,
+                Tipo = "Matriz",
+                Cep = request.Cep,
+                Logradouro = request.Logradouro,
+                Numero = request.Numero,
+                Bairro = request.Bairro,
+                Cidade = request.Cidade,
+                Uf = request.Uf.ToUpperInvariant(),
+                UsuarioId = user.Id
+            };
 
             _context.Concessionarias.Add(concessionaria);
             await _context.SaveChangesAsync();
+
+            var lojaMatriz = CreateLojaMatriz(concessionaria);
+            concessionaria.Lojas.Add(lojaMatriz);
+            _context.Lojas.Add(lojaMatriz);
+            await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            return concessionaria.Adapt<ConcessionariaResponse>();
+            return MapConcessionariaResponse(concessionaria);
         }
         catch
         {
@@ -79,163 +85,378 @@ public class ConcessionariaService
         }
     }
 
-    /// <summary>
-    /// Obtém uma concessionária específica pelo ID.
-    /// </summary>
     public virtual async Task<ConcessionariaResponse> GetByIdAsync(int id)
     {
         var concessionaria = await _context.Concessionarias
-            .Include(c => c.Usuario) // Carrega o usuário para pegar o e-mail
-            .Include(c => c.Enderecos) // Carrega os endereços
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .Include(c => c.Lojas)
+            .Where(c => c.Id == id)
+            .FirstOrDefaultAsync();
 
-        if (concessionaria == null)
-            throw new NotFoundException($"Concessionária com ID {id} não encontrada.");
-
-        var response = concessionaria.Adapt<ConcessionariaResponse>();
-        return response;
+        return concessionaria == null
+            ? throw new NotFoundException($"Concessionaria com ID {id} nao encontrada.")
+            : MapConcessionariaResponse(concessionaria);
     }
-    
-    /// <summary>
-    /// Obtém os dados da concessionária logada através do ID do usuário Identity.
-    /// </summary>
+
     public virtual async Task<ConcessionariaResponse> GetByUserIdAsync(string userId)
     {
         var concessionaria = await _context.Concessionarias
-            .Include(c => c.Usuario) // Carrega o usuário para pegar o e-mail
-            .Include(c => c.Enderecos) // Carrega os endereços
+            .Include(c => c.Lojas)
+            .Where(c => c.UsuarioId == userId)
+            .FirstOrDefaultAsync();
+
+        return concessionaria == null
+            ? throw new NotFoundException("Concessionaria nao encontrada.")
+            : MapConcessionariaResponse(concessionaria);
+    }
+
+    public virtual async Task<IEnumerable<ConcessionariaResponse>> GetAllAsync()
+    {
+        var concessionarias = await _context.Concessionarias
+            .Include(c => c.Lojas)
+            .ToListAsync();
+
+        return concessionarias.Select(MapConcessionariaResponse);
+    }
+
+    public virtual async Task<ConcessionariaResponse> UpdatePerfilAsync(string userId, ConcessionariaPerfilRequest request)
+    {
+        var concessionaria = await _context.Concessionarias
+            .Include(c => c.Lojas)
             .FirstOrDefaultAsync(c => c.UsuarioId == userId);
 
         if (concessionaria == null)
-            throw new NotFoundException($"Concessionária não encontrada.");
-
-        return concessionaria.Adapt<ConcessionariaResponse>();
-    }
-
-    /// <summary>
-    /// Lista e filtra concessionárias por nome, id e/ou cidade.
-    /// </summary>
-    public virtual async Task<List<ConcessionariaListResponse>> BuscarConcessionariasAsync(string? termoBusca, string? cidade)
-    {
-        var query = _context.Concessionarias.Include(c => c.Enderecos).AsQueryable();
-
-        // Filtro por Nome ou ID
-        if (!string.IsNullOrWhiteSpace(termoBusca))
         {
-            if (int.TryParse(termoBusca, out int idBusca))
-            {
-                query = query.Where(c => c.Id == idBusca || c.Nome.Contains(termoBusca));
-            }
-            else
-            {
-                query = query.Where(c => c.Nome.Contains(termoBusca));
-            }
+            throw new NotFoundException("Concessionaria nao encontrada.");
         }
 
-        // Filtro adicional por Cidade (que está dentro dos Enderecos)
-        if (!string.IsNullOrWhiteSpace(cidade))
+        var cnpjEmUsoPorOutraMatriz = await _context.Concessionarias
+            .AnyAsync(c => c.Cnpj == request.Cnpj && c.Id != concessionaria.Id);
+        var cnpjEmUsoPorLoja = await _context.Lojas.AnyAsync(l =>
+            l.Cnpj == request.Cnpj &&
+            !(l.ConcessionariaId == concessionaria.Id && l.Tipo == "Matriz"));
+        if (cnpjEmUsoPorOutraMatriz || cnpjEmUsoPorLoja)
         {
-            query = query.Where(c => c.Enderecos.Any(e => e.Cidade.Contains(cidade)));
+            throw new DuplicateDataException($"O CNPJ {request.Cnpj} ja esta em uso.");
         }
 
-        var concessionariasData = await query.ToListAsync();
-
-        return concessionariasData.Adapt<List<ConcessionariaListResponse>>();
-    }
-
-    /// <summary>
-    /// Atualiza os dados cadastrais de uma concessionária.
-    /// </summary>
-    public virtual async Task<ConcessionariaResponse> UpdateAsync(int id, UpdateConcessionariaRequest request)
-    {
-        var concessionaria = await _context.Concessionarias
-            .Include(c => c.Usuario)
-            .Include(c => c.Enderecos)
-            .FirstOrDefaultAsync(c => c.Id == id);
-
-        if (concessionaria == null)
+        var telefoneEmUsoPorLoja = await _context.Lojas.AnyAsync(l =>
+            l.Telefone == request.Telefone &&
+            !(l.ConcessionariaId == concessionaria.Id && l.Tipo == "Matriz"));
+        if (telefoneEmUsoPorLoja)
         {
-            throw new NotFoundException($"Concessionária com ID {id} não encontrada.");
+            throw new DuplicateDataException($"O telefone {request.Telefone} ja esta em uso.");
         }
 
-        // Se o email está sendo alterado, verifica se já existe outro usuário com esse email
-        if (concessionaria.Usuario.Email != request.Email)
-        {
-            var emailJaExiste = await _userManager.FindByEmailAsync(request.Email);
-            if (emailJaExiste != null)
-            {
-                throw new DuplicateDataException($"O email {request.Email} já está em uso.");
-            }
-            
-            // Atualiza o e-mail e username
-            concessionaria.Usuario.Email = request.Email;
-            concessionaria.Usuario.UserName = request.Email;
-            
-            var updateResult = await _userManager.UpdateAsync(concessionaria.Usuario);
-            if (!updateResult.Succeeded)
-            {
-                throw new Exception("Falha ao atualizar o e-mail no provedor de autenticação.");
-            }
-        }
-
-        // Atualiza a Razão Social
         concessionaria.Nome = request.Nome;
+        concessionaria.Cnpj = request.Cnpj;
+        concessionaria.Telefone = request.Telefone;
+        concessionaria.Tipo = "Matriz";
+        concessionaria.Cep = request.Cep;
+        concessionaria.Logradouro = request.Logradouro;
+        concessionaria.Numero = request.Numero;
+        concessionaria.Bairro = request.Bairro;
+        concessionaria.Cidade = request.Cidade;
+        concessionaria.Uf = request.Uf.ToUpperInvariant();
+
+        SincronizarLojaMatriz(concessionaria);
+        await _context.SaveChangesAsync();
+
+        return MapConcessionariaResponse(concessionaria);
+    }
+
+    public virtual async Task AlterarSenhaAsync(string userId, ConcessionariaAlterarSenhaRequest request)
+    {
+        if (request.NovaSenha != request.ConfirmarNovaSenha)
+        {
+            throw new ValidationException("A confirmacao da nova senha nao confere.");
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            throw new NotFoundException("Usuario nao encontrado.");
+        }
+
+        var result = await _userManager.ChangePasswordAsync(user, request.SenhaAtual, request.NovaSenha);
+        if (!result.Succeeded)
+        {
+            throw new RegistrationException(result.Errors);
+        }
+    }
+
+    public virtual async Task<bool> ConcessionariaPertenceAoUsuarioAsync(string userId, int concessionariaId)
+    {
+        return await _context.Concessionarias
+            .AnyAsync(c => c.Id == concessionariaId && c.UsuarioId == userId);
+    }
+
+    public virtual async Task<LojaResponse> AddLojaAsync(string userId, LojaRequest request)
+    {
+        var concessionaria = await ObterConcessionariaPorUsuarioAsync(userId);
+        return await AddLojaAsync(concessionaria.Id, request);
+    }
+
+    public virtual async Task<LojaResponse> AddLojaAsync(int concessionariaId, LojaRequest request)
+    {
+        var concessionariaExiste = await _context.Concessionarias.AnyAsync(c => c.Id == concessionariaId);
+        if (!concessionariaExiste)
+        {
+            throw new NotFoundException($"Concessionaria com ID {concessionariaId} nao encontrada.");
+        }
+
+        if (await CnpjJaExisteAsync(request.Cnpj))
+        {
+            throw new DuplicateDataException($"O CNPJ {request.Cnpj} ja esta em uso.");
+        }
+
+        if (await TelefoneLojaJaExisteAsync(request.Telefone))
+        {
+            throw new DuplicateDataException($"O telefone {request.Telefone} ja esta em uso.");
+        }
+
+        var loja = new Loja
+        {
+            Nome = request.Nome,
+            Tipo = "Filial",
+            Cnpj = request.Cnpj,
+            Telefone = request.Telefone,
+            Cep = request.Cep,
+            Logradouro = request.Logradouro,
+            Numero = request.Numero,
+            Bairro = request.Bairro,
+            Cidade = request.Cidade,
+            Uf = request.Uf.ToUpperInvariant(),
+            ConcessionariaId = concessionariaId
+        };
+
+        _context.Lojas.Add(loja);
+        await _context.SaveChangesAsync();
+
+        return MapLojaResponse(loja);
+    }
+
+    public virtual async Task<LojaResponse> UpdateLojaAsync(string userId, int lojaId, LojaRequest request)
+    {
+        var concessionaria = await ObterConcessionariaPorUsuarioAsync(userId);
+        return await UpdateLojaAsync(concessionaria.Id, lojaId, request);
+    }
+
+    public virtual async Task<LojaResponse> UpdateLojaAsync(int concessionariaId, int lojaId, LojaRequest request)
+    {
+        var loja = await _context.Lojas
+            .FirstOrDefaultAsync(l => l.Id == lojaId && l.ConcessionariaId == concessionariaId);
+
+        if (loja == null)
+        {
+            throw new NotFoundException($"Loja com ID {lojaId} nao encontrada.");
+        }
+
+        if (loja.Tipo == "Matriz")
+        {
+            throw new BusinessRuleException("A loja matriz deve ser atualizada pelo perfil da concessionaria.");
+        }
+
+        var cnpjEmUsoPorMatriz = await _context.Concessionarias.AnyAsync(c => c.Cnpj == request.Cnpj);
+        var cnpjEmUsoPorOutraLoja = await _context.Lojas.AnyAsync(l => l.Cnpj == request.Cnpj && l.Id != lojaId);
+        if (cnpjEmUsoPorMatriz || cnpjEmUsoPorOutraLoja)
+        {
+            throw new DuplicateDataException($"O CNPJ {request.Cnpj} ja esta em uso.");
+        }
+
+        if (await TelefoneLojaJaExisteAsync(request.Telefone, lojaId))
+        {
+            throw new DuplicateDataException($"O telefone {request.Telefone} ja esta em uso.");
+        }
+
+        loja.Nome = request.Nome;
+        loja.Tipo = "Filial";
+        loja.Cnpj = request.Cnpj;
+        loja.Telefone = request.Telefone;
+        loja.Cep = request.Cep;
+        loja.Logradouro = request.Logradouro;
+        loja.Numero = request.Numero;
+        loja.Bairro = request.Bairro;
+        loja.Cidade = request.Cidade;
+        loja.Uf = request.Uf.ToUpperInvariant();
 
         await _context.SaveChangesAsync();
 
-        return concessionaria.Adapt<ConcessionariaResponse>();
+        return MapLojaResponse(loja);
     }
 
-    /// <summary>
-    /// Inativa a concessionária logada, realizando um soft delete nela, em seus endereços e no usuário.
-    /// </summary>
-    public virtual async Task InativarAsync(string userId)
+    public virtual async Task<LojaResponse> AlternarStatusLojaAsync(string userId, int lojaId)
+    {
+        var concessionaria = await ObterConcessionariaPorUsuarioAsync(userId);
+        return await AlternarStatusLojaAsync(concessionaria.Id, lojaId);
+    }
+
+    public virtual async Task<LojaResponse> AlternarStatusLojaAsync(int concessionariaId, int lojaId)
+    {
+        var loja = await _context.Lojas
+            .FirstOrDefaultAsync(l => l.Id == lojaId && l.ConcessionariaId == concessionariaId);
+
+        if (loja == null)
+        {
+            throw new NotFoundException($"Loja com ID {lojaId} nao encontrada.");
+        }
+
+        loja.Ativo = !loja.Ativo;
+        await _context.SaveChangesAsync();
+
+        return MapLojaResponse(loja);
+    }
+
+    public virtual async Task<IEnumerable<LojaResponse>> GetLojasAsync(string userId)
+    {
+        var concessionaria = await ObterConcessionariaPorUsuarioAsync(userId);
+        return await GetLojasAsync(concessionaria.Id);
+    }
+
+    public virtual async Task<IEnumerable<LojaResponse>> GetLojasAsync(int concessionariaId)
+    {
+        var concessionariaExiste = await _context.Concessionarias.AnyAsync(c => c.Id == concessionariaId);
+        if (!concessionariaExiste)
+        {
+            throw new NotFoundException($"Concessionaria com ID {concessionariaId} nao encontrada.");
+        }
+
+        var lojas = await _context.Lojas
+            .Where(l => l.ConcessionariaId == concessionariaId)
+            .OrderByDescending(l => l.Tipo == "Matriz")
+            .ThenBy(l => l.Nome)
+            .ToListAsync();
+
+        return lojas.Select(MapLojaResponse);
+    }
+
+    public virtual async Task<IEnumerable<LojaResponse>> GetLojasAtivasAsync()
+    {
+        var lojas = await _context.Lojas
+            .Where(l => l.Ativo)
+            .OrderByDescending(l => l.Tipo == "Matriz")
+            .ThenBy(l => l.Cidade)
+            .ThenBy(l => l.Nome)
+            .ToListAsync();
+
+        return lojas.Select(MapLojaResponse);
+    }
+
+    public virtual async Task<LojaResponse> GetLojaByIdAsync(string userId, int lojaId)
+    {
+        var concessionaria = await ObterConcessionariaPorUsuarioAsync(userId);
+        return await GetLojaByIdAsync(concessionaria.Id, lojaId);
+    }
+
+    public virtual async Task<LojaResponse> GetLojaByIdAsync(int concessionariaId, int lojaId)
+    {
+        var loja = await _context.Lojas
+            .FirstOrDefaultAsync(l => l.Id == lojaId && l.ConcessionariaId == concessionariaId);
+
+        return loja == null
+            ? throw new NotFoundException($"Loja com ID {lojaId} nao encontrada.")
+            : MapLojaResponse(loja);
+    }
+
+    private async Task<bool> CnpjJaExisteAsync(string cnpj)
+    {
+        return await _context.Concessionarias.AnyAsync(c => c.Cnpj == cnpj)
+            || await _context.Lojas.AnyAsync(l => l.Cnpj == cnpj);
+    }
+
+    private async Task<bool> TelefoneLojaJaExisteAsync(string telefone, int? lojaIdIgnorado = null)
+    {
+        return await _context.Lojas.AnyAsync(l => l.Telefone == telefone && l.Id != lojaIdIgnorado);
+    }
+
+    private async Task<Concessionaria> ObterConcessionariaPorUsuarioAsync(string userId)
     {
         var concessionaria = await _context.Concessionarias
-            .Include(c => c.Usuario)
-            .Include(c => c.Enderecos)
             .FirstOrDefaultAsync(c => c.UsuarioId == userId);
 
-        if (concessionaria == null)
-            throw new NotFoundException("Concessionária não encontrada.");
+        return concessionaria == null
+            ? throw new NotFoundException("Concessionaria nao encontrada.")
+            : concessionaria;
+    }
 
-        // TODO: Quando o módulo de agendamento for implementado, descomentar e ajustar o código abaixo:
-        // var possuiAgendamentoPendente = await _context.Agendamentos
-        //     .AnyAsync(a => a.ConcessionariaId == concessionaria.Id && (a.Status == "Pendente" || a.Status == "Em Andamento"));
-        // if (possuiAgendamentoPendente)
-        // {
-        //     throw new InvalidOperationException("Não é possível excluir a conta pois existem agendamentos pendentes ou em andamento.");
-        // }
-
-        await using var transaction = await _context.Database.BeginTransactionAsync();
-        try
+    private static Loja CreateLojaMatriz(Concessionaria concessionaria)
+    {
+        return new Loja
         {
-            // Inativar Concessionaria
-            concessionaria.Ativo = false;
+            Nome = concessionaria.Nome,
+            Tipo = "Matriz",
+            Cnpj = concessionaria.Cnpj,
+            Telefone = concessionaria.Telefone,
+            Cep = concessionaria.Cep,
+            Logradouro = concessionaria.Logradouro,
+            Numero = concessionaria.Numero,
+            Bairro = concessionaria.Bairro,
+            Cidade = concessionaria.Cidade,
+            Uf = concessionaria.Uf,
+            Ativo = true,
+            ConcessionariaId = concessionaria.Id
+        };
+    }
 
-            // Inativar Endereços associados
-            foreach (var endereco in concessionaria.Enderecos)
-            {
-                endereco.Ativo = false;
-            }
-
-            // Inativar Usuário (Identity)
-            if (concessionaria.Usuario != null)
-            {
-                concessionaria.Usuario.Ativo = false;
-                
-                // Opcional: Você pode querer invalidar tokens ativos também
-                concessionaria.Usuario.RefreshToken = null;
-                concessionaria.Usuario.RefreshTokenExpiryTime = null;
-            }
-
-            await _context.SaveChangesAsync();
-            await transaction.CommitAsync();
-        }
-        catch
+    private void SincronizarLojaMatriz(Concessionaria concessionaria)
+    {
+        var lojaMatriz = concessionaria.Lojas.FirstOrDefault(l => l.Tipo == "Matriz");
+        if (lojaMatriz == null)
         {
-            await transaction.RollbackAsync();
-            throw;
+            lojaMatriz = CreateLojaMatriz(concessionaria);
+            concessionaria.Lojas.Add(lojaMatriz);
+            _context.Lojas.Add(lojaMatriz);
+            return;
         }
+
+        lojaMatriz.Nome = concessionaria.Nome;
+        lojaMatriz.Tipo = "Matriz";
+        lojaMatriz.Cnpj = concessionaria.Cnpj;
+        lojaMatriz.Telefone = concessionaria.Telefone;
+        lojaMatriz.Cep = concessionaria.Cep;
+        lojaMatriz.Logradouro = concessionaria.Logradouro;
+        lojaMatriz.Numero = concessionaria.Numero;
+        lojaMatriz.Bairro = concessionaria.Bairro;
+        lojaMatriz.Cidade = concessionaria.Cidade;
+        lojaMatriz.Uf = concessionaria.Uf;
+    }
+
+    private static ConcessionariaResponse MapConcessionariaResponse(Concessionaria concessionaria)
+    {
+        return new ConcessionariaResponse(
+            concessionaria.Id,
+            concessionaria.Nome,
+            concessionaria.Cnpj,
+            concessionaria.Telefone,
+            concessionaria.Tipo,
+            concessionaria.Cep,
+            concessionaria.Logradouro,
+            concessionaria.Numero,
+            concessionaria.Bairro,
+            concessionaria.Cidade,
+            concessionaria.Uf,
+            concessionaria.Lojas
+                .OrderByDescending(l => l.Tipo == "Matriz")
+                .ThenBy(l => l.Nome)
+                .Select(MapLojaResponse)
+        );
+    }
+
+    private static LojaResponse MapLojaResponse(Loja loja)
+    {
+        return new LojaResponse(
+            loja.Id,
+            loja.Nome,
+            loja.Tipo,
+            loja.Cnpj,
+            loja.Telefone,
+            loja.Cep,
+            loja.Logradouro,
+            loja.Numero,
+            loja.Bairro,
+            loja.Cidade,
+            loja.Uf,
+            loja.ConcessionariaId,
+            loja.Ativo
+        );
     }
 }

@@ -3,16 +3,17 @@ namespace MotoRevApi.Model;
 public class Concessionaria
 {
     public int Id { get; set; }
-    public required string Nome { get; set; } // Razão Social ou Nome Fantasia
-    public required string Cnpj { get; set; } // Novo campo adicionado
+    public required string Nome { get; set; }
+    public required string Cnpj { get; set; }
+    public required string Telefone { get; set; }
+    public string Tipo { get; set; } = "Matriz";
+    public required string Cep { get; set; }
+    public required string Logradouro { get; set; }
+    public required string Numero { get; set; }
+    public required string Bairro { get; set; }
+    public required string Cidade { get; set; }
+    public required string Uf { get; set; }
     public required string UsuarioId { get; set; }
     public virtual Usuario Usuario { get; set; } = null!;
-    
-    // Controle de Soft Delete
-    public bool Ativo { get; set; } = true;
-    
-    // Relacionamento com Endereco (1:N)
-    public virtual ICollection<Endereco> Enderecos { get; set; } = new List<Endereco>();
-    
-    public virtual ICollection<RevisaoPadrao> RevisoesPadrao { get; set; } = new List<RevisaoPadrao>();
+    public virtual ICollection<Loja> Lojas { get; set; } = [];
 }

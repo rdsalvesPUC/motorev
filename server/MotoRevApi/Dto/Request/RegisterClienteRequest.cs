@@ -8,5 +8,7 @@ public record RegisterClienteRequest(
     [RegularExpression(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", ErrorMessage = "O e-mail deve conter '@' e '.'")]
     string Email,
     [Required] string Password,
-    [Required] string Nome
+    [Required] string Nome,
+    [Required] string Cpf,
+    [Required] string Telefone
 );

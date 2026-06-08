@@ -29,11 +29,11 @@ public class AuthServiceTests
             .Options;
 
         var userStoreMock = new Mock<IUserStore<Usuario>>();
-        _mockUserManager = new Mock<UserManager<Usuario>>(userStoreMock.Object, null!, null!, null!, null!, null!, null!, null!, null!);
+        _mockUserManager = new Mock<UserManager<Usuario>>(userStoreMock.Object, null, null, null, null, null, null, null, null);
 
         var contextAccessorMock = new Mock<Microsoft.AspNetCore.Http.IHttpContextAccessor>();
         var claimsFactoryMock = new Mock<IUserClaimsPrincipalFactory<Usuario>>();
-        _mockSignInManager = new Mock<SignInManager<Usuario>>(_mockUserManager.Object, contextAccessorMock.Object, claimsFactoryMock.Object, null!, null!, null!, null!);
+        _mockSignInManager = new Mock<SignInManager<Usuario>>(_mockUserManager.Object, contextAccessorMock.Object, claimsFactoryMock.Object, null, null, null, null);
         
         _mockConfiguration = new Mock<IConfiguration>();
         _mockConfiguration.Setup(x => x["JwtSettings:Secret"]).Returns("uma-chave-secreta-super-longa-para-testes");
@@ -54,6 +54,24 @@ public class AuthServiceTests
     }
 
     private AppDbContext CreateContext() => new AppDbContext(_dbContextOptions);
+
+    private static Concessionaria CreateConcessionaria(string usuarioId, string nome, string cnpj = "12.345.678/0001-90")
+    {
+        return new Concessionaria
+        {
+            UsuarioId = usuarioId,
+            Nome = nome,
+            Cnpj = cnpj,
+            Telefone = "(11) 99999-9999",
+            Tipo = "Matriz",
+            Cep = "01001-000",
+            Logradouro = "Rua Teste",
+            Numero = "100",
+            Bairro = "Centro",
+            Cidade = "Sao Paulo",
+            Uf = "SP"
+        };
+    }
 
     [Fact]
     public async Task LoginAsync_DeveRetornarLoginResponse_ParaCliente()
@@ -94,7 +112,7 @@ public class AuthServiceTests
         var user = new Usuario { Id = "user-conc", Email = "conc@email.com", UserName = "conc@email.com" };
         var request = new LoginRequest("conc@email.com", "password");
         
-        context.Concessionarias.Add(new Concessionaria { UsuarioId = user.Id, Nome = "Conc Teste", Cnpj = "12345678000190" });
+        context.Concessionarias.Add(CreateConcessionaria(user.Id, "Conc Teste"));
         await context.SaveChangesAsync();
 
         _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email)).ReturnsAsync(user);
@@ -169,7 +187,7 @@ public class AuthServiceTests
         // Arrange
         using var context = CreateContext();
         var request = new LoginRequest("naoexiste@email.com", "password");
-        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email)).ReturnsAsync((Usuario?)null);
+        _mockUserManager.Setup(x => x.FindByEmailAsync(request.Email)).ReturnsAsync((Usuario)null);
         
         var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
@@ -288,7 +306,7 @@ public class AuthServiceTests
         };
         var request = new RefreshTokenRequest("expired-token", refreshToken);
 
-        context.Concessionarias.Add(new Concessionaria { UsuarioId = userId, Nome = "Conc Refresh", Cnpj = "12345678000190" });
+        context.Concessionarias.Add(CreateConcessionaria(userId, "Conc Refresh", "22.345.678/0001-90"));
         await context.SaveChangesAsync();
 
         var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
@@ -317,7 +335,7 @@ public class AuthServiceTests
         // Arrange
         using var context = CreateContext();
         var request = new RefreshTokenRequest("invalid-token", "refresh");
-        _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(It.IsAny<string>())).Returns((ClaimsPrincipal?)null);
+        _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(It.IsAny<string>())).Returns((ClaimsPrincipal)null);
 
         var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
@@ -336,7 +354,7 @@ public class AuthServiceTests
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
 
         _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(It.IsAny<string>())).Returns(principal);
-        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync((Usuario?)null);
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync((Usuario)null);
 
         var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
 
