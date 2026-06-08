@@ -161,17 +161,15 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
     setActiveRevTab('0');
   };
 
-  const validateRevisoes = () => {
+  const validateEstruturaRevisoes = () => {
     const invalidRevision = revisoes.find((revisao) => (
       !revisao.nome.trim()
       || revisao.quilometragem < 0
       || revisao.tempoMeses < 0
-      || revisao.servicosIds.length === 0
-      || revisao.pecas.some((peca) => !peca.pecaId || peca.quantidade <= 0)
     ));
 
     if (invalidRevision) {
-      message.error('Preencha nome, quilometragem, tempo, serviços e peças válidas em todas as revisões.');
+      message.error('Preencha nome, quilometragem e tempo em todas as revisões.');
       return false;
     }
 
@@ -183,6 +181,22 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
     return true;
   };
 
+  const validateServicosEPecas = () => {
+    const invalidRevision = revisoes.find((revisao) => (
+      revisao.servicosIds.length === 0
+      || revisao.pecas.some((peca) => !peca.pecaId || peca.quantidade <= 0)
+    ));
+
+    if (invalidRevision) {
+      message.error('Selecione ao menos um serviço e mantenha as peças válidas em todas as revisões.');
+      return false;
+    }
+
+    return true;
+  };
+
+  const validateRevisoes = () => validateEstruturaRevisoes() && validateServicosEPecas();
+
   const goNext = async () => {
     if (currentStep === 0) {
       try {
@@ -192,7 +206,11 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
       }
     }
 
-    if (currentStep === 1 && !validateRevisoes()) {
+    if (currentStep === 1 && !validateEstruturaRevisoes()) {
+      return;
+    }
+
+    if (currentStep === 2 && !validateServicosEPecas()) {
       return;
     }
 
@@ -281,20 +299,6 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
         />
       ),
     },
-    {
-      title: 'Serviços',
-      dataIndex: 'servicosIds',
-      key: 'servicosIds',
-      render: (_: number[], record) => (
-        <Select
-          mode="multiple"
-          placeholder="Selecione os serviços"
-          value={record.servicosIds}
-          onChange={(servicosIds) => updateRevisao(record.key, { servicosIds })}
-          options={servicos.map((servico) => ({ value: servico.id, label: servico.nome }))}
-        />
-      ),
-    },
   ];
 
   const renderStep1 = () => (
@@ -363,7 +367,7 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
     </Card>
   );
 
-  const renderPecasTable = (revisao: RevisaoFormItem) => {
+  const renderServicosEPecas = (revisao: RevisaoFormItem) => {
     const columns: ColumnsType<RevisaoPadraoPecaRequest & { index: number }> = [
       {
         title: 'Peça',
@@ -424,42 +428,62 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
 
     return (
       <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-        <Flex justify="space-between" align="center">
-          <Text>Peças opcionais da {revisao.ordem}ª revisão</Text>
-          <Button icon={<PlusOutlined />} onClick={() => addPeca(revisao.key)}>
-            Adicionar Peça
-          </Button>
-        </Flex>
+        <Descriptions size="small" bordered>
+          <Descriptions.Item label="Quilometragem">
+            {revisao.quilometragem.toLocaleString('pt-BR')} km
+          </Descriptions.Item>
+          <Descriptions.Item label="Tempo">{revisao.tempoMeses} meses</Descriptions.Item>
+        </Descriptions>
 
-        <Table
-          size="small"
-          bordered
-          pagination={false}
-          rowKey="index"
-          dataSource={revisao.pecas.map((peca, index) => ({ ...peca, index }))}
-          columns={columns}
-          locale={{
-            emptyText: (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="Nenhuma peça adicionada."
-              />
-            ),
-          }}
-        />
+        <Card size="small" title="Serviços">
+          <Select
+            mode="multiple"
+            placeholder="Selecione os serviços desta revisão"
+            value={revisao.servicosIds}
+            onChange={(servicosIds) => updateRevisao(revisao.key, { servicosIds })}
+            options={servicos.map((servico) => ({ value: servico.id, label: servico.nome }))}
+            style={{ width: '100%' }}
+          />
+        </Card>
+
+        <Card size="small" title="Peças">
+          <Flex justify="space-between" align="center">
+            <Text>Peças opcionais da {revisao.ordem}ª revisão</Text>
+            <Button icon={<PlusOutlined />} onClick={() => addPeca(revisao.key)}>
+              Adicionar Peça
+            </Button>
+          </Flex>
+
+          <Table
+            size="small"
+            bordered
+            pagination={false}
+            rowKey="index"
+            dataSource={revisao.pecas.map((peca, index) => ({ ...peca, index }))}
+            columns={columns}
+            locale={{
+              emptyText: (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="Nenhuma peça adicionada."
+                />
+              ),
+            }}
+          />
+        </Card>
       </Space>
     );
   };
 
   const renderStep3 = () => (
-    <Card title="Peças por Revisão">
+    <Card title="Peças e Serviços por Revisão">
       <Tabs
         activeKey={activeRevTab}
         onChange={setActiveRevTab}
         items={revisoes.map((revisao, index) => ({
           key: index.toString(),
           label: `${revisao.ordem}ª Revisão`,
-          children: renderPecasTable(revisao),
+          children: renderServicosEPecas(revisao),
         }))}
       />
     </Card>
@@ -565,7 +589,7 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
           items={[
             { title: 'Dados Gerais' },
             { title: 'Revisões' },
-            { title: 'Peças' },
+            { title: 'Peças e Serviços' },
             { title: 'Resumo' },
           ]}
         />
