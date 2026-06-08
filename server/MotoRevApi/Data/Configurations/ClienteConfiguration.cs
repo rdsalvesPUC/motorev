@@ -16,7 +16,7 @@ public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
 
         // Relacionamento 1:1 com Usuario
         builder.HasOne(c => c.Usuario)
-            .WithOne()
+            .WithOne(u => u.Cliente)
             .HasForeignKey<Cliente>(c => c.UsuarioId)
             .IsRequired();
 

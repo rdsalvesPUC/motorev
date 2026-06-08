@@ -14,16 +14,10 @@ public class ConcessionariaConfiguration : IEntityTypeConfiguration<Concessionar
         builder.HasIndex(c => c.Cnpj).IsUnique();
         builder.Property(c => c.Telefone).IsRequired().HasMaxLength(20);
         builder.Property(c => c.Tipo).IsRequired().HasMaxLength(20).HasDefaultValue("Matriz");
-        builder.Property(c => c.Cep).IsRequired().HasMaxLength(9);
-        builder.Property(c => c.Logradouro).IsRequired().HasMaxLength(150);
-        builder.Property(c => c.Numero).IsRequired().HasMaxLength(20);
-        builder.Property(c => c.Bairro).IsRequired().HasMaxLength(100);
-        builder.Property(c => c.Cidade).IsRequired().HasMaxLength(100);
-        builder.Property(c => c.Uf).IsRequired().HasMaxLength(2);
 
         // Relacionamento 1:1 com Usuario
         builder.HasOne(c => c.Usuario)
-            .WithOne()
+            .WithOne(u => u.Concessionaria)
             .HasForeignKey<Concessionaria>(c => c.UsuarioId)
             .IsRequired();
 

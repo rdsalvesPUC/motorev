@@ -113,9 +113,28 @@ public class MotoEndpointsTests : IDisposable
         var concessionaria = new Concessionaria
         {
             UsuarioId = concessionariaId,
-            Nome = nome
+            Nome = nome,
+            Cnpj = "12345678000199",
+            Telefone = "1234567890"
         };
         context.Concessionarias.Add(concessionaria);
+        context.SaveChanges();
+
+        var lojaMatriz = new Loja
+        {
+            ConcessionariaId = concessionaria.Id,
+            Nome = nome,
+            Tipo = "Matriz",
+            Cnpj = "12345678000199",
+            Telefone = "1234567890",
+            Cep = "12345678",
+            Logradouro = "Rua Teste",
+            Numero = "123",
+            Bairro = "Bairro Teste",
+            Cidade = "Cidade Teste",
+            Uf = "SP"
+        };
+        context.Lojas.Add(lojaMatriz);
         context.SaveChanges();
 
         return concessionaria;

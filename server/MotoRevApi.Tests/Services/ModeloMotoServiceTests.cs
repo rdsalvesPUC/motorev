@@ -30,10 +30,11 @@ public class ModeloMotoServiceTests
         using var context = CreateContext();
         var linha = new Linha { Nome = "Ninja", Ativo = true };
         context.Linhas.Add(linha);
+        context.RevisoesPadrao.Add(new RevisaoPadrao { LinhaId = 1, Nome = "Rev Padrao", Ordem = 1, Ativo = true });
         context.SaveChanges();
 
         var service = new ModeloMotoService(context);
-        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva", linha.Id, "400cc", 2023);
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva", 1, "400cc", 2023);
 
         // Act
         var result = service.CadastrarModeloMoto(request);
@@ -115,12 +116,13 @@ public class ModeloMotoServiceTests
         using var context = CreateContext();
         var linha = new Linha { Nome = "YZF", Ativo = true };
         context.Linhas.Add(linha);
-        var modelo = new ModeloMoto { NomeModelo = "R1", Marca = "Yamaha", Categoria = "Esportiva", Ativo = true };
+        context.RevisoesPadrao.Add(new RevisaoPadrao { LinhaId = 1, Nome = "Rev Padrao", Ordem = 1, Ativo = true });
+        var modelo = new ModeloMoto { NomeModelo = "R1", Marca = "Yamaha", Categoria = "Esportiva", LinhaId = 1, Ativo = true };
         context.ModelosMotos.Add(modelo);
         context.SaveChanges();
 
         var service = new ModeloMotoService(context);
-        var request = new ModeloMotoRequest("R1 M", "Yamaha", "Super Esportiva", linha.Id, "1000cc", 2024);
+        var request = new ModeloMotoRequest("R1 M", "Yamaha", "Super Esportiva", 1, "1000cc", 2024);
 
         // Act
         var result = service.AtualizarModeloMoto(modelo.Id, request);

@@ -11,4 +11,5 @@ public class ModeloMoto
     public string? Cilindrada { get; set; }
     public int? Ano { get; set; }
     public bool Ativo { get; set; } = true;
+
 }

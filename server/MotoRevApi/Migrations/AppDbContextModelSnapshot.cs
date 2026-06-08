@@ -637,6 +637,78 @@ namespace MotoRevApi.Migrations
                     b.ToTable("Servicos");
                 });
 
+            modelBuilder.Entity("MotoRevApi.Model.RevisaoPadrao", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Ativo")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ConcessionariaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ModeloMotoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quilometragem")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TempoMeses")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConcessionariaId");
+
+                    b.HasIndex("ModeloMotoId");
+
+                    b.ToTable("RevisoesPadrao");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.RevisaoPadraoPeca", b =>
+                {
+                    b.Property<int>("RevisaoPadraoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PecaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Quantidade")
+                        .HasColumnType("int");
+
+                    b.HasKey("RevisaoPadraoId", "PecaId");
+
+                    b.HasIndex("PecaId");
+
+                    b.ToTable("RevisaoPadraoPecas");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.RevisaoPadraoServico", b =>
+                {
+                    b.Property<int>("RevisaoPadraoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ServicoId")
+                        .HasColumnType("int");
+
+                    b.HasKey("RevisaoPadraoId", "ServicoId");
+
+                    b.HasIndex("ServicoId");
+
+                    b.ToTable("RevisaoPadraoServicos");
+                });
+
             modelBuilder.Entity("MotoRevApi.Model.Usuario", b =>
                 {
                     b.Property<string>("Id")
@@ -836,9 +908,88 @@ namespace MotoRevApi.Migrations
                     b.Navigation("ModeloMoto");
                 });
 
+            modelBuilder.Entity("MotoRevApi.Model.RevisaoPadrao", b =>
+                {
+                    b.HasOne("MotoRevApi.Model.Concessionaria", "Concessionaria")
+                        .WithMany()
+                        .HasForeignKey("ConcessionariaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MotoRevApi.Model.ModeloMoto", "ModeloMoto")
+                        .WithMany("RevisoesPadrao")
+                        .HasForeignKey("ModeloMotoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Concessionaria");
+
+                    b.Navigation("ModeloMoto");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.RevisaoPadraoPeca", b =>
+                {
+                    b.HasOne("MotoRevApi.Model.Peca", "Peca")
+                        .WithMany("RevisoesPadrao")
+                        .HasForeignKey("PecaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MotoRevApi.Model.RevisaoPadrao", "RevisaoPadrao")
+                        .WithMany("Pecas")
+                        .HasForeignKey("RevisaoPadraoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Peca");
+
+                    b.Navigation("RevisaoPadrao");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.RevisaoPadraoServico", b =>
+                {
+                    b.HasOne("MotoRevApi.Model.RevisaoPadrao", "RevisaoPadrao")
+                        .WithMany("Servicos")
+                        .HasForeignKey("RevisaoPadraoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MotoRevApi.Model.Servico", "Servico")
+                        .WithMany("RevisoesPadrao")
+                        .HasForeignKey("ServicoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RevisaoPadrao");
+
+                    b.Navigation("Servico");
+                });
+
             modelBuilder.Entity("MotoRevApi.Model.Concessionaria", b =>
                 {
                     b.Navigation("Lojas");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.ModeloMoto", b =>
+                {
+                    b.Navigation("RevisoesPadrao");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.Peca", b =>
+                {
+                    b.Navigation("RevisoesPadrao");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.RevisaoPadrao", b =>
+                {
+                    b.Navigation("Pecas");
+
+                    b.Navigation("Servicos");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.Servico", b =>
+                {
+                    b.Navigation("RevisoesPadrao");
                 });
 #pragma warning restore 612, 618
         }

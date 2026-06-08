@@ -11,4 +11,5 @@ public class Peca
     public decimal Preco { get; set; }
     public int Estoque { get; set; }
     public StatusCadastro Status { get; set; }
+    public virtual ICollection<RevisaoPadraoPeca> RevisoesPadrao { get; set; } = new List<RevisaoPadraoPeca>();
 }

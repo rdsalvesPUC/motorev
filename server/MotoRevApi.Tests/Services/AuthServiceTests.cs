@@ -57,20 +57,29 @@ public class AuthServiceTests
 
     private static Concessionaria CreateConcessionaria(string usuarioId, string nome, string cnpj = "12.345.678/0001-90")
     {
-        return new Concessionaria
+        var concessionaria = new Concessionaria
         {
             UsuarioId = usuarioId,
             Nome = nome,
             Cnpj = cnpj,
             Telefone = "(11) 99999-9999",
+            Tipo = "Matriz"
+        };
+        concessionaria.Lojas.Add(new Loja
+        {
+            Nome = nome,
             Tipo = "Matriz",
+            Cnpj = cnpj,
+            Telefone = "(11) 99999-9999",
             Cep = "01001-000",
             Logradouro = "Rua Teste",
             Numero = "100",
             Bairro = "Centro",
             Cidade = "Sao Paulo",
-            Uf = "SP"
-        };
+            Uf = "SP",
+            Concessionaria = concessionaria
+        });
+        return concessionaria;
     }
 
     [Fact]

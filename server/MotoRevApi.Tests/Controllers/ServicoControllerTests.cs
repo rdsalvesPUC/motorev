@@ -26,7 +26,7 @@ public class ServicoControllerTests
     {
         // Arrange
         var request = new ServicoRequest("COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100);
-        var response = new ServicoResponse(1, "COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100);
+        var response = new ServicoResponse(1, "COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100, true);
 
         _servicoServiceMock.Setup(s => s.CreateAsync(request))
             .ReturnsAsync(response);
@@ -48,7 +48,7 @@ public class ServicoControllerTests
         var categoria = CategoriaServico.Troca;
         var servicos = new List<ServicoResponse>
         {
-            new ServicoResponse(1, "COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100)
+            new ServicoResponse(1, "COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100, true)
         };
 
         _servicoServiceMock.Setup(s => s.GetAllAsync(categoria))
@@ -75,7 +75,8 @@ public class ServicoControllerTests
             "Desc",
             CategoriaServico.Troca,
             30,
-            100
+            100,
+            true
         );
 
         _servicoServiceMock.Setup(s => s.GetByIdAsync(servicoId))
@@ -111,7 +112,7 @@ public class ServicoControllerTests
         // Arrange
         var servicoId = 1;
         var request = new ServicoUpdateRequest("COD002", "Troca de Pneu", "Desc Pneu", CategoriaServico.Troca, 60, 200);
-        var response = new ServicoResponse(servicoId, "COD002", "Troca de Pneu", "Desc Pneu", CategoriaServico.Troca, 60, 200);
+        var response = new ServicoResponse(servicoId, "COD002", "Troca de Pneu", "Desc Pneu", CategoriaServico.Troca, 60, 200, true);
 
         _servicoServiceMock.Setup(s => s.UpdateAsync(servicoId, request))
             .ReturnsAsync(response);

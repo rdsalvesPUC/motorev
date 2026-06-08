@@ -48,9 +48,9 @@ interface SectionCardProps {
   icon: React.ReactNode;
   editing: boolean;
   saving?: boolean;
-  onEdit: () => void;
-  onSave: () => void;
-  onCancel: () => void;
+  onEdit?: () => void;
+  onSave?: () => void;
+  onCancel?: () => void;
   children: React.ReactNode;
 }
 
@@ -73,7 +73,7 @@ function SectionCard({
         </Flex>
       }
       extra={
-        editing ? (
+        onEdit && (editing ? (
           <Flex gap={8} wrap="wrap">
             <Button size="small" icon={<CloseOutlined />} onClick={onCancel} disabled={saving}>
               Cancelar
@@ -86,7 +86,7 @@ function SectionCard({
           <Button size="small" icon={<EditOutlined />} onClick={onEdit}>
             Editar
           </Button>
-        )
+        ))
       }
     >
       {children}
@@ -116,18 +116,13 @@ export default function PerfilConcessionaria() {
   const [profile, setProfile] = useState<Concessionaria | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingDados, setEditingDados] = useState(false);
-  const [editingEndereco, setEditingEndereco] = useState(false);
   const [savingDados, setSavingDados] = useState(false);
-  const [savingEndereco, setSavingEndereco] = useState(false);
   const [savingSenha, setSavingSenha] = useState(false);
-  const [buscandoCep, setBuscandoCep] = useState(false);
-  const [enderecoBloqueado, setEnderecoBloqueado] = useState(false);
   const [senhaModalOpen, setSenhaModalOpen] = useState(false);
   const [temaEscuro, setTemaEscuro] = useState(false);
   const [idioma, setIdioma] = useState('pt-BR');
 
   const [formDados] = Form.useForm<ConcessionariaPerfilRequest>();
-  const [formEndereco] = Form.useForm<ConcessionariaPerfilRequest>();
   const [formSenha] = Form.useForm();
 
   const enderecoDescription = useMemo(() => {
@@ -228,88 +223,7 @@ export default function PerfilConcessionaria() {
     }
   };
 
-  const handleEditEndereco = () => {
-    if (!profile) return;
-    formEndereco.setFieldsValue({
-      nome: profile.nome,
-      cnpj: profile.cnpj,
-      telefone: profile.telefone,
-      cep: formatCEP(profile.cep),
-      logradouro: profile.logradouro,
-      numero: profile.numero,
-      bairro: profile.bairro,
-      cidade: profile.cidade,
-      uf: profile.uf,
-    });
-    setEnderecoBloqueado(false);
-    setEditingEndereco(true);
-  };
 
-  const handleSaveEndereco = async () => {
-    const currentPayload = buildCurrentPayload();
-    if (!currentPayload) return;
-
-    try {
-      const values = await formEndereco.validateFields();
-      setSavingEndereco(true);
-      const updatedProfile = await concessionariaService.updateMe(
-        buildPerfilPayload({
-          ...currentPayload,
-          cep: values.cep,
-          logradouro: values.logradouro,
-          numero: values.numero,
-          bairro: values.bairro,
-          cidade: values.cidade,
-          uf: values.uf,
-        })
-      );
-      updateProfile(updatedProfile);
-      setEditingEndereco(false);
-      setEnderecoBloqueado(false);
-      message.success('Endereco da matriz atualizado');
-    } catch (error: any) {
-      if (error?.errorFields) return;
-      message.error(error.message || 'Falha ao atualizar endereco');
-    } finally {
-      setSavingEndereco(false);
-    }
-  };
-
-  const handleBuscarCep = async () => {
-    const cep = formEndereco.getFieldValue('cep');
-    const digits = normalizeText(cep).replace(/\D/g, '');
-    if (digits.length === 0) return;
-    if (digits.length !== 8) {
-      setEnderecoBloqueado(false);
-      message.warning('Informe um CEP com 8 digitos');
-      return;
-    }
-
-    try {
-      setBuscandoCep(true);
-      const endereco = await viaCepService.buscarEnderecoPorCep(cep);
-      if (!endereco) {
-        throw new Error('CEP não encontrado');
-      }
-      formEndereco.setFieldsValue({
-        cep: formatCEP(endereco.cep),
-        logradouro: endereco.logradouro,
-        bairro: endereco.bairro,
-        cidade: endereco.cidade,
-        uf: endereco.uf,
-      });
-      setEnderecoBloqueado(true);
-    } catch (error: any) {
-      setEnderecoBloqueado(false);
-      message.warning(error.message || 'CEP nao encontrado');
-    } finally {
-      setBuscandoCep(false);
-    }
-  };
-
-  const handleCepChange = () => {
-    setEnderecoBloqueado(false);
-  };
 
   const handleAlterarSenha = async () => {
     try {
@@ -473,87 +387,17 @@ export default function PerfilConcessionaria() {
       <SectionCard
         title="Endereco da Matriz"
         icon={<EnvironmentOutlined />}
-        editing={editingEndereco}
-        saving={savingEndereco}
-        onEdit={handleEditEndereco}
-        onSave={handleSaveEndereco}
-        onCancel={() => {
-          setEditingEndereco(false);
-          setEnderecoBloqueado(false);
-        }}
+        editing={false}
       >
-        {editingEndereco ? (
-          <Form form={formEndereco} layout="vertical" style={{ maxWidth: 760 }}>
-            <Flex gap="large" wrap="wrap">
-              <Form.Item
-                label="CEP"
-                name="cep"
-                normalize={formatCEP}
-                rules={[
-                  { required: true, message: 'Informe o CEP' },
-                  { pattern: CEP_REGEX, message: 'CEP invalido' },
-                ]}
-                style={{ flex: '0 0 170px' }}
-              >
-                <Input placeholder="00000-000" onChange={handleCepChange} onBlur={handleBuscarCep} />
-              </Form.Item>
-
-              <Form.Item
-                label="Rua / Avenida"
-                name="logradouro"
-                rules={[{ required: true, whitespace: true, message: 'Informe o logradouro' }]}
-                style={{ flex: '1 1 280px' }}
-              >
-                <Input placeholder="Ex: Av. Paulista" disabled={buscandoCep || enderecoBloqueado} />
-              </Form.Item>
-
-              <Form.Item
-                label="Numero"
-                name="numero"
-                rules={[{ required: true, whitespace: true, message: 'Informe o numero' }]}
-                style={{ flex: '0 0 120px' }}
-              >
-                <Input placeholder="Ex: 1000" />
-              </Form.Item>
-            </Flex>
-
-            <Flex gap="large" wrap="wrap">
-              <Form.Item
-                label="Bairro"
-                name="bairro"
-                rules={[{ required: true, whitespace: true, message: 'Informe o bairro' }]}
-                style={{ flex: '1 1 220px' }}
-              >
-                <Input disabled={buscandoCep || enderecoBloqueado} />
-              </Form.Item>
-
-              <Form.Item
-                label="Cidade"
-                name="cidade"
-                rules={[{ required: true, whitespace: true, message: 'Informe a cidade' }]}
-                style={{ flex: '1 1 220px' }}
-              >
-                <Input disabled={buscandoCep || enderecoBloqueado} />
-              </Form.Item>
-
-              <Form.Item
-                label="UF"
-                name="uf"
-                rules={[
-                  { required: true, message: 'Informe a UF' },
-                  { pattern: UF_REGEX, message: 'UF deve conter 2 letras' },
-                ]}
-                style={{ flex: '0 0 100px' }}
-              >
-                <Input
-                  placeholder="SP"
-                  maxLength={2}
-                  disabled={buscandoCep || enderecoBloqueado}
-                  onChange={(event) => formEndereco.setFieldValue('uf', event.target.value.toUpperCase())}
-                />
-              </Form.Item>
-            </Flex>
-          </Form>
+        {!profile?.cep ? (
+          <Space direction="vertical" size="small" style={{ display: 'flex' }}>
+            <Text type="secondary">
+              Você ainda não possui uma loja Matriz cadastrada.
+            </Text>
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              Cadastre sua primeira loja na aba <strong>Lojas</strong> para definir o endereço da sua concessionária.
+            </Text>
+          </Space>
         ) : (
           <Flex align="flex-start" gap={8}>
             <EnvironmentOutlined style={{ color: '#8c8c8c', marginTop: 3 }} />

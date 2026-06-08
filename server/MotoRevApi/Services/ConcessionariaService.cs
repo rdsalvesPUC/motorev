@@ -58,21 +58,10 @@ public class ConcessionariaService
                 Cnpj = request.Cnpj,
                 Telefone = request.Telefone,
                 Tipo = "Matriz",
-                Cep = request.Cep,
-                Logradouro = request.Logradouro,
-                Numero = request.Numero,
-                Bairro = request.Bairro,
-                Cidade = request.Cidade,
-                Uf = request.Uf.ToUpperInvariant(),
                 UsuarioId = user.Id
             };
 
             _context.Concessionarias.Add(concessionaria);
-            await _context.SaveChangesAsync();
-
-            var lojaMatriz = CreateLojaMatriz(concessionaria);
-            concessionaria.Lojas.Add(lojaMatriz);
-            _context.Lojas.Add(lojaMatriz);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -151,14 +140,16 @@ public class ConcessionariaService
         concessionaria.Cnpj = request.Cnpj;
         concessionaria.Telefone = request.Telefone;
         concessionaria.Tipo = "Matriz";
-        concessionaria.Cep = request.Cep;
-        concessionaria.Logradouro = request.Logradouro;
-        concessionaria.Numero = request.Numero;
-        concessionaria.Bairro = request.Bairro;
-        concessionaria.Cidade = request.Cidade;
-        concessionaria.Uf = request.Uf.ToUpperInvariant();
 
-        SincronizarLojaMatriz(concessionaria);
+        SincronizarLojaMatriz(
+            concessionaria,
+            request.Cep,
+            request.Logradouro,
+            request.Numero,
+            request.Bairro,
+            request.Cidade,
+            request.Uf
+        );
         await _context.SaveChangesAsync();
 
         return MapConcessionariaResponse(concessionaria);
@@ -204,7 +195,15 @@ public class ConcessionariaService
             throw new NotFoundException($"Concessionaria com ID {concessionariaId} nao encontrada.");
         }
 
-        if (await CnpjJaExisteAsync(request.Cnpj))
+        var isMatriz = !await _context.Lojas.AnyAsync(l => l.ConcessionariaId == concessionariaId && l.Tipo == "Matriz");
+
+        var cnpjEmUsoPorOutraConcessionaria = await _context.Concessionarias.AnyAsync(c => c.Cnpj == request.Cnpj && c.Id != concessionariaId);
+        var cnpjEmUsoPorOutraLoja = await _context.Lojas.AnyAsync(l => l.Cnpj == request.Cnpj);
+        var concessionariaCnpj = await _context.Concessionarias.Where(c => c.Id == concessionariaId).Select(c => c.Cnpj).FirstOrDefaultAsync();
+
+        if (cnpjEmUsoPorOutraConcessionaria || 
+            cnpjEmUsoPorOutraLoja || 
+            (!isMatriz && request.Cnpj == concessionariaCnpj))
         {
             throw new DuplicateDataException($"O CNPJ {request.Cnpj} ja esta em uso.");
         }
@@ -217,7 +216,7 @@ public class ConcessionariaService
         var loja = new Loja
         {
             Nome = request.Nome,
-            Tipo = "Filial",
+            Tipo = isMatriz ? "Matriz" : "Filial",
             Cnpj = request.Cnpj,
             Telefone = request.Telefone,
             Cep = request.Cep,
@@ -378,7 +377,14 @@ public class ConcessionariaService
             : concessionaria;
     }
 
-    private static Loja CreateLojaMatriz(Concessionaria concessionaria)
+    private static Loja CreateLojaMatriz(
+        Concessionaria concessionaria,
+        string cep,
+        string logradouro,
+        string numero,
+        string bairro,
+        string cidade,
+        string uf)
     {
         return new Loja
         {
@@ -386,23 +392,30 @@ public class ConcessionariaService
             Tipo = "Matriz",
             Cnpj = concessionaria.Cnpj,
             Telefone = concessionaria.Telefone,
-            Cep = concessionaria.Cep,
-            Logradouro = concessionaria.Logradouro,
-            Numero = concessionaria.Numero,
-            Bairro = concessionaria.Bairro,
-            Cidade = concessionaria.Cidade,
-            Uf = concessionaria.Uf,
+            Cep = cep,
+            Logradouro = logradouro,
+            Numero = numero,
+            Bairro = bairro,
+            Cidade = cidade,
+            Uf = uf.ToUpperInvariant(),
             Ativo = true,
             ConcessionariaId = concessionaria.Id
         };
     }
 
-    private void SincronizarLojaMatriz(Concessionaria concessionaria)
+    private void SincronizarLojaMatriz(
+        Concessionaria concessionaria,
+        string cep,
+        string logradouro,
+        string numero,
+        string bairro,
+        string cidade,
+        string uf)
     {
         var lojaMatriz = concessionaria.Lojas.FirstOrDefault(l => l.Tipo == "Matriz");
         if (lojaMatriz == null)
         {
-            lojaMatriz = CreateLojaMatriz(concessionaria);
+            lojaMatriz = CreateLojaMatriz(concessionaria, cep, logradouro, numero, bairro, cidade, uf);
             concessionaria.Lojas.Add(lojaMatriz);
             _context.Lojas.Add(lojaMatriz);
             return;
@@ -412,28 +425,29 @@ public class ConcessionariaService
         lojaMatriz.Tipo = "Matriz";
         lojaMatriz.Cnpj = concessionaria.Cnpj;
         lojaMatriz.Telefone = concessionaria.Telefone;
-        lojaMatriz.Cep = concessionaria.Cep;
-        lojaMatriz.Logradouro = concessionaria.Logradouro;
-        lojaMatriz.Numero = concessionaria.Numero;
-        lojaMatriz.Bairro = concessionaria.Bairro;
-        lojaMatriz.Cidade = concessionaria.Cidade;
-        lojaMatriz.Uf = concessionaria.Uf;
+        lojaMatriz.Cep = cep;
+        lojaMatriz.Logradouro = logradouro;
+        lojaMatriz.Numero = numero;
+        lojaMatriz.Bairro = bairro;
+        lojaMatriz.Cidade = cidade;
+        lojaMatriz.Uf = uf.ToUpperInvariant();
     }
 
     private static ConcessionariaResponse MapConcessionariaResponse(Concessionaria concessionaria)
     {
+        var lojaMatriz = concessionaria.Lojas.FirstOrDefault(l => l.Tipo == "Matriz");
         return new ConcessionariaResponse(
             concessionaria.Id,
             concessionaria.Nome,
             concessionaria.Cnpj,
             concessionaria.Telefone,
             concessionaria.Tipo,
-            concessionaria.Cep,
-            concessionaria.Logradouro,
-            concessionaria.Numero,
-            concessionaria.Bairro,
-            concessionaria.Cidade,
-            concessionaria.Uf,
+            lojaMatriz?.Cep ?? string.Empty,
+            lojaMatriz?.Logradouro ?? string.Empty,
+            lojaMatriz?.Numero ?? string.Empty,
+            lojaMatriz?.Bairro ?? string.Empty,
+            lojaMatriz?.Cidade ?? string.Empty,
+            lojaMatriz?.Uf ?? string.Empty,
             concessionaria.Lojas
                 .OrderByDescending(l => l.Tipo == "Matriz")
                 .ThenBy(l => l.Nome)
