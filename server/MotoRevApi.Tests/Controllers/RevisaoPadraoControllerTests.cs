@@ -15,16 +15,35 @@ namespace MotoRevApi.Tests.Controllers;
 public class RevisaoPadraoControllerTests
 {
     private readonly Mock<RevisaoPadraoService> _revisaoServiceMock;
+    private readonly Mock<ConcessionariaService> _concessionariaServiceMock;
     private readonly RevisaoPadraoController _controller;
+    private const string UserId = "44c403a7-754a-4763-9f72-a02c68fc44e0";
+    private const int ConcessionariaId = 1;
 
     public RevisaoPadraoControllerTests()
     {
         _revisaoServiceMock = new Mock<RevisaoPadraoService>();
-        _controller = new RevisaoPadraoController(_revisaoServiceMock.Object);
+        _concessionariaServiceMock = new Mock<ConcessionariaService>();
+        _controller = new RevisaoPadraoController(_revisaoServiceMock.Object, _concessionariaServiceMock.Object);
+
+        _concessionariaServiceMock
+            .Setup(s => s.GetByUserIdAsync(UserId))
+            .ReturnsAsync(new ConcessionariaResponse(
+                ConcessionariaId,
+                "Concessionária",
+                "12345678000190",
+                "11999999999",
+                "Matriz",
+                "01001000",
+                "Rua A",
+                "100",
+                "Centro",
+                "São Paulo",
+                "SP",
+                new List<LojaResponse>()));
         
         // Mock do usuário padrão para a maioria dos testes
-        var userId = "1"; // O ClaimTypes.NameIdentifier agora parece ser o ID numérico da concessionária
-        var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }, "mock"));
+        var user = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, UserId) }, "mock"));
         _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
     }
 
@@ -33,7 +52,7 @@ public class RevisaoPadraoControllerTests
     {
         // Arrange
         var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1000, 6, 1, "Ninja", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>());
-        _revisaoServiceMock.Setup(s => s.GetByIdAsync(1, 1)).ReturnsAsync(response);
+        _revisaoServiceMock.Setup(s => s.GetByIdAsync(1, ConcessionariaId)).ReturnsAsync(response);
 
         // Act
         var result = await _controller.GetById(1);
@@ -51,7 +70,7 @@ public class RevisaoPadraoControllerTests
         var request = new RevisaoPadraoRequest("Revisão 1000km", 1, 1000, 6, 1, new List<int> { 1, 2 });
         var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1000, 6, 1, "Ninja", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>());
         
-        _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, 1)).ReturnsAsync(response);
+        _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, ConcessionariaId)).ReturnsAsync(response);
 
         // Act
         var result = await _controller.Post(request);
@@ -67,7 +86,7 @@ public class RevisaoPadraoControllerTests
     {
         // Arrange
         var request = new RevisaoPadraoRequest("Revisão com erro", 99, 1000, 6, 1, new List<int> { 99 });
-        _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, 1))
+        _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, ConcessionariaId))
             .ThrowsAsync(new NotFoundException("Modelo de moto não encontrado."));
 
         // Act & Assert
@@ -80,7 +99,7 @@ public class RevisaoPadraoControllerTests
     {
         // Arrange
         var request = new RevisaoPadraoRequest("Revisão duplicada", 1, 1000, 6, 1, new List<int> { 1 });
-        _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, 1))
+        _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, ConcessionariaId))
             .ThrowsAsync(new DuplicateDataException("Ordem de revisão já existe."));
 
         // Act & Assert
@@ -89,16 +108,18 @@ public class RevisaoPadraoControllerTests
     }
 
     [Fact]
-    public async Task Post_DeveLancarNullReferenceException_QuandoSemUsuario()
+    public async Task Post_DeveRetornarUnauthorized_QuandoSemUsuario()
     {
         // Arrange
         var user = new ClaimsPrincipal(new ClaimsIdentity()); // Usuário sem claims
         _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
         var request = new RevisaoPadraoRequest("Revisão 1000km", 1, 1000, 6, 1, new List<int> { 1 });
 
-        // Act & Assert
-        // O controller agora usa o ! (null-forgiving operator), então ele lança NullReferenceException se o claim faltar.
-        await Assert.ThrowsAsync<NullReferenceException>(() => _controller.Post(request));
+        // Act
+        var result = await _controller.Post(request);
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
     }
 
     [Fact]
@@ -121,7 +142,7 @@ public class RevisaoPadraoControllerTests
             new(1, "Revisão 1000km", 1, "Ninja", 2, "Street", 1, 1000, 6, true)
         };
 
-        _revisaoServiceMock.Setup(s => s.ListarRevisoesAsync(1, null, 2)).ReturnsAsync(response);
+        _revisaoServiceMock.Setup(s => s.ListarRevisoesAsync(ConcessionariaId, null, 2)).ReturnsAsync(response);
 
         // Act
         var result = await _controller.Get(null, 2);
@@ -147,7 +168,7 @@ public class RevisaoPadraoControllerTests
             new(1, "Revisão 1000km", 1, 1000, 6, 1, "Ninja", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>())
         };
 
-        _revisaoServiceMock.Setup(s => s.CadastrarRevisoesPorLinhaAsync(request, 1)).ReturnsAsync(response);
+        _revisaoServiceMock.Setup(s => s.CadastrarRevisoesPorLinhaAsync(request, ConcessionariaId)).ReturnsAsync(response);
 
         // Act
         var result = await _controller.PostPorLinha(request);
@@ -167,7 +188,7 @@ public class RevisaoPadraoControllerTests
             new(1, "Revisão 1000km", 1, "Ninja", 2, "Street", 1, 1000, 6, false)
         };
 
-        _revisaoServiceMock.Setup(s => s.AlternarStatusPorLinhaAsync(2, 1)).ReturnsAsync(response);
+        _revisaoServiceMock.Setup(s => s.AlternarStatusPorLinhaAsync(2, ConcessionariaId)).ReturnsAsync(response);
 
         // Act
         var result = await _controller.AlternarStatusPorLinha(2);

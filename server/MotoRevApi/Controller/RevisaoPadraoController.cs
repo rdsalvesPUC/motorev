@@ -15,10 +15,12 @@ namespace MotoRevApi.Controller;
 public class RevisaoPadraoController : ControllerBase
 {
     private readonly RevisaoPadraoService _revisaoPadraoService;
+    private readonly ConcessionariaService _concessionariaService;
 
-    public RevisaoPadraoController(RevisaoPadraoService revisaoPadraoService)
+    public RevisaoPadraoController(RevisaoPadraoService revisaoPadraoService, ConcessionariaService concessionariaService)
     {
         _revisaoPadraoService = revisaoPadraoService;
+        _concessionariaService = concessionariaService;
     }
 
     /// <summary>
@@ -38,8 +40,13 @@ public class RevisaoPadraoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Get([FromQuery] int? modeloMotoId, [FromQuery] int? linhaId)
     {
-        var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        var revisoes = await _revisaoPadraoService.ListarRevisoesAsync(concessionariaId, modeloMotoId, linhaId);
+        var concessionariaId = await ObterConcessionariaIdAsync();
+        if (concessionariaId == null)
+        {
+            return Unauthorized();
+        }
+
+        var revisoes = await _revisaoPadraoService.ListarRevisoesAsync(concessionariaId.Value, modeloMotoId, linhaId);
         return Ok(revisoes);
     }
 
@@ -58,8 +65,13 @@ public class RevisaoPadraoController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(int id)
     {
-        var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        var revisao = await _revisaoPadraoService.GetByIdAsync(id, concessionariaId);
+        var concessionariaId = await ObterConcessionariaIdAsync();
+        if (concessionariaId == null)
+        {
+            return Unauthorized();
+        }
+
+        var revisao = await _revisaoPadraoService.GetByIdAsync(id, concessionariaId.Value);
         return Ok(revisao);
     }
 
@@ -82,8 +94,13 @@ public class RevisaoPadraoController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Post([FromBody] RevisaoPadraoRequest request)
     {
-        var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        var response = await _revisaoPadraoService.CadastrarRevisaoAsync(request, concessionariaId);
+        var concessionariaId = await ObterConcessionariaIdAsync();
+        if (concessionariaId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _revisaoPadraoService.CadastrarRevisaoAsync(request, concessionariaId.Value);
         return CreatedAtAction(nameof(GetById), new { id = response.Id }, response); // Atualizado para apontar para o GetById
     }
 
@@ -106,8 +123,13 @@ public class RevisaoPadraoController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> PostPorLinha([FromBody] RevisaoPadraoLinhaRequest request)
     {
-        var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        var response = await _revisaoPadraoService.CadastrarRevisoesPorLinhaAsync(request, concessionariaId);
+        var concessionariaId = await ObterConcessionariaIdAsync();
+        if (concessionariaId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _revisaoPadraoService.CadastrarRevisoesPorLinhaAsync(request, concessionariaId.Value);
         return CreatedAtAction(nameof(Get), new { linhaId = request.LinhaId }, response);
     }
 
@@ -126,8 +148,25 @@ public class RevisaoPadraoController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> AlternarStatusPorLinha(int linhaId)
     {
-        var concessionariaId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-        var response = await _revisaoPadraoService.AlternarStatusPorLinhaAsync(linhaId, concessionariaId);
+        var concessionariaId = await ObterConcessionariaIdAsync();
+        if (concessionariaId == null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await _revisaoPadraoService.AlternarStatusPorLinhaAsync(linhaId, concessionariaId.Value);
         return Ok(response);
+    }
+
+    private async Task<int?> ObterConcessionariaIdAsync()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId == null)
+        {
+            return null;
+        }
+
+        var concessionaria = await _concessionariaService.GetByUserIdAsync(userId);
+        return concessionaria.Id;
     }
 }
