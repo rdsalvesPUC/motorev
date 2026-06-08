@@ -232,6 +232,17 @@ export default function Cadastro() {
         </Form.Item>
 
         <Form.Item
+          label={t('cadastro.email.label')}
+          name="email"
+          rules={[
+            { required: true, message: t('cadastro.email.required') },
+            { type: 'email', message: t('cadastro.email.invalid') }
+          ]}
+        >
+          <Input prefix={<MailOutlined />} placeholder={t('cadastro.concessionaria.email.placeholder')} />
+        </Form.Item>
+
+        <Form.Item
           label={t('cadastro.concessionaria.telefone.label')}
           name="tel"
           normalize={formatPhone}
@@ -241,19 +252,6 @@ export default function Cadastro() {
           ]}
         >
           <Input prefix={<PhoneOutlined />} placeholder={t('cadastro.concessionaria.telefone.placeholder')} />
-        </Form.Item>
-
-
-
-        <Form.Item
-          label={t('cadastro.email.label')}
-          name="email"
-          rules={[
-            { required: true, message: t('cadastro.email.required') },
-            { type: 'email', message: t('cadastro.email.invalid') }
-          ]}
-        >
-          <Input prefix={<MailOutlined />} placeholder={t('cadastro.concessionaria.email.placeholder')} />
         </Form.Item>
 
         <Form.Item

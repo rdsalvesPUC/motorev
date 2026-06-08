@@ -38,6 +38,7 @@ import { viaCepService } from '@/app/services/viaCepService';
 import { tokenManager } from '@/app/services/tokenManager';
 import { Concessionaria } from '@/app/models/Concessionaria';
 import { ConcessionariaPerfilRequest } from '@/app/models/ConcessionariaPerfilRequest';
+import { useConfiguracoes, type Idioma } from '@/app/contexts/ConfiguracoesContext';
 import { formatCEP, formatCNPJ, formatPhone } from '@/app/utils/formatters';
 import { CEP_REGEX, CNPJ_REGEX, PHONE_REGEX, UF_REGEX, validateCNPJ } from '@/app/utils/validators';
 
@@ -119,8 +120,7 @@ export default function PerfilConcessionaria() {
   const [savingDados, setSavingDados] = useState(false);
   const [savingSenha, setSavingSenha] = useState(false);
   const [senhaModalOpen, setSenhaModalOpen] = useState(false);
-  const [temaEscuro, setTemaEscuro] = useState(false);
-  const [idioma, setIdioma] = useState('pt-BR');
+  const { configuracoes, setIdioma, setTema } = useConfiguracoes();
 
   const [formDados] = Form.useForm<ConcessionariaPerfilRequest>();
   const [formSenha] = Form.useForm();
@@ -243,6 +243,14 @@ export default function PerfilConcessionaria() {
     } finally {
       setSavingSenha(false);
     }
+  };
+
+  const handleIdiomaChange = (nextIdioma: Idioma) => {
+    setIdioma(nextIdioma);
+  };
+
+  const handleTemaChange = (checked: boolean) => {
+    setTema(checked ? 'dark' : 'light');
   };
 
   if (loading) {
@@ -429,7 +437,10 @@ export default function PerfilConcessionaria() {
                 </Flex>
               }
             >
-              <Radio.Group value={idioma} onChange={(event) => setIdioma(event.target.value)}>
+              <Radio.Group
+                value={configuracoes.idioma}
+                onChange={(event) => handleIdiomaChange(event.target.value as Idioma)}
+              >
                 <Space direction="vertical">
                   <Radio value="pt-BR">Portugues (Brasil)</Radio>
                   <Radio value="en-US">English (United States)</Radio>
@@ -447,12 +458,12 @@ export default function PerfilConcessionaria() {
             >
               <Flex align="center" gap={12}>
                 <Text>Claro</Text>
-                <Switch checked={temaEscuro} onChange={setTemaEscuro} />
+                <Switch checked={configuracoes.tema === 'dark'} onChange={handleTemaChange} />
                 <Text>Escuro</Text>
               </Flex>
             </Descriptions.Item>
           </Descriptions>
-          <Text type="secondary">Preferencias mantidas apenas no Front por enquanto.</Text>
+          <Text type="secondary">Preferencias salvas automaticamente no navegador.</Text>
         </Flex>
       </Card>
 
