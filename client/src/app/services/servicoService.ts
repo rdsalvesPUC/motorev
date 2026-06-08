@@ -17,6 +17,20 @@ export const servicoService = {
     return handleResponse(response, t('error.fetchServices'));
   },
 
+  getCatalogo: async (categoria?: string, ativo?: boolean): Promise<Servico[]> => {
+    const url = new URL(`${SERVICE_URL}/catalogo`);
+    if (categoria) {
+      url.searchParams.append('categoria', categoria);
+    }
+    if (ativo !== undefined) {
+      url.searchParams.append('ativo', String(ativo));
+    }
+
+    const response = await apiFetch(url.toString());
+
+    return handleResponse(response, t('error.fetchServices'));
+  },
+
   getById: async (id: number): Promise<Servico> => {
     const response = await apiFetch(`${SERVICE_URL}/${id}`);
     
@@ -39,10 +53,10 @@ export const servicoService = {
     return handleResponse(response, t('error.updateService'));
   },
 
-  delete: async (id: number): Promise<void> => {
-    const response = await apiFetch(`${SERVICE_URL}/${id}/inativar`, {
+  alternarStatus: async (id: number): Promise<Servico> => {
+    const response = await apiFetch(`${SERVICE_URL}/${id}/alternar-status`, {
       method: 'PATCH',
     });
-    return handleResponse(response, t('error.deleteService'));
+    return handleResponse(response, t('serviceCatalog.status.error'));
   },
 };

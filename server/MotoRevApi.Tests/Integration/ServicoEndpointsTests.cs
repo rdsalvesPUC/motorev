@@ -169,6 +169,66 @@ public class ServicoEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task GetCatalogo_DeveRetornarServicosAtivosEInativos_QuandoUsuarioForConcessionaria()
+    {
+        // Arrange
+        SeedServicos(
+            new Servico { Codigo = "S-CAT-01", Nome = "Ativo", Descricao = "D", Categoria = CategoriaServico.Verificacao, TempoEstimado = 120, Custo = 150m, Ativo = true },
+            new Servico { Codigo = "S-CAT-02", Nome = "Inativo", Descricao = "D", Categoria = CategoriaServico.Troca, TempoEstimado = 30, Custo = 40m, Ativo = false }
+        );
+
+        var client = CreateClient(Roles.Concessionaria);
+
+        // Act
+        var response = await client.GetAsync("/api/Servico/catalogo");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var servicos = await response.Content.ReadFromJsonAsync<List<ServicoResponse>>(_jsonOptions);
+        Assert.NotNull(servicos);
+        Assert.Equal(2, servicos.Count);
+        Assert.Contains(servicos, s => s.Codigo == "S-CAT-01" && s.Ativo);
+        Assert.Contains(servicos, s => s.Codigo == "S-CAT-02" && !s.Ativo);
+    }
+
+    [Fact]
+    public async Task GetCatalogo_DeveRetornarForbidden_QuandoUsuarioForCliente()
+    {
+        // Arrange
+        var client = CreateClient(Roles.Cliente);
+
+        // Act
+        var response = await client.GetAsync("/api/Servico/catalogo");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetCatalogo_DeveFiltrarPorCategoriaEStatus()
+    {
+        // Arrange
+        SeedServicos(
+            new Servico { Codigo = "S-CAT-03", Nome = "Ajuste Ativo", Descricao = "D", Categoria = CategoriaServico.Ajuste, TempoEstimado = 20, Custo = 30m, Ativo = true },
+            new Servico { Codigo = "S-CAT-04", Nome = "Ajuste Inativo", Descricao = "D", Categoria = CategoriaServico.Ajuste, TempoEstimado = 20, Custo = 30m, Ativo = false },
+            new Servico { Codigo = "S-CAT-05", Nome = "Troca Inativa", Descricao = "D", Categoria = CategoriaServico.Troca, TempoEstimado = 20, Custo = 30m, Ativo = false }
+        );
+
+        var client = CreateClient(Roles.Concessionaria);
+
+        // Act
+        var response = await client.GetAsync($"/api/Servico/catalogo?categoria={CategoriaServico.Ajuste}&ativo=false");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var servicos = await response.Content.ReadFromJsonAsync<List<ServicoResponse>>(_jsonOptions);
+        Assert.NotNull(servicos);
+        var singleServico = Assert.Single(servicos);
+        Assert.Equal("S-CAT-04", singleServico.Codigo);
+        Assert.False(singleServico.Ativo);
+    }
+
+    [Fact]
     public async Task GetById_DeveRetornarServico_QuandoExistir()
     {
         // Arrange
@@ -276,5 +336,62 @@ public class ServicoEndpointsTests : IDisposable
         var servicoDb = context.Servicos.Find(id);
         Assert.NotNull(servicoDb);
         Assert.False(servicoDb.Ativo);
+    }
+
+    [Fact]
+    public async Task AlternarStatus_DeveInativarServico_QuandoUsuarioForConcessionaria()
+    {
+        // Arrange
+        var id = SeedServicos(new Servico
+        {
+            Codigo = "SERV-TOGGLE",
+            Nome = "Para Alternar",
+            Descricao = "D",
+            Categoria = CategoriaServico.Verificacao,
+            TempoEstimado = 30,
+            Custo = 100m,
+            Ativo = true
+        }).Single();
+
+        var client = CreateClient(Roles.Concessionaria);
+
+        // Act
+        var response = await client.PatchAsync($"/api/Servico/{id}/alternar-status", null);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var servico = await response.Content.ReadFromJsonAsync<ServicoResponse>(_jsonOptions);
+        Assert.NotNull(servico);
+        Assert.False(servico.Ativo);
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var servicoDb = context.Servicos.Find(id);
+        Assert.NotNull(servicoDb);
+        Assert.False(servicoDb.Ativo);
+    }
+
+    [Fact]
+    public async Task AlternarStatus_DeveRetornarForbidden_QuandoUsuarioForCliente()
+    {
+        // Arrange
+        var id = SeedServicos(new Servico
+        {
+            Codigo = "SERV-TOGGLE-FORBIDDEN",
+            Nome = "Sem Permissao",
+            Descricao = "D",
+            Categoria = CategoriaServico.Verificacao,
+            TempoEstimado = 30,
+            Custo = 100m,
+            Ativo = true
+        }).Single();
+
+        var client = CreateClient(Roles.Cliente);
+
+        // Act
+        var response = await client.PatchAsync($"/api/Servico/{id}/alternar-status", null);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }

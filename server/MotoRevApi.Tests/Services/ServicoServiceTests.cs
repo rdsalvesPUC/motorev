@@ -223,6 +223,49 @@ public class ServicoServiceTests
         Assert.Contains(responseList, s => s.Id == servicoAtivo1.Id);
         Assert.Contains(responseList, s => s.Id == servicoAtivo2.Id);
     }
+
+    [Fact]
+    public async Task GetCatalogoAsync_DeveRetornarServicosAtivosEInativos()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+
+        var servicoAtivo = await service.CreateAsync(new ServicoRequest("COD_CAT_A", "Ativo", "Desc", CategoriaServico.Ajuste, 10, 20));
+        var servicoInativo = await service.CreateAsync(new ServicoRequest("COD_CAT_I", "Inativo", "Desc", CategoriaServico.Troca, 45, 200));
+        await service.InactivateAsync(servicoInativo.Id);
+
+        // Act
+        var response = (await service.GetCatalogoAsync()).ToList();
+
+        // Assert
+        Assert.Equal(2, response.Count);
+        Assert.Contains(response, s => s.Id == servicoAtivo.Id && s.Ativo);
+        Assert.Contains(response, s => s.Id == servicoInativo.Id && !s.Ativo);
+    }
+
+    [Fact]
+    public async Task GetCatalogoAsync_DeveFiltrarPorCategoriaEStatus()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+
+        await service.CreateAsync(new ServicoRequest("COD_CAT_1", "Ajuste Ativo", "Desc", CategoriaServico.Ajuste, 10, 20));
+        var ajusteInativo = await service.CreateAsync(new ServicoRequest("COD_CAT_2", "Ajuste Inativo", "Desc", CategoriaServico.Ajuste, 15, 30));
+        var trocaInativa = await service.CreateAsync(new ServicoRequest("COD_CAT_3", "Troca Inativa", "Desc", CategoriaServico.Troca, 45, 200));
+        await service.InactivateAsync(ajusteInativo.Id);
+        await service.InactivateAsync(trocaInativa.Id);
+
+        // Act
+        var response = (await service.GetCatalogoAsync(CategoriaServico.Ajuste, false)).ToList();
+
+        // Assert
+        var singleServico = Assert.Single(response);
+        Assert.Equal(ajusteInativo.Id, singleServico.Id);
+        Assert.False(singleServico.Ativo);
+        Assert.Equal(CategoriaServico.Ajuste, singleServico.Categoria);
+    }
     
     [Fact]
     public async Task GetByIdAsync_DeveRetornarServicoComSucesso()
@@ -465,6 +508,91 @@ public class ServicoServiceTests
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(
             () => service.InactivateAsync(999));
+
+        Assert.Contains("não encontrado", exception.Message);
+    }
+
+    [Fact]
+    public async Task AlternarStatusAsync_DeveInativarServicoAtivo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        var servicoCriado = await service.CreateAsync(new ServicoRequest("COD_TOGGLE_1", "Toggle 1", "Desc", CategoriaServico.Troca, 30, 100));
+
+        // Act
+        var response = await service.AlternarStatusAsync(servicoCriado.Id);
+
+        // Assert
+        Assert.False(response.Ativo);
+        var servicoNoBanco = await context.Servicos.FindAsync(servicoCriado.Id);
+        Assert.NotNull(servicoNoBanco);
+        Assert.False(servicoNoBanco.Ativo);
+    }
+
+    [Fact]
+    public async Task AlternarStatusAsync_DeveAtivarServicoInativo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+        var servicoCriado = await service.CreateAsync(new ServicoRequest("COD_TOGGLE_2", "Toggle 2", "Desc", CategoriaServico.Troca, 30, 100));
+        await service.InactivateAsync(servicoCriado.Id);
+
+        // Act
+        var response = await service.AlternarStatusAsync(servicoCriado.Id);
+
+        // Assert
+        Assert.True(response.Ativo);
+        var servicoNoBanco = await context.Servicos.FindAsync(servicoCriado.Id);
+        Assert.NotNull(servicoNoBanco);
+        Assert.True(servicoNoBanco.Ativo);
+    }
+
+    [Fact]
+    public async Task AlternarStatusAsync_DeveLancarExcecao_QuandoAtivarServicoComDuplicidadeAtiva()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Servicos.AddRange(
+            new MotoRevApi.Model.Servico
+            {
+                Codigo = "COD_DUP_TOGGLE",
+                Nome = "Servico Ativo",
+                Descricao = "Desc",
+                Categoria = CategoriaServico.Troca,
+                TempoEstimado = 30,
+                Custo = 100,
+                Ativo = true
+            },
+            new MotoRevApi.Model.Servico
+            {
+                Codigo = "COD_DUP_TOGGLE",
+                Nome = "Servico Inativo",
+                Descricao = "Desc",
+                Categoria = CategoriaServico.Limpeza,
+                TempoEstimado = 45,
+                Custo = 150,
+                Ativo = false
+            });
+        await context.SaveChangesAsync();
+        var servicoInativo = await context.Servicos.SingleAsync(s => !s.Ativo);
+        var service = new ServicoService(context);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.AlternarStatusAsync(servicoInativo.Id));
+    }
+
+    [Fact]
+    public async Task AlternarStatusAsync_DeveRetornarErroSeServicoNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ServicoService(context);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<NotFoundException>(
+            () => service.AlternarStatusAsync(999));
 
         Assert.Contains("não encontrado", exception.Message);
     }

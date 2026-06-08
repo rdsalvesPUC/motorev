@@ -64,6 +64,30 @@ public class ServicoControllerTests
     }
 
     [Fact]
+    public async Task GetCatalogo_DeveRetornarOk_ComListaDeServicos()
+    {
+        // Arrange
+        var categoria = CategoriaServico.Troca;
+        var ativo = false;
+        var servicos = new List<ServicoResponse>
+        {
+            new ServicoResponse(1, "COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100, false)
+        };
+
+        _servicoServiceMock.Setup(s => s.GetCatalogoAsync(categoria, ativo))
+            .ReturnsAsync(servicos);
+
+        // Act
+        var result = await _controller.GetCatalogo(categoria, ativo);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedServicos = Assert.IsAssignableFrom<IEnumerable<ServicoResponse>>(okResult.Value);
+        var singleServico = Assert.Single(returnedServicos);
+        Assert.False(singleServico.Ativo);
+    }
+
+    [Fact]
     public async Task GetById_DeveRetornarOk_QuandoServicoExiste()
     {
         // Arrange
@@ -139,5 +163,23 @@ public class ServicoControllerTests
 
         // Assert
         Assert.IsType<NoContentResult>(result);
+    }
+
+    [Fact]
+    public async Task AlternarStatus_DeveRetornarOk_QuandoServicoExiste()
+    {
+        // Arrange
+        var servicoId = 1;
+        var response = new ServicoResponse(servicoId, "COD001", "Troca de Óleo", "Desc", CategoriaServico.Troca, 30, 100, false);
+        _servicoServiceMock.Setup(s => s.AlternarStatusAsync(servicoId))
+            .ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.AlternarStatus(servicoId);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        var returnedServico = Assert.IsType<ServicoResponse>(okResult.Value);
+        Assert.False(returnedServico.Ativo);
     }
 }
