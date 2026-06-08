@@ -14,8 +14,6 @@ export interface RevisaoPadraoPecaResponse {
 export interface RevisaoPadraoListResponse {
   id: number;
   nome: string;
-  modeloMotoId: number;
-  nomeModeloMoto: string;
   linhaId: number;
   nomeLinha: string;
   ordem: number;
@@ -30,8 +28,8 @@ export interface RevisaoPadraoResponse {
   ordem: number;
   quilometragem: number;
   tempoMeses: number;
-  modeloMotoId: number;
-  nomeModeloMoto: string;
+  linhaId: number;
+  nomeLinha: string;
   servicos: Servico[];
   pecas: RevisaoPadraoPecaResponse[];
 }

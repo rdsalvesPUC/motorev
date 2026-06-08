@@ -7,11 +7,5 @@ public record RegisterConcessionariaRequest(
     [Required] string Password,
     [Required] string Nome,
     [Required] string Cnpj,
-    [Required] string Telefone,
-    [Required] string Cep,
-    [Required] string Logradouro,
-    [Required] string Numero,
-    [Required] string Bairro,
-    [Required] string Cidade,
-    [Required, StringLength(2, MinimumLength = 2)] string Uf
+    [Required] string Telefone
 );

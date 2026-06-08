@@ -65,17 +65,8 @@ export default function ModeloRevisaoDetalhes() {
         const lineModelos = allModelos.filter((m) => m.linhaId === lid);
         setModelosVinculados(lineModelos.map((m) => m.nomeModelo));
 
-        const firstModeloId = lineRevisoes[0]?.modeloMotoId;
-
-        if (!firstModeloId) {
-          setRevisoesDetalhes([]);
-          return;
-        }
-
-        const modelRevisoes = lineRevisoes.filter((r) => r.modeloMotoId === firstModeloId);
-
         const details = await Promise.all(
-          modelRevisoes.map((r) => revisaoPadraoService.getById(r.id))
+          lineRevisoes.map((r) => revisaoPadraoService.getById(r.id))
         );
 
         setRevisoesDetalhes(details.sort((a, b) => a.ordem - b.ordem));

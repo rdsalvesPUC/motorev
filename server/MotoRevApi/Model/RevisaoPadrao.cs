@@ -1,4 +1,4 @@
-﻿namespace MotoRevApi.Model;
+namespace MotoRevApi.Model;
 
 public class RevisaoPadrao
 {
@@ -8,8 +8,8 @@ public class RevisaoPadrao
     public int Quilometragem { get; set; }
     public int TempoMeses { get; set; }
     
-    public int ModeloMotoId { get; set; }
-    public virtual ModeloMoto ModeloMoto { get; set; } = null!;
+    public int LinhaId { get; set; }
+    public virtual Linha Linha { get; set; } = null!;
     
     public int ConcessionariaId { get; set; }
     public virtual Concessionaria Concessionaria { get; set; } = null!;

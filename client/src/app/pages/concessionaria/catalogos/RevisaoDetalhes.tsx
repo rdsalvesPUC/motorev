@@ -17,8 +17,6 @@ import {
   ArrowLeftOutlined,
 } from '@ant-design/icons';
 import { revisaoPadraoService } from '@/app/services/revisaoPadraoService';
-import { modeloMotoService } from '@/app/services/modeloMotoService';
-import { linhaService } from '@/app/services/linhaService';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { RevisaoPadraoResponse } from '@/app/models/RevisaoPadrao';
 
@@ -52,12 +50,8 @@ export default function RevisaoDetalhes() {
         setLoading(true);
         const revData = await revisaoPadraoService.getById(Number(id));
         setRevisao(revData);
-
-        const modelData = await modeloMotoService.getById(revData.modeloMotoId);
-        setLinhaId(modelData.linhaId);
-
-        const lineData = await linhaService.getById(modelData.linhaId);
-        setNomeLinha(lineData.nome);
+        setLinhaId(revData.linhaId);
+        setNomeLinha(revData.nomeLinha);
       } catch (error) {
         handleApiError(error, 'Erro ao carregar detalhes da revisão padrão.');
       } finally {

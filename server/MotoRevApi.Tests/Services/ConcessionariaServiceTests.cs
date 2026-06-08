@@ -39,13 +39,7 @@ public class ConcessionariaServiceTests
             password,
             nome,
             cnpj,
-            "(11) 99999-9999",
-            "01001-000",
-            "Rua Teste",
-            "100",
-            "Centro",
-            "Sao Paulo",
-            "SP"
+            "(11) 99999-9999"
         );
     }
 
@@ -62,12 +56,6 @@ public class ConcessionariaServiceTests
             Cnpj = cnpj,
             Telefone = "(11) 99999-9999",
             Tipo = "Matriz",
-            Cep = "01001-000",
-            Logradouro = "Rua Teste",
-            Numero = "100",
-            Bairro = "Centro",
-            Cidade = "Sao Paulo",
-            Uf = "SP",
             UsuarioId = usuarioId
         };
     }
@@ -96,12 +84,7 @@ public class ConcessionariaServiceTests
         Assert.Equal("Concessionaria Top", concessionariaNoDb.Nome);
         Assert.Equal("Matriz", concessionariaNoDb.Tipo);
         var lojaMatrizNoDb = await context.Lojas.SingleOrDefaultAsync();
-        Assert.NotNull(lojaMatrizNoDb);
-        Assert.Equal("Concessionaria Top", lojaMatrizNoDb.Nome);
-        Assert.Equal("Matriz", lojaMatrizNoDb.Tipo);
-        Assert.Equal(concessionariaNoDb.Id, lojaMatrizNoDb.ConcessionariaId);
-        Assert.Equal(concessionariaNoDb.Cnpj, lojaMatrizNoDb.Cnpj);
-        Assert.Equal(concessionariaNoDb.Telefone, lojaMatrizNoDb.Telefone);
+        Assert.Null(lojaMatrizNoDb);
     }
 
     [Fact]
@@ -407,6 +390,21 @@ public class ConcessionariaServiceTests
         // Arrange
         using var context = CreateContext();
         context.Concessionarias.Add(CreateConcessionaria(cnpj: "11.222.333/0001-44"));
+        context.Lojas.Add(new Loja
+        {
+            Id = 99,
+            Nome = "Matriz",
+            Tipo = "Matriz",
+            Cnpj = "11.222.333/0001-44",
+            Telefone = "(11) 99999-9999",
+            Cep = "01001-000",
+            Logradouro = "Rua Teste",
+            Numero = "100",
+            Bairro = "Centro",
+            Cidade = "Sao Paulo",
+            Uf = "SP",
+            ConcessionariaId = 1
+        });
         await context.SaveChangesAsync();
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);

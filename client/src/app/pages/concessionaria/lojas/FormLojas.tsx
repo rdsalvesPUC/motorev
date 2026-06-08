@@ -11,7 +11,7 @@ import { formatCEP, formatCNPJ, formatPhone } from '@/app/utils/formatters';
 import { CEP_REGEX, CNPJ_REGEX, PHONE_REGEX, UF_REGEX, validateCNPJ } from '@/app/utils/validators';
 import { PATH_SEGMENTS } from '@/app/paths';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 interface LojasCreateProps {
   onBack: () => void;
@@ -25,13 +25,20 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
   const [loading, setLoading] = useState(false);
   const [buscandoCep, setBuscandoCep] = useState(false);
   const [enderecoBloqueado, setEnderecoBloqueado] = useState(false);
+  const [hasMatriz, setHasMatriz] = useState(true);
+  const [lojaTipo, setLojaTipo] = useState('Filial');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        const minhasLojas = await concessionariaService.getMinhasLojas();
+        const existsMatriz = minhasLojas.some(l => l.tipo === 'Matriz');
+        setHasMatriz(existsMatriz);
+
         if (isEditing && lojaId) {
           const loja = await concessionariaService.getMinhaLojaById(lojaId);
+          setLojaTipo(loja.tipo);
           form.setFieldsValue({
             nome: loja.nome,
             cnpj: loja.cnpj,
@@ -151,7 +158,15 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
         <Card>
           <Form form={form} layout="vertical" onFinish={handleSubmit}>
             <Form.Item label="Tipo">
-              <Tag color="blue">Filial</Tag>
+              {isEditing ? (
+                <Tag color={lojaTipo === 'Matriz' ? 'gold' : 'blue'}>
+                  {lojaTipo === 'Matriz' ? 'Matriz' : 'Filial'}
+                </Tag>
+              ) : !hasMatriz ? (
+                <Tag color="gold">Matriz</Tag>
+              ) : (
+                <Tag color="blue">Filial</Tag>
+              )}
             </Form.Item>
 
             <Form.Item

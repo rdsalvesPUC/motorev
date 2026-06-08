@@ -60,10 +60,27 @@ public class AuthEndpointsTests : IDisposable
         }
         else if (role == Roles.Concessionaria)
         {
-            context.Concessionarias.Add(new Concessionaria
+            var concessionaria = new Concessionaria
             {
                 UsuarioId = user.Id,
-                Nome = nome
+                Nome = nome,
+                Cnpj = "12345678000199",
+                Telefone = "1234567890"
+            };
+            context.Concessionarias.Add(concessionaria);
+            concessionaria.Lojas.Add(new Loja
+            {
+                Nome = nome,
+                Tipo = "Matriz",
+                Cnpj = "12345678000199",
+                Telefone = "1234567890",
+                Cep = "12345678",
+                Logradouro = "Rua Teste",
+                Numero = "123",
+                Bairro = "Bairro Teste",
+                Cidade = "Cidade Teste",
+                Uf = "SP",
+                Concessionaria = concessionaria
             });
         }
 

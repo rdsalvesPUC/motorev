@@ -30,13 +30,7 @@ public class ConcessionariaControllerTests
             "Pass123!",
             "Conc Test",
             "12.345.678/0001-90",
-            "(11) 99999-9999",
-            "01001-000",
-            "Rua Teste",
-            "100",
-            "Centro",
-            "Sao Paulo",
-            "SP"
+            "(11) 99999-9999"
         );
     }
 

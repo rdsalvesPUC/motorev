@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useParams } from 'react-router';
 import {
   Alert,
   Button,
@@ -86,6 +87,9 @@ const createRevisoes = (quantity: number): RevisaoFormItem[] =>
   }));
 
 export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelosRevisaoCreateProps) {
+  const { linhaId: paramLinhaId } = useParams<{ linhaId?: string }>();
+  const isEditMode = !!paramLinhaId;
+
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -122,7 +126,45 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
         setServicos(servicosData);
         setPecas(pecasData);
         setRevisoesExistentes(revisoesExistentesData);
-        form.setFieldsValue({ quantidadeRevisoes: 4 });
+
+        if (isEditMode && paramLinhaId) {
+          const lid = Number(paramLinhaId);
+          const revisoesDaLinha = revisoesExistentesData.filter((r) => r.linhaId === lid);
+          
+          if (revisoesDaLinha.length > 0) {
+            const detailedRevisoes = await Promise.all(
+              revisoesDaLinha.map((r) => revisaoPadraoService.getById(r.id))
+            );
+
+            detailedRevisoes.sort((a, b) => a.ordem - b.ordem);
+
+            const mappedRevisoes: RevisaoFormItem[] = detailedRevisoes.map((rev) => ({
+              key: rev.ordem.toString(),
+              ordem: rev.ordem,
+              nome: rev.nome,
+              quilometragem: rev.quilometragem,
+              tempoMeses: rev.tempoMeses,
+              servicosIds: rev.servicos?.map((s) => s.id) || [],
+              pecas: rev.pecas?.map((p) => ({ pecaId: p.id, quantidade: p.quantidade })) || [],
+            }));
+
+            const targetLinha = linhasData.find((l) => l.id === lid);
+            const modelName = targetLinha ? `Plano Padrão — ${targetLinha.nome}` : 'Plano de Revisão';
+
+            form.setFieldsValue({
+              nome: modelName,
+              linhaId: lid,
+              quantidadeRevisoes: mappedRevisoes.length,
+            });
+
+            setLinhaId(lid);
+            setRevisoes(mappedRevisoes);
+          } else {
+            form.setFieldsValue({ quantidadeRevisoes: 4 });
+          }
+        } else {
+          form.setFieldsValue({ quantidadeRevisoes: 4 });
+        }
       } catch (error) {
         handleApiError(error, 'Erro ao carregar dados para o cadastro de revisões.');
       } finally {
@@ -131,7 +173,7 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
     };
 
     fetchDependencies();
-  }, [form]);
+  }, [form, paramLinhaId, isEditMode]);
 
   const modelosAtivosDaLinha = useMemo(
     () => modelos.filter((modelo) => modelo.linhaId == linhaId && modelo.ativo),
@@ -141,7 +183,7 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
 
   const linhaJaTemAtivo = useMemo(
     () => revisoesExistentes.some((r) => r.linhaId == linhaId && r.ativo),
-    [revisoesExistentes, Self => linhaId], // eslint-disable-line react-hooks/exhaustive-deps
+    [revisoesExistentes, linhaId],
   );
 
   // Sync state if form changes lineId
@@ -300,7 +342,7 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
   };
 
   const handleSave = async (status: 'ativo' | 'rascunho') => {
-    if (status === 'ativo' && linhaJaTemAtivo) {
+    if (status === 'ativo' && linhaJaTemAtivo && !isEditMode) {
       Modal.error({
         title: 'Não é possível publicar',
         content:
@@ -336,8 +378,13 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
         };
 
         setSaving(true);
-        await revisaoPadraoService.criarPorLinha(payload);
-        message.success('Modelo de revisão cadastrado com sucesso.');
+        if (isEditMode && paramLinhaId) {
+          await revisaoPadraoService.atualizarPorLinha(Number(paramLinhaId), payload);
+          message.success('Modelo de revisão atualizado com sucesso.');
+        } else {
+          await revisaoPadraoService.criarPorLinha(payload);
+          message.success('Modelo de revisão cadastrado com sucesso.');
+        }
         onBack();
       } catch (error) {
         handleApiError(error);
@@ -345,6 +392,7 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
         setSaving(false);
       }
     };
+
 
     if (status === 'ativo') {
       const values = form.getFieldsValue();
@@ -388,6 +436,7 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
           <Select
             placeholder="Selecione uma linha"
             style={{ width: '100%' }}
+            disabled={isEditMode}
             onChange={(val: number) => {
               setLinhaId(val);
               const qty = form.getFieldValue('quantidadeRevisoes');
@@ -399,7 +448,7 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
 
         {linhaId && (
           <Form.Item>
-            {linhaJaTemAtivo ? (
+            {linhaJaTemAtivo && !isEditMode ? (
               <Alert
                 type="warning"
                 showIcon
@@ -814,7 +863,7 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
 
     return (
       <Flex vertical gap="large">
-        {linhaJaTemAtivo && (
+        {linhaJaTemAtivo && !isEditMode && (
           <Alert
             type="warning"
             showIcon
@@ -903,13 +952,13 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
                   ),
                 },
                 { title: 'Modelos de Revisão' },
-                { title: 'Novo Modelo de Revisão' },
+                { title: isEditMode ? 'Editar Modelo de Revisão' : 'Novo Modelo de Revisão' },
               ]}
             />
             <Flex gap="middle" align="center">
               <Button icon={<ArrowLeftOutlined />} onClick={onBack} />
               <Title level={2} style={{ margin: 0 }}>
-                Novo Modelo de Revisão
+                {isEditMode ? 'Editar Modelo de Revisão' : 'Novo Modelo de Revisão'}
               </Title>
             </Flex>
           </Flex>
@@ -938,10 +987,10 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
                     <Button onClick={() => handleSave('rascunho')}>Salvar como Rascunho</Button>
                     <Button
                       type="primary"
-                      disabled={linhaJaTemAtivo}
+                      disabled={linhaJaTemAtivo && !isEditMode}
                       onClick={() => handleSave('ativo')}
                     >
-                      Publicar Modelo de Revisão
+                      {isEditMode ? 'Salvar Modelo de Revisão' : 'Publicar Modelo de Revisão'}
                     </Button>
                   </>
                 )}

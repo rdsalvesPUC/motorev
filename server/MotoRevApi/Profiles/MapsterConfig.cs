@@ -15,14 +15,6 @@ public static class MapsterConfig
         {
             if (_isRegistered) return;
             _isRegistered = true;
-
-            TypeAdapterConfig<Moto, MotoResponse>.NewConfig()
-                .Map(dest => dest.NomeModelo, src => src.ModeloMoto.NomeModelo)
-                .Map(dest => dest.Marca, src => src.ModeloMoto.Marca)
-                .Map(dest => dest.NomeConcessionaria, src => src.Concessionaria != null ? src.Concessionaria.Nome : null)
-                .Map(dest => dest.Linha, src => src.ModeloMoto.Linha != null ? src.ModeloMoto.Linha.Nome : string.Empty)
-                .Map(dest => dest.Cilindrada, src => src.ModeloMoto.Cilindrada ?? string.Empty)
-                .Map(dest => dest.Ano, src => src.ModeloMoto.Ano ?? 0);
           
           TypeAdapterConfig<Moto, MotoResponse>.NewConfig()
             .Map(dest => dest.NomeModelo, src => src.ModeloMoto.NomeModelo)
@@ -34,7 +26,7 @@ public static class MapsterConfig
 
         TypeAdapterConfig<RevisaoPadrao, RevisaoPadraoResponse>
             .NewConfig()
-            .Map(dest => dest.NomeModeloMoto, src => src.ModeloMoto != null ? src.ModeloMoto.NomeModelo : string.Empty)
+            .Map(dest => dest.NomeLinha, src => src.Linha != null ? src.Linha.Nome : string.Empty)
             .Map(dest => dest.Servicos, src => src.Servicos.Select(s => s.Servico))
             .Map(dest => dest.Pecas, src => src.Pecas.Select(p => new RevisaoPadraoPecaResponse(
                 p.Peca.Id,

@@ -21,18 +21,22 @@ import {
   SearchOutlined,
   EyeOutlined,
   PlusOutlined,
+  EditOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { revisaoPadraoService } from '@/app/services/revisaoPadraoService';
 import { linhaService } from '@/app/services/linhaService';
+import { modeloMotoService } from '@/app/services/modeloMotoService';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { Linha } from '@/app/models/Linha';
+import { ModeloMoto } from '@/app/models/ModeloMoto';
 import { RevisaoPadraoListResponse } from '@/app/models/RevisaoPadrao';
 
 const { Title } = Typography;
 
 interface CatalogoModelosRevisaoProps {
   onNavigateToForm?: () => void;
+  onNavigateToEdit?: (linhaId: number) => void;
 }
 
 interface RevisaoLinhaData {
@@ -47,7 +51,7 @@ interface RevisaoLinhaData {
   revisoes: RevisaoPadraoListResponse[];
 }
 
-const groupByLinha = (revisoes: RevisaoPadraoListResponse[]): RevisaoLinhaData[] => {
+const groupByLinha = (revisoes: RevisaoPadraoListResponse[], allModelos: ModeloMoto[]): RevisaoLinhaData[] => {
   const map = new Map<number, RevisaoPadraoListResponse[]>();
 
   revisoes.forEach((revisao) => {
@@ -57,9 +61,9 @@ const groupByLinha = (revisoes: RevisaoPadraoListResponse[]): RevisaoLinhaData[]
   });
 
   return Array.from(map.entries()).map(([linhaId, items]) => {
-    const sorted = [...items].sort((a, b) => a.ordem - b.ordem || a.nomeModeloMoto.localeCompare(b.nomeModeloMoto));
+    const sorted = [...items].sort((a, b) => a.ordem - b.ordem);
     const ordens = new Set(sorted.map((item) => item.ordem));
-    const modelos = Array.from(new Set(sorted.map((item) => item.nomeModeloMoto))).sort();
+    const modelos = allModelos.filter((m) => m.linhaId === linhaId).map((m) => m.nomeModelo).sort();
     const quilometragens = Array.from(new Set(sorted.map((item) => item.quilometragem))).sort((a, b) => a - b);
     const tempoMeses = Array.from(new Set(sorted.map((item) => item.tempoMeses))).sort((a, b) => a - b);
 
@@ -77,7 +81,7 @@ const groupByLinha = (revisoes: RevisaoPadraoListResponse[]): RevisaoLinhaData[]
   }).sort((a, b) => a.nomeLinha.localeCompare(b.nomeLinha));
 };
 
-export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoModelosRevisaoProps) {
+export default function CatalogoModelosRevisao({ onNavigateToForm, onNavigateToEdit }: CatalogoModelosRevisaoProps) {
   const navigate = useNavigate();
 
   const [data, setData] = useState<RevisaoLinhaData[]>([]);
@@ -90,12 +94,13 @@ export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoMod
   const fetchRevisoes = async () => {
     try {
       setLoading(true);
-      const [revisoes, linhasData] = await Promise.all([
+      const [revisoes, linhasData, modelosData] = await Promise.all([
         revisaoPadraoService.listar(),
         linhaService.getAll(false),
+        modeloMotoService.getAll(),
       ]);
 
-      setData(groupByLinha(revisoes));
+      setData(groupByLinha(revisoes, modelosData));
       setLinhas(linhasData);
     } catch (error) {
       handleApiError(error, 'Erro ao carregar modelos de revisão.');
@@ -125,15 +130,6 @@ export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoMod
   }, [data, linhaFilter, searchText, statusFilter]);
 
   const handleStatusToggle = async (record: RevisaoLinhaData) => {
-    if (record.ativo && record.modelosVinculados.length > 0) {
-      Modal.error({
-        title: 'Não é possível desativar',
-        content: 'Este modelo de revisão não pode ser desativado porque possui modelos de moto vinculados.',
-        okText: 'Entendido',
-      });
-      return;
-    }
-
     try {
       setLoading(true);
       await revisaoPadraoService.alternarStatusPorLinha(record.linhaId);
@@ -185,7 +181,6 @@ export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoMod
       render: (_, record) => (
         <Switch
           checked={record.ativo}
-          disabled={record.ativo && record.modelosVinculados.length > 0}
           onChange={() => handleStatusToggle(record)}
           checkedChildren="Ativo"
           unCheckedChildren="Inativo"
@@ -195,18 +190,31 @@ export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoMod
     {
       title: 'Ações',
       key: 'actions',
-      width: 120,
+      width: 180,
       align: 'center',
       render: (_, record) => (
-        <Button
-          type="link"
-          icon={<EyeOutlined />}
-          onClick={() => {
-            navigate(`/dashboard/concessionaria/catalogos-revisoes/linha/${record.linhaId}`);
-          }}
-        >
-          Detalhes
-        </Button>
+        <Space>
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            onClick={() => {
+              navigate(`/dashboard/concessionaria/catalogos-revisoes/linha/${record.linhaId}`);
+            }}
+          >
+            Detalhes
+          </Button>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => {
+              if (onNavigateToEdit) {
+                onNavigateToEdit(record.linhaId);
+              }
+            }}
+          >
+            Editar
+          </Button>
+        </Space>
       ),
     },
   ];
