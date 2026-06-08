@@ -624,5 +624,46 @@ public class RevisaoPadraoServiceTests
         Assert.Equal("Filtro", result.Pecas.First().Nome);
         Assert.Equal(3, result.Pecas.First().Quantidade);
     }
+
+    [Fact]
+    public async Task AtualizarRevisoesPorLinhaAsync_DeveAtualizarComSucesso()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var concessionaria = new Concessionaria { Id = 1, Nome = "Conc", Cnpj = "123", UsuarioId = "u1", Usuario = new Usuario { Id = "u1", UserName = "user1" }, Telefone = "123" };
+        var linha = new Linha { Id = 1, Nome = "Street" };
+        var servico = new Servico { Id = 1, Codigo = "S1", Nome = "Oleo", Descricao = "D", Categoria = CategoriaServico.Verificacao };
+        var peca = new Peca { Id = 1, Codigo = "P1", Nome = "Filtro", Preco = 50.0m, Estoque = 10, Status = StatusCadastro.Ativo };
+        var revisaoAntiga = new RevisaoPadrao { Id = 1, Nome = "Rev Antiga", Ordem = 1, LinhaId = 1, ConcessionariaId = 1 };
+
+        context.Concessionarias.Add(concessionaria);
+        context.Linhas.Add(linha);
+        context.Servicos.Add(servico);
+        context.Pecas.Add(peca);
+        context.RevisoesPadrao.Add(revisaoAntiga);
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var itemRequest = new RevisaoPadraoLinhaItemRequest("Revisão Nova", 1, 1500, 8, new List<int> { 1 }, new List<RevisaoPadraoPecaRequest> { new RevisaoPadraoPecaRequest(1, 2) });
+        var request = new RevisaoPadraoLinhaRequest("Plano Novo", 1, new List<RevisaoPadraoLinhaItemRequest> { itemRequest });
+
+        // Act
+        var result = await service.AtualizarRevisoesPorLinhaAsync(1, request, 1);
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.Single(result);
+        var updatedRev = result.First();
+        Assert.Equal("Revisão Nova", updatedRev.Nome);
+        Assert.Equal(1, updatedRev.Ordem);
+        Assert.Equal(1500, updatedRev.Quilometragem);
+        Assert.Equal(8, updatedRev.TempoMeses);
+        Assert.Single(updatedRev.Servicos);
+        Assert.Equal("Oleo", updatedRev.Servicos.First().Nome);
+        Assert.Single(updatedRev.Pecas);
+        Assert.Equal("Filtro", updatedRev.Pecas.First().Nome);
+        Assert.Equal(2, updatedRev.Pecas.First().Quantidade);
+    }
 }
+
 
