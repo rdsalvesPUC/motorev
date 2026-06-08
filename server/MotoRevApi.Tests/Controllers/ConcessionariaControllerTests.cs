@@ -39,6 +39,7 @@ public class ConcessionariaControllerTests
         return new ConcessionariaResponse(
             id,
             nome,
+            "conc@test.com",
             "12.345.678/0001-90",
             "(11) 99999-9999",
             "Matriz",
@@ -142,6 +143,7 @@ public class ConcessionariaControllerTests
         SetAuthenticatedConcessionaria(userId);
         var request = new ConcessionariaPerfilRequest(
             "Conc Atualizada",
+            "conc@test.com",
             "12.345.678/0001-90",
             "(11) 99999-9999",
             "01001-000",
@@ -169,7 +171,7 @@ public class ConcessionariaControllerTests
         // Arrange
         var user = new ClaimsPrincipal(new ClaimsIdentity());
         _controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = user } };
-        var request = new ConcessionariaPerfilRequest("Conc", "12.345.678/0001-90", "(11) 99999-9999", "01001-000", "Rua", "1", "Bairro", "Cidade", "SP");
+        var request = new ConcessionariaPerfilRequest("Conc", "conc@test.com", "12.345.678/0001-90", "(11) 99999-9999", "01001-000", "Rua", "1", "Bairro", "Cidade", "SP");
 
         // Act
         var result = await _controller.UpdateMe(request);

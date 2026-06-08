@@ -65,7 +65,7 @@ public class ConcessionariaService
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            return MapConcessionariaResponse(concessionaria);
+            return MapConcessionariaResponse(concessionaria, user.Email);
         }
         catch
         {
@@ -77,6 +77,7 @@ public class ConcessionariaService
     public virtual async Task<ConcessionariaResponse> GetByIdAsync(int id)
     {
         var concessionaria = await _context.Concessionarias
+            .Include(c => c.Usuario)
             .Include(c => c.Lojas)
             .Where(c => c.Id == id)
             .FirstOrDefaultAsync();
@@ -89,6 +90,7 @@ public class ConcessionariaService
     public virtual async Task<ConcessionariaResponse> GetByUserIdAsync(string userId)
     {
         var concessionaria = await _context.Concessionarias
+            .Include(c => c.Usuario)
             .Include(c => c.Lojas)
             .Where(c => c.UsuarioId == userId)
             .FirstOrDefaultAsync();
@@ -101,15 +103,17 @@ public class ConcessionariaService
     public virtual async Task<IEnumerable<ConcessionariaResponse>> GetAllAsync()
     {
         var concessionarias = await _context.Concessionarias
+            .Include(c => c.Usuario)
             .Include(c => c.Lojas)
             .ToListAsync();
 
-        return concessionarias.Select(MapConcessionariaResponse);
+        return concessionarias.Select(c => MapConcessionariaResponse(c));
     }
 
     public virtual async Task<ConcessionariaResponse> UpdatePerfilAsync(string userId, ConcessionariaPerfilRequest request)
     {
         var concessionaria = await _context.Concessionarias
+            .Include(c => c.Usuario)
             .Include(c => c.Lojas)
             .FirstOrDefaultAsync(c => c.UsuarioId == userId);
 
@@ -118,14 +122,10 @@ public class ConcessionariaService
             throw new NotFoundException("Concessionaria nao encontrada.");
         }
 
-        var cnpjEmUsoPorOutraMatriz = await _context.Concessionarias
-            .AnyAsync(c => c.Cnpj == request.Cnpj && c.Id != concessionaria.Id);
-        var cnpjEmUsoPorLoja = await _context.Lojas.AnyAsync(l =>
-            l.Cnpj == request.Cnpj &&
-            !(l.ConcessionariaId == concessionaria.Id && l.Tipo == "Matriz"));
-        if (cnpjEmUsoPorOutraMatriz || cnpjEmUsoPorLoja)
+        var existingUser = await _userManager.FindByEmailAsync(request.Email);
+        if (existingUser != null && existingUser.Id != concessionaria.UsuarioId)
         {
-            throw new DuplicateDataException($"O CNPJ {request.Cnpj} ja esta em uso.");
+            throw new DuplicateDataException($"O email {request.Email} ja esta em uso.");
         }
 
         var telefoneEmUsoPorLoja = await _context.Lojas.AnyAsync(l =>
@@ -136,21 +136,43 @@ public class ConcessionariaService
             throw new DuplicateDataException($"O telefone {request.Telefone} ja esta em uso.");
         }
 
-        concessionaria.Nome = request.Nome;
-        concessionaria.Cnpj = request.Cnpj;
-        concessionaria.Telefone = request.Telefone;
-        concessionaria.Tipo = "Matriz";
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            concessionaria.Nome = request.Nome;
 
-        SincronizarLojaMatriz(
-            concessionaria,
-            request.Cep,
-            request.Logradouro,
-            request.Numero,
-            request.Bairro,
-            request.Cidade,
-            request.Uf
-        );
-        await _context.SaveChangesAsync();
+            if (!string.Equals(concessionaria.Usuario.Email, request.Email, StringComparison.OrdinalIgnoreCase))
+            {
+                var emailResult = await _userManager.SetEmailAsync(concessionaria.Usuario, request.Email);
+                if (!emailResult.Succeeded) throw new RegistrationException(emailResult.Errors);
+
+                var userNameResult = await _userManager.SetUserNameAsync(concessionaria.Usuario, request.Email);
+                if (!userNameResult.Succeeded) throw new RegistrationException(userNameResult.Errors);
+
+                concessionaria.Usuario.Email = request.Email;
+                concessionaria.Usuario.UserName = request.Email;
+            }
+
+            concessionaria.Telefone = request.Telefone;
+            concessionaria.Tipo = "Matriz";
+
+            SincronizarLojaMatriz(
+                concessionaria,
+                request.Cep,
+                request.Logradouro,
+                request.Numero,
+                request.Bairro,
+                request.Cidade,
+                request.Uf
+            );
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
 
         return MapConcessionariaResponse(concessionaria);
     }
@@ -433,12 +455,13 @@ public class ConcessionariaService
         lojaMatriz.Uf = uf.ToUpperInvariant();
     }
 
-    private static ConcessionariaResponse MapConcessionariaResponse(Concessionaria concessionaria)
+    private static ConcessionariaResponse MapConcessionariaResponse(Concessionaria concessionaria, string? email = null)
     {
         var lojaMatriz = concessionaria.Lojas.FirstOrDefault(l => l.Tipo == "Matriz");
         return new ConcessionariaResponse(
             concessionaria.Id,
             concessionaria.Nome,
+            email ?? concessionaria.Usuario?.Email ?? string.Empty,
             concessionaria.Cnpj,
             concessionaria.Telefone,
             concessionaria.Tipo,

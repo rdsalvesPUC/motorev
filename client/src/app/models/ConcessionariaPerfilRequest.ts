@@ -1,5 +1,6 @@
 export interface ConcessionariaPerfilRequest {
   nome: string;
+  email: string;
   cnpj: string;
   telefone: string;
   cep: string;

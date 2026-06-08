@@ -3,6 +3,7 @@ namespace MotoRevApi.Dto.Response;
 public record ConcessionariaResponse(
     int Id,
     string Nome,
+    string Email,
     string Cnpj,
     string Telefone,
     string Tipo,

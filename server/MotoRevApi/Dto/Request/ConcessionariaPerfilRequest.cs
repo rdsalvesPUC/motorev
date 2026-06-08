@@ -4,6 +4,7 @@ namespace MotoRevApi.Dto.Request;
 
 public record ConcessionariaPerfilRequest(
     [Required] string Nome,
+    [Required, EmailAddress] string Email,
     [Required] string Cnpj,
     [Required] string Telefone,
     [Required] string Cep,

@@ -56,7 +56,13 @@ public class ConcessionariaServiceTests
             Cnpj = cnpj,
             Telefone = "(11) 99999-9999",
             Tipo = "Matriz",
-            UsuarioId = usuarioId
+            UsuarioId = usuarioId,
+            Usuario = new Usuario
+            {
+                Id = usuarioId,
+                UserName = $"{usuarioId}@test.com",
+                Email = $"{usuarioId}@test.com"
+            }
         };
     }
 
@@ -78,6 +84,7 @@ public class ConcessionariaServiceTests
         // Assert
         Assert.NotNull(result);
         Assert.Equal("Concessionaria Top", result.Nome);
+        Assert.Equal("contato@top.com", result.Email);
         Assert.Equal("Matriz", result.Tipo);
         var concessionariaNoDb = await context.Concessionarias.SingleOrDefaultAsync();
         Assert.NotNull(concessionariaNoDb);
@@ -180,6 +187,7 @@ public class ConcessionariaServiceTests
         var service = new ConcessionariaService(context, _mockUserManager.Object);
         var request = new ConcessionariaPerfilRequest(
             "Concessionaria Atualizada",
+            "nova@conc.com",
             "98.765.432/0001-10",
             "(21) 98888-7777",
             "20000-000",
@@ -189,12 +197,20 @@ public class ConcessionariaServiceTests
             "Rio de Janeiro",
             "rj"
         );
+        _mockUserManager.Setup(x => x.FindByEmailAsync("nova@conc.com")).ReturnsAsync((Usuario)null);
+        _mockUserManager
+            .Setup(x => x.SetEmailAsync(It.IsAny<Usuario>(), "nova@conc.com"))
+            .ReturnsAsync(IdentityResult.Success);
+        _mockUserManager
+            .Setup(x => x.SetUserNameAsync(It.IsAny<Usuario>(), "nova@conc.com"))
+            .ReturnsAsync(IdentityResult.Success);
 
         // Act
         var result = await service.UpdatePerfilAsync(userId, request);
 
         // Assert
         Assert.Equal("Concessionaria Atualizada", result.Nome);
+        Assert.Equal("nova@conc.com", result.Email);
         Assert.Equal("(21) 98888-7777", result.Telefone);
         Assert.Equal("RJ", result.Uf);
         Assert.Equal("Matriz", result.Tipo);
@@ -232,6 +248,7 @@ public class ConcessionariaServiceTests
         var service = new ConcessionariaService(context, _mockUserManager.Object);
         var request = new ConcessionariaPerfilRequest(
             "Concessionaria Atualizada",
+            "user-1@test.com",
             "98.765.432/0001-10",
             "(21) 98888-7777",
             "20000-000",
@@ -251,7 +268,7 @@ public class ConcessionariaServiceTests
     }
 
     [Fact]
-    public async Task UpdatePerfilAsync_DeveLancarExcecao_QuandoCnpjDeLojaJaExiste()
+    public async Task UpdatePerfilAsync_DeveIgnorarAlteracaoDeCnpj()
     {
         // Arrange
         using var context = CreateContext();
@@ -276,6 +293,7 @@ public class ConcessionariaServiceTests
         var service = new ConcessionariaService(context, _mockUserManager.Object);
         var request = new ConcessionariaPerfilRequest(
             "Concessionaria",
+            "user-1@test.com",
             "11.222.333/0001-44",
             "(11) 99999-9999",
             "01001-000",
@@ -286,8 +304,15 @@ public class ConcessionariaServiceTests
             "SP"
         );
 
-        // Act & Assert
-        await Assert.ThrowsAsync<DuplicateDataException>(() => service.UpdatePerfilAsync(userId, request));
+        // Act
+        var result = await service.UpdatePerfilAsync(userId, request);
+
+        // Assert
+        var concessionaria = await context.Concessionarias.SingleAsync(c => c.UsuarioId == userId);
+        var lojaMatriz = await context.Lojas.SingleAsync(l => l.ConcessionariaId == concessionaria.Id && l.Tipo == "Matriz");
+        Assert.Equal("98.765.432/0001-10", result.Cnpj);
+        Assert.Equal("98.765.432/0001-10", concessionaria.Cnpj);
+        Assert.Equal("98.765.432/0001-10", lojaMatriz.Cnpj);
     }
 
     [Fact]
