@@ -482,4 +482,122 @@ public class AuthServiceTests
         Assert.Null(user.RefreshToken);
         _mockUserManager.Verify(x => x.UpdateAsync(user), Times.Once);
     }
+
+    [Fact]
+    public async Task RefreshTokenAsync_DeveUsarStringVazia_QuandoUserIdNaoEstiverNasClaims()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var request = new RefreshTokenRequest("expired", "valid");
+        var principal = new ClaimsPrincipal(new ClaimsIdentity()); // Sem NameIdentifier Claim
+
+        _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(request.AccessToken)).Returns(principal);
+        _mockUserManager.Setup(x => x.FindByIdAsync("")).ReturnsAsync((Usuario)null);
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<SecurityTokenException>(() => service.RefreshTokenAsync(request));
+        _mockUserManager.Verify(x => x.FindByIdAsync(""), Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_DeveLancarSecurityTokenException_QuandoRefreshTokenNoBancoForNulo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        var user = new Usuario { Id = userId, RefreshToken = null, RefreshTokenExpiryTime = DateTime.UtcNow.AddHours(1) };
+        var request = new RefreshTokenRequest("expired", "valid");
+        var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(request.AccessToken)).Returns(principal);
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<SecurityTokenException>(() => service.RefreshTokenAsync(request));
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_DeveLancarSecurityTokenException_QuandoRefreshTokenNaoCoincidir()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        var user = new Usuario { Id = userId, RefreshToken = "stored-token", RefreshTokenExpiryTime = DateTime.UtcNow.AddHours(1) };
+        var request = new RefreshTokenRequest("expired", "different-token");
+        var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(request.AccessToken)).Returns(principal);
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<SecurityTokenException>(() => service.RefreshTokenAsync(request));
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_DeveLancarSecurityTokenException_QuandoRefreshTokenEstiverExpirado()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        var user = new Usuario { Id = userId, RefreshToken = "valid", RefreshTokenExpiryTime = DateTime.UtcNow.AddHours(-1) };
+        var request = new RefreshTokenRequest("expired", "valid");
+        var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(request.AccessToken)).Returns(principal);
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<SecurityTokenException>(() => service.RefreshTokenAsync(request));
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_DeveLancarException_QuandoPerfilNaoExisteNoBanco()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "user-1";
+        var user = new Usuario { Id = userId, RefreshToken = "valid", RefreshTokenExpiryTime = DateTime.UtcNow.AddHours(1) };
+        var request = new RefreshTokenRequest("expired", "valid");
+        var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
+        var principal = new ClaimsPrincipal(new ClaimsIdentity(claims));
+
+        _mockTokenService.Setup(x => x.GetPrincipalFromExpiredToken(request.AccessToken)).Returns(principal);
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync(user);
+        _mockUserManager.Setup(x => x.GetRolesAsync(user)).ReturnsAsync(new List<string> { "Cliente" });
+        _mockUserManager.Setup(x => x.UpdateAsync(user)).ReturnsAsync(IdentityResult.Success);
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<Exception>(() => service.RefreshTokenAsync(request));
+        Assert.Equal("Não foi possível encontrar os dados do perfil do usuário.", exception.Message);
+    }
+
+    [Fact]
+    public async Task LogoutAsync_DeveRetornarSemFazerNada_QuandoUsuarioNaoEncontrado()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var userId = "non-existent-user";
+        _mockUserManager.Setup(x => x.FindByIdAsync(userId)).ReturnsAsync((Usuario)null);
+
+        var service = new AuthService(_mockUserManager.Object, _mockSignInManager.Object, _mockTokenService.Object, context, _mockConfiguration.Object, _mockHashService.Object);
+
+        // Act
+        await service.LogoutAsync(userId);
+
+        // Assert
+        _mockUserManager.Verify(x => x.UpdateAsync(It.IsAny<Usuario>()), Times.Never);
+    }
 }
