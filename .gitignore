@@ -54,6 +54,7 @@ TestResult.xml
 nunit-*.xml
 
 .idea
+*.sln.DotSettings.user
 
 server/MotoRevApi/wwwroot
 /figma-maker-files/
