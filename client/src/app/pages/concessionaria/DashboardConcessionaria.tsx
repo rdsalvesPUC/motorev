@@ -13,7 +13,7 @@ import CatalogoPecas from "@/app/pages/concessionaria/catalogos/CatalogoPecas";
 import CatalogoPecasCreate from "@/app/pages/concessionaria/catalogos/CatalogoPecasCreate";
 import Lojas from "@/app/pages/concessionaria/lojas/Lojas";
 import FormLojas from "@/app/pages/concessionaria/lojas/FormLojas";
-import PerfilConcessionaria from "@/app/pages/concessionaria/perfil/perfil";
+import PerfilConcessionaria from "@/app/pages/concessionaria/perfil/PerfilConcessionaria";
 import CatalogoMotos from "@/app/pages/concessionaria/catalogos/CatalogoMotos";
 import FormCatalogoModeloMoto from "@/app/pages/concessionaria/catalogos/FormCatalogoModeloMoto";
 import CatalogoRevisoes from "@/app/pages/concessionaria/catalogos/CatalogoRevisoes";

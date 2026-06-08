@@ -31,6 +31,7 @@ public class RevisaoPadraoControllerTests
             .ReturnsAsync(new ConcessionariaResponse(
                 ConcessionariaId,
                 "Concessionária",
+                "concessionaria@test.com",
                 "12345678000190",
                 "11999999999",
                 "Matriz",

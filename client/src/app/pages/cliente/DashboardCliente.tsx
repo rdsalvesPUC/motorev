@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router';
 import DashboardLayout from '@/app/components/layout/DashboardLayout';
-import MinhasMotos from '@/app/pages/cliente/MinhasMotos';
-import MotoForm from '@/app/pages/cliente/MotoForm';
-import MotoDetalhes from '@/app/pages/cliente/MotoDetalhes';
-import ConcessionariasCliente from '@/app/pages/cliente/Concessionarias';
-import PerfilCliente from '@/app/components/perfil/PerfilCliente';
+import MinhasMotos from '@/app/pages/cliente/motos/MinhasMotos';
+import MotoForm from '@/app/pages/cliente/motos/MotoForm';
+import MotoDetalhes from '@/app/pages/cliente/motos/MotoDetalhes';
+import ConcessionariasCliente from '@/app/pages/cliente/concessionarias/Concessionarias';
+import PerfilCliente from '@/app/pages/cliente/perfil/PerfilCliente';
 import { Typography } from 'antd';
 import {tokenManager} from "@/app/services/tokenManager";
 import {PATH_SEGMENTS, PATHS} from "@/app/paths";

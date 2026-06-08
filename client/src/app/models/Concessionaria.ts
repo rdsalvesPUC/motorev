@@ -3,6 +3,7 @@ import { Loja } from '@/app/models/Loja';
 export interface Concessionaria {
   id: number;
   nome: string;
+  email: string;
   cnpj: string;
   telefone: string;
   tipo: string;

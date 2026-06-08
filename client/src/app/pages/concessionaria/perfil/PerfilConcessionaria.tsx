@@ -14,7 +14,6 @@ import {
   Skeleton,
   Space,
   Switch,
-  Tag,
   Typography,
   message,
 } from 'antd';
@@ -27,6 +26,7 @@ import {
   HomeOutlined,
   IdcardOutlined,
   LockOutlined,
+  MailOutlined,
   PhoneOutlined,
   SaveOutlined,
   SettingOutlined,
@@ -38,8 +38,10 @@ import { viaCepService } from '@/app/services/viaCepService';
 import { tokenManager } from '@/app/services/tokenManager';
 import { Concessionaria } from '@/app/models/Concessionaria';
 import { ConcessionariaPerfilRequest } from '@/app/models/ConcessionariaPerfilRequest';
+import { useConfiguracoes, type Idioma } from '@/app/contexts/ConfiguracoesContext';
+import { t } from '@/app/i18n';
 import { formatCEP, formatCNPJ, formatPhone } from '@/app/utils/formatters';
-import { CEP_REGEX, CNPJ_REGEX, PHONE_REGEX, UF_REGEX, validateCNPJ } from '@/app/utils/validators';
+import { CEP_REGEX, PHONE_REGEX, UF_REGEX } from '@/app/utils/validators';
 
 const { Title, Text } = Typography;
 
@@ -76,15 +78,15 @@ function SectionCard({
         onEdit && (editing ? (
           <Flex gap={8} wrap="wrap">
             <Button size="small" icon={<CloseOutlined />} onClick={onCancel} disabled={saving}>
-              Cancelar
+              {t('perfil.actions.cancel')}
             </Button>
             <Button size="small" type="primary" icon={<SaveOutlined />} onClick={onSave} loading={saving}>
-              Salvar
+              {t('perfil.actions.save')}
             </Button>
           </Flex>
         ) : (
           <Button size="small" icon={<EditOutlined />} onClick={onEdit}>
-            Editar
+            {t('perfil.actions.edit')}
           </Button>
         ))
       }
@@ -101,6 +103,7 @@ function normalizeText(value?: string | null) {
 function buildPerfilPayload(values: ConcessionariaPerfilRequest): ConcessionariaPerfilRequest {
   return {
     nome: normalizeText(values.nome),
+    email: normalizeText(values.email),
     cnpj: normalizeText(values.cnpj),
     telefone: normalizeText(values.telefone),
     cep: normalizeText(values.cep),
@@ -119,8 +122,7 @@ export default function PerfilConcessionaria() {
   const [savingDados, setSavingDados] = useState(false);
   const [savingSenha, setSavingSenha] = useState(false);
   const [senhaModalOpen, setSenhaModalOpen] = useState(false);
-  const [temaEscuro, setTemaEscuro] = useState(false);
-  const [idioma, setIdioma] = useState('pt-BR');
+  const { configuracoes, setIdioma, setTema } = useConfiguracoes();
 
   const [formDados] = Form.useForm<ConcessionariaPerfilRequest>();
   const [formSenha] = Form.useForm();
@@ -145,7 +147,7 @@ export default function PerfilConcessionaria() {
         setProfile(data);
       } catch (error: any) {
         if (mounted) {
-          message.error(error.message || 'Falha ao carregar perfil da concessionaria');
+          message.error(error.message || t('perfil.concessionaria.loading.error'));
         }
       } finally {
         if (mounted) {
@@ -163,13 +165,14 @@ export default function PerfilConcessionaria() {
 
   const updateProfile = (updatedProfile: Concessionaria) => {
     setProfile(updatedProfile);
-    tokenManager.updateUserData({ nome: updatedProfile.nome });
+    tokenManager.updateUserData({ nome: updatedProfile.nome, email: updatedProfile.email });
   };
 
   const buildCurrentPayload = (): ConcessionariaPerfilRequest | null => {
     if (!profile) return null;
     return {
       nome: profile.nome,
+      email: profile.email,
       cnpj: profile.cnpj,
       telefone: profile.telefone,
       cep: profile.cep,
@@ -185,6 +188,7 @@ export default function PerfilConcessionaria() {
     if (!profile) return;
     formDados.setFieldsValue({
       nome: profile.nome,
+      email: profile.email,
       cnpj: formatCNPJ(profile.cnpj),
       telefone: formatPhone(profile.telefone),
       cep: profile.cep,
@@ -208,16 +212,16 @@ export default function PerfilConcessionaria() {
         buildPerfilPayload({
           ...currentPayload,
           nome: values.nome,
-          cnpj: values.cnpj,
+          email: values.email,
           telefone: values.telefone,
         })
       );
       updateProfile(updatedProfile);
       setEditingDados(false);
-      message.success('Dados da concessionaria atualizados');
+      message.success(t('perfil.concessionaria.dados.updated'));
     } catch (error: any) {
       if (error?.errorFields) return;
-      message.error(error.message || 'Falha ao atualizar dados da concessionaria');
+      message.error(error.message || t('perfil.concessionaria.dados.updateError'));
     } finally {
       setSavingDados(false);
     }
@@ -236,13 +240,21 @@ export default function PerfilConcessionaria() {
       });
       setSenhaModalOpen(false);
       formSenha.resetFields();
-      message.success('Senha alterada com sucesso');
+      message.success(t('perfil.senha.updated'));
     } catch (error: any) {
       if (error?.errorFields) return;
-      message.error(error.message || 'Falha ao alterar senha');
+      message.error(error.message || t('perfil.senha.updateError'));
     } finally {
       setSavingSenha(false);
     }
+  };
+
+  const handleIdiomaChange = (nextIdioma: Idioma) => {
+    setIdioma(nextIdioma);
+  };
+
+  const handleTemaChange = (checked: boolean) => {
+    setTema(checked ? 'dark' : 'light');
   };
 
   if (loading) {
@@ -256,7 +268,7 @@ export default function PerfilConcessionaria() {
   if (!profile) {
     return (
       <Card>
-        <Text type="danger">Nao foi possivel carregar os dados da concessionaria.</Text>
+        <Text type="danger">{t('perfil.concessionaria.load.empty')}</Text>
       </Card>
     );
   }
@@ -270,7 +282,7 @@ export default function PerfilConcessionaria() {
             {
               title: (
                 <>
-                  <UserOutlined /> <span>Perfil</span>
+                  <UserOutlined /> <span>{t('perfil.breadcrumb')}</span>
                 </>
               ),
             },
@@ -283,16 +295,13 @@ export default function PerfilConcessionaria() {
             <Title level={2} style={{ margin: 0 }}>
               {profile.nome}
             </Title>
-            <Flex align="center" gap={8} wrap="wrap">
-              <Tag color="gold">{profile.tipo || 'Matriz'}</Tag>
-              <Text type="secondary">{formatCNPJ(profile.cnpj)}</Text>
-            </Flex>
+            <Text type="secondary">{formatCNPJ(profile.cnpj)}</Text>
           </Flex>
         </Flex>
       </Flex>
 
       <SectionCard
-        title="Informacoes da Concessionaria"
+        title={t('perfil.concessionaria.dados.title')}
         icon={<ShopOutlined />}
         editing={editingDados}
         saving={savingDados}
@@ -303,41 +312,40 @@ export default function PerfilConcessionaria() {
         {editingDados ? (
           <Form form={formDados} layout="vertical" style={{ maxWidth: 680 }}>
             <Form.Item
-              label="Nome da Concessionaria"
+              label={t('perfil.concessionaria.dados.nome.label')}
               name="nome"
-              rules={[{ required: true, whitespace: true, message: 'Informe o nome da concessionaria' }]}
+              rules={[{ required: true, whitespace: true, message: t('perfil.concessionaria.dados.nome.required') }]}
             >
               <Input prefix={<ShopOutlined />} />
             </Form.Item>
 
+            <Form.Item
+              label={t('perfil.dados.email.label')}
+              name="email"
+              rules={[
+                { required: true, message: t('perfil.dados.email.required') },
+                { type: 'email', message: t('perfil.dados.email.invalid') },
+              ]}
+            >
+              <Input prefix={<MailOutlined />} />
+            </Form.Item>
+
             <Flex gap="large" wrap="wrap">
               <Form.Item
-                label="CNPJ da Matriz"
+                label={t('perfil.concessionaria.dados.cnpj.label')}
                 name="cnpj"
-                normalize={formatCNPJ}
-                rules={[
-                  { required: true, message: 'Informe o CNPJ' },
-                  {
-                    validator: (_, value) => {
-                      if (!value || (CNPJ_REGEX.test(value) && validateCNPJ(value))) {
-                        return Promise.resolve();
-                      }
-                      return Promise.reject(new Error('CNPJ invalido'));
-                    },
-                  },
-                ]}
                 style={{ flex: '1 1 220px' }}
               >
-                <Input prefix={<IdcardOutlined />} />
+                <Input prefix={<IdcardOutlined />} disabled />
               </Form.Item>
 
               <Form.Item
-                label="Telefone"
+                label={t('perfil.dados.telefone.label')}
                 name="telefone"
                 normalize={formatPhone}
                 rules={[
-                  { required: true, message: 'Informe o telefone' },
-                  { pattern: PHONE_REGEX, message: 'Telefone invalido' },
+                  { required: true, message: t('perfil.dados.telefone.required') },
+                  { pattern: PHONE_REGEX, message: t('perfil.dados.telefone.invalid') },
                 ]}
                 style={{ flex: '1 1 220px' }}
               >
@@ -348,19 +356,22 @@ export default function PerfilConcessionaria() {
         ) : (
           <Flex vertical gap="middle">
             <Descriptions column={{ xs: 1, sm: 2 }} size="small">
-              <Descriptions.Item label="Nome da Concessionaria">
+              <Descriptions.Item label={t('perfil.concessionaria.dados.nome.label')}>
                 <Text strong>{profile.nome}</Text>
               </Descriptions.Item>
-              <Descriptions.Item label="Tipo">
-                <Tag color="gold">{profile.tipo || 'Matriz'}</Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="CNPJ da Matriz">
+              <Descriptions.Item label={t('perfil.concessionaria.dados.cnpj.label')}>
                 <Flex align="center" gap={6}>
                   <IdcardOutlined style={{ color: '#8c8c8c' }} />
                   <Text>{formatCNPJ(profile.cnpj)}</Text>
                 </Flex>
               </Descriptions.Item>
-              <Descriptions.Item label="Telefone">
+              <Descriptions.Item label={t('perfil.dados.email.label')}>
+                <Flex align="center" gap={6}>
+                  <MailOutlined style={{ color: '#8c8c8c' }} />
+                  <Text>{profile.email || '-'}</Text>
+                </Flex>
+              </Descriptions.Item>
+              <Descriptions.Item label={t('perfil.dados.telefone.label')}>
                 <Flex align="center" gap={6}>
                   <PhoneOutlined style={{ color: '#8c8c8c' }} />
                   <Text>{formatPhone(profile.telefone)}</Text>
@@ -373,11 +384,11 @@ export default function PerfilConcessionaria() {
             <Flex align="center" justify="space-between" gap="middle" wrap="wrap">
               <Flex align="center" gap={8}>
                 <LockOutlined style={{ color: '#8c8c8c' }} />
-                <Text type="secondary">Senha</Text>
+                <Text type="secondary">{t('perfil.senha.label')}</Text>
                 <Text>********</Text>
               </Flex>
               <Button size="small" icon={<LockOutlined />} onClick={() => setSenhaModalOpen(true)}>
-                Alterar Senha
+                {t('perfil.senha.change')}
               </Button>
             </Flex>
           </Flex>
@@ -385,17 +396,19 @@ export default function PerfilConcessionaria() {
       </SectionCard>
 
       <SectionCard
-        title="Endereco da Matriz"
+        title={t('perfil.concessionaria.endereco.title')}
         icon={<EnvironmentOutlined />}
         editing={false}
       >
         {!profile?.cep ? (
           <Space direction="vertical" size="small" style={{ display: 'flex' }}>
             <Text type="secondary">
-              Você ainda não possui uma loja Matriz cadastrada.
+              {t('perfil.concessionaria.endereco.empty')}
             </Text>
             <Text type="secondary" style={{ fontSize: 13 }}>
-              Cadastre sua primeira loja na aba <strong>Lojas</strong> para definir o endereço da sua concessionária.
+              {t('perfil.concessionaria.endereco.createStorePrefix')}{' '}
+              <strong>{t('dashboard.menu.lojas')}</strong>{' '}
+              {t('perfil.concessionaria.endereco.createStoreSuffix')}
             </Text>
           </Space>
         ) : (
@@ -405,7 +418,9 @@ export default function PerfilConcessionaria() {
               <Text>{enderecoDescription?.linha1 || '-'}</Text>
               <Text type="secondary">{enderecoDescription?.bairro || '-'}</Text>
               <Text type="secondary">{enderecoDescription?.cidadeUf || '-'}</Text>
-              <Text type="secondary">CEP {formatCEP(enderecoDescription?.cep || '')}</Text>
+              <Text type="secondary">
+                {t('perfil.endereco.cepDisplay', { cep: formatCEP(enderecoDescription?.cep || '') })}
+              </Text>
             </Flex>
           </Flex>
         )}
@@ -415,7 +430,7 @@ export default function PerfilConcessionaria() {
         title={
           <Flex align="center" gap={8}>
             <SettingOutlined />
-            <span>Preferencias</span>
+            <span>{t('perfil.preferencias.title')}</span>
           </Flex>
         }
       >
@@ -425,14 +440,17 @@ export default function PerfilConcessionaria() {
               label={
                 <Flex align="center" gap={8}>
                   <GlobalOutlined />
-                  <span>Idioma</span>
+                  <span>{t('perfil.preferencias.idioma')}</span>
                 </Flex>
               }
             >
-              <Radio.Group value={idioma} onChange={(event) => setIdioma(event.target.value)}>
+              <Radio.Group
+                value={configuracoes.idioma}
+                onChange={(event) => handleIdiomaChange(event.target.value as Idioma)}
+              >
                 <Space direction="vertical">
-                  <Radio value="pt-BR">Portugues (Brasil)</Radio>
-                  <Radio value="en-US">English (United States)</Radio>
+                  <Radio value="pt-BR">{t('perfil.preferencias.idioma.ptBr')}</Radio>
+                  <Radio value="en-US">{t('perfil.preferencias.idioma.enUs')}</Radio>
                 </Space>
               </Radio.Group>
             </Descriptions.Item>
@@ -441,18 +459,18 @@ export default function PerfilConcessionaria() {
               label={
                 <Flex align="center" gap={8}>
                   <BulbOutlined />
-                  <span>Tema</span>
+                  <span>{t('perfil.preferencias.tema')}</span>
                 </Flex>
               }
             >
               <Flex align="center" gap={12}>
-                <Text>Claro</Text>
-                <Switch checked={temaEscuro} onChange={setTemaEscuro} />
-                <Text>Escuro</Text>
+                <Text>{t('perfil.preferencias.tema.claro')}</Text>
+                <Switch checked={configuracoes.tema === 'dark'} onChange={handleTemaChange} />
+                <Text>{t('perfil.preferencias.tema.escuro')}</Text>
               </Flex>
             </Descriptions.Item>
           </Descriptions>
-          <Text type="secondary">Preferencias mantidas apenas no Front por enquanto.</Text>
+          <Text type="secondary">{t('perfil.preferencias.autoSave')}</Text>
         </Flex>
       </Card>
 
@@ -460,7 +478,7 @@ export default function PerfilConcessionaria() {
         title={
           <Flex align="center" gap={8}>
             <LockOutlined />
-            <span>Alterar Senha</span>
+            <span>{t('perfil.senha.change')}</span>
           </Flex>
         }
         open={senhaModalOpen}
@@ -470,40 +488,40 @@ export default function PerfilConcessionaria() {
         }}
         onOk={handleAlterarSenha}
         confirmLoading={savingSenha}
-        okText="Alterar Senha"
-        cancelText="Cancelar"
+        okText={t('perfil.senha.change')}
+        cancelText={t('perfil.actions.cancel')}
         destroyOnHidden
       >
         <Form form={formSenha} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
-            label="Senha Atual"
+            label={t('perfil.senha.current.label')}
             name="senhaAtual"
-            rules={[{ required: true, message: 'Informe a senha atual' }]}
+            rules={[{ required: true, message: t('perfil.senha.current.required') }]}
           >
             <Input.Password />
           </Form.Item>
           <Form.Item
-            label="Nova Senha"
+            label={t('perfil.senha.new.label')}
             name="novaSenha"
             rules={[
-              { required: true, message: 'Informe a nova senha' },
-              { min: 6, message: 'A senha deve ter no minimo 6 caracteres' },
+              { required: true, message: t('perfil.senha.new.required') },
+              { min: 6, message: t('perfil.senha.new.min') },
             ]}
           >
             <Input.Password />
           </Form.Item>
           <Form.Item
-            label="Confirmar Nova Senha"
+            label={t('perfil.senha.confirm.label')}
             name="confirmarNovaSenha"
             dependencies={['novaSenha']}
             rules={[
-              { required: true, message: 'Confirme a nova senha' },
+              { required: true, message: t('perfil.senha.confirm.required') },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || getFieldValue('novaSenha') === value) {
                     return Promise.resolve();
                   }
-                  return Promise.reject(new Error('As senhas nao coincidem'));
+                  return Promise.reject(new Error(t('perfil.senha.confirm.match')));
                 },
               }),
             ]}

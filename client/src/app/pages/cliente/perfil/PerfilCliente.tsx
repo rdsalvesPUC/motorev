@@ -34,19 +34,19 @@ import {
   SettingOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { clienteService } from '../../services/clienteService';
-import { tokenManager } from '../../services/tokenManager';
-import { viaCepService } from '../../services/viaCepService';
-import { useConfiguracoes, type Idioma } from '../../contexts/ConfiguracoesContext';
-import { t } from '../../i18n';
+import { clienteService } from '@/app/services/clienteService';
+import { tokenManager } from '@/app/services/tokenManager';
+import { viaCepService } from '@/app/services/viaCepService';
+import { useConfiguracoes, type Idioma } from '@/app/contexts/ConfiguracoesContext';
+import { t } from '@/app/i18n';
 import type {
   ClienteDadosPessoaisRequest,
   ClienteEndereco,
   ClienteEnderecoRequest,
   ClientePerfil,
-} from '../../models/ClientePerfil';
-import { formatCPF, formatPhone } from '../../utils/formatters';
-import { PHONE_REGEX } from '../../utils/validators';
+} from '@/app/models/ClientePerfil';
+import { formatCPF, formatPhone } from '@/app/utils/formatters';
+import { PHONE_REGEX } from '@/app/utils/validators';
 
 const { Title, Text } = Typography;
 
