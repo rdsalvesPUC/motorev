@@ -1,743 +1,524 @@
-﻿import { useState, useMemo, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  Breadcrumb,
-  Typography,
-  Steps,
+  Alert,
   Button,
+  Card,
+  Descriptions,
+  Empty,
+  Flex,
   Form,
   Input,
-  Select,
   InputNumber,
+  Select,
+  Space,
+  Spin,
+  Steps,
   Table,
   Tabs,
-  Alert,
-  Flex,
-  Modal,
-  Descriptions,
   Tag,
-  Card,
-  App,
+  Typography,
+  message,
 } from 'antd';
-import {
-  HomeOutlined,
-  ToolOutlined,
-  ArrowLeftOutlined,
-  DeleteOutlined,
-} from '@ant-design/icons';
+import { ArrowLeftOutlined, DeleteOutlined, PlusOutlined, ToolOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import { useLinhas } from '../../contexts/LinhasContext';
-import { useMotos } from '../../contexts/MotosContext';
-import { useModelosRevisao, type RevisaoPecaItem, type RevisaoServicoItem, type RevisaoConfig } from '../../contexts/ModelosRevisaoContext';
+import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
+import { linhaService } from '@/app/services/linhaService';
+import { modeloMotoService } from '@/app/services/modeloMotoService';
+import { servicoService } from '@/app/services/servicoService';
+import { pecaService, PecaResponse } from '@/app/services/pecaService';
+import { revisaoPadraoService } from '@/app/services/revisaoPadraoService';
+import { handleApiError } from '@/app/utils/errorHandler';
+import { Linha } from '@/app/models/Linha';
+import { ModeloMoto } from '@/app/models/ModeloMoto';
+import { Servico } from '@/app/models/Servico';
+import { RevisaoPadraoLinhaRequest, RevisaoPadraoPecaRequest } from '@/app/models/RevisaoPadraoRequest';
 
 const { Title, Text } = Typography;
 
 interface CatalogoModelosRevisaoCreateProps {
   onBack: () => void;
-  editModeloKey?: string;
 }
 
-const CATALOGO_PECAS = [
-  { key: 'P001', codigo: 'P001', nome: 'Filtro de Óleo', preco: 35 },
-  { key: 'P002', codigo: 'P002', nome: 'Vela de Ignição NGK', preco: 18 },
-  { key: 'P003', codigo: 'P003', nome: 'Pastilha de Freio', preco: 85 },
-  { key: 'P004', codigo: 'P004', nome: 'Correia Dentada', preco: 120 },
-];
-
-const CATALOGO_SERVICOS = [
-  { key: 'S001', nome: 'Troca de Óleo', tempoMinutos: 30, valor: 80 },
-  { key: 'S002', nome: 'Verificação de Pneus', tempoMinutos: 15, valor: 50 },
-  { key: 'S003', nome: 'Lubrificação de Cabos', tempoMinutos: 20, valor: 60 },
-  { key: 'S004', nome: 'Ajuste de Freios', tempoMinutos: 45, valor: 120 },
-];
+interface RevisaoFormItem {
+  key: string;
+  ordem: number;
+  nome: string;
+  quilometragem: number;
+  tempoMeses: number;
+  servicosIds: number[];
+  pecas: RevisaoPadraoPecaRequest[];
+}
 
 const DEFAULT_REVISAO_VALUES = [
-  { numero: 1, quilometragem: 1000, tempoMeses: 6 },
-  { numero: 2, quilometragem: 5000, tempoMeses: 12 },
-  { numero: 3, quilometragem: 10000, tempoMeses: 18 },
-  { numero: 4, quilometragem: 15000, tempoMeses: 24 },
-  { numero: 5, quilometragem: 20000, tempoMeses: 30 },
-  { numero: 6, quilometragem: 25000, tempoMeses: 36 },
-  { numero: 7, quilometragem: 30000, tempoMeses: 42 },
+  { ordem: 1, nome: 'Primeira revisão', quilometragem: 1000, tempoMeses: 6 },
+  { ordem: 2, nome: 'Segunda revisão', quilometragem: 5000, tempoMeses: 12 },
+  { ordem: 3, nome: 'Terceira revisão', quilometragem: 10000, tempoMeses: 18 },
+  { ordem: 4, nome: 'Quarta revisão', quilometragem: 15000, tempoMeses: 24 },
+  { ordem: 5, nome: 'Quinta revisão', quilometragem: 20000, tempoMeses: 30 },
+  { ordem: 6, nome: 'Sexta revisão', quilometragem: 25000, tempoMeses: 36 },
+  { ordem: 7, nome: 'Sétima revisão', quilometragem: 30000, tempoMeses: 42 },
 ];
 
-const formatCurrency = (v: number) =>
-  v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+const formatCurrency = (value: number) =>
+  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-const formatTempo = (minutos: number) => {
-  if (minutos === 0) return '-';
-  const h = Math.floor(minutos / 60);
-  const m = minutos % 60;
-  if (h === 0) return `${m}min`;
-  return m > 0 ? `${h}h ${m}min` : `${h}h`;
-};
+const createRevisoes = (quantity: number): RevisaoFormItem[] =>
+  DEFAULT_REVISAO_VALUES.slice(0, quantity).map((item) => ({
+    ...item,
+    key: item.ordem.toString(),
+    servicosIds: [],
+    pecas: [],
+  }));
 
-const calcRevisao = (rev: RevisaoConfig) => {
-  const totalPecasValor = rev.pecas.reduce((s, p) => s + p.valorTotal, 0);
-  const totalServicosValor = rev.servicos.reduce((s, sv) => s + sv.valorMaoObra, 0);
-  const tempoMinutos = rev.servicos.reduce((s, sv) => s + sv.tempoMinutos, 0);
-  return {
-    totalPecasValor,
-    totalServicosValor,
-    tempoMinutos,
-    valorTotal: totalPecasValor + totalServicosValor,
-  };
-};
-
-const ordinal = (n: number) => `${n}ª`;
-
-export default function CatalogoModelosRevisaoCreate({ onBack, editModeloKey }: CatalogoModelosRevisaoCreateProps) {
-  const { linhas } = useLinhas();
-  const { motos } = useMotos();
-  const { modelosRevisao, setModelosRevisao } = useModelosRevisao();
-  const { modal } = App.useApp();
-
+export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelosRevisaoCreateProps) {
+  const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(0);
-  const [step1Form] = Form.useForm();
-  const [step1Data, setStep1Data] = useState<{ nome: string; linha: string; quantidadeRevisoes: 4 | 7 } | null>(null);
-  const [linhaSelected, setLinhaSelected] = useState('');
-  const [revisoes, setRevisoes] = useState<RevisaoConfig[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [linhas, setLinhas] = useState<Linha[]>([]);
+  const [modelos, setModelos] = useState<ModeloMoto[]>([]);
+  const [servicos, setServicos] = useState<Servico[]>([]);
+  const [pecas, setPecas] = useState<PecaResponse[]>([]);
+  const [linhaId, setLinhaId] = useState<number | undefined>();
+  const [revisoes, setRevisoes] = useState<RevisaoFormItem[]>(createRevisoes(4));
   const [activeRevTab, setActiveRevTab] = useState('0');
-  const [addPecaKey, setAddPecaKey] = useState<string | null>(null);
-  const [addPecaQty, setAddPecaQty] = useState(1);
-  const [addServKey, setAddServKey] = useState<string | null>(null);
 
-  // Pre-populate when editing an existing modelo (draft)
   useEffect(() => {
-    if (!editModeloKey) return;
-    const modelo = modelosRevisao.find((m) => m.key === editModeloKey);
-    if (!modelo) return;
-    const qty = modelo.quantidadeRevisoes as 4 | 7;
-    step1Form.setFieldsValue({ nome: modelo.nome, linha: modelo.linha, quantidadeRevisoes: qty });
-    setLinhaSelected(modelo.linha);
-    setStep1Data({ nome: modelo.nome, linha: modelo.linha, quantidadeRevisoes: qty });
-    setRevisoes(
-      DEFAULT_REVISAO_VALUES.slice(0, qty).map((d) => ({ ...d, pecas: [], servicos: [] })),
-    );
-  }, [editModeloKey]);
+    const fetchDependencies = async () => {
+      try {
+        setLoading(true);
+        const [linhasData, modelosData, servicosData, pecasData] = await Promise.all([
+          linhaService.getAll(true),
+          modeloMotoService.getAll(),
+          servicoService.getAll(),
+          pecaService.listar('Ativo'),
+        ]);
 
-  const motosNaLinha = useMemo(
-    () => motos.filter((m) => m.linha === linhaSelected),
-    [motos, linhaSelected],
+        setLinhas(linhasData);
+        setModelos(modelosData);
+        setServicos(servicosData);
+        setPecas(pecasData);
+        form.setFieldsValue({ quantidadeRevisoes: 4 });
+      } catch (error) {
+        handleApiError(error, 'Erro ao carregar dados para o cadastro de revisões.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDependencies();
+  }, [form]);
+
+  const modelosAtivosDaLinha = useMemo(
+    () => modelos.filter((modelo) => modelo.linhaId === linhaId && modelo.ativo),
+    [linhaId, modelos],
   );
 
-  const linhaJaTemAtivo = useMemo(
-    () => modelosRevisao.some((m) => m.linha === linhaSelected && m.status === 'ativo'),
-    [modelosRevisao, linhaSelected],
+  const servicoById = useMemo(
+    () => new Map(servicos.map((servico) => [servico.id, servico])),
+    [servicos],
   );
 
-  const handleQtdChange = (val: number) => {
-    setRevisoes(
-      DEFAULT_REVISAO_VALUES.slice(0, val).map((d) => ({
-        ...d,
-        pecas: [],
-        servicos: [],
-      })),
-    );
+  const pecaById = useMemo(
+    () => new Map(pecas.map((peca) => [peca.id, peca])),
+    [pecas],
+  );
+
+  const updateRevisao = (key: string, patch: Partial<RevisaoFormItem>) => {
+    setRevisoes((prev) => prev.map((revisao) => revisao.key === key ? { ...revisao, ...patch } : revisao));
+  };
+
+  const updatePeca = (revisaoKey: string, index: number, patch: Partial<RevisaoPadraoPecaRequest>) => {
+    setRevisoes((prev) => prev.map((revisao) => {
+      if (revisao.key !== revisaoKey) return revisao;
+
+      const pecasAtualizadas = revisao.pecas.map((peca, pecaIndex) => (
+        pecaIndex === index ? { ...peca, ...patch } : peca
+      ));
+
+      return { ...revisao, pecas: pecasAtualizadas };
+    }));
+  };
+
+  const addPeca = (revisaoKey: string) => {
+    setRevisoes((prev) => prev.map((revisao) => (
+      revisao.key === revisaoKey
+        ? { ...revisao, pecas: [...revisao.pecas, { pecaId: 0, quantidade: 1 }] }
+        : revisao
+    )));
+  };
+
+  const removePeca = (revisaoKey: string, index: number) => {
+    setRevisoes((prev) => prev.map((revisao) => (
+      revisao.key === revisaoKey
+        ? { ...revisao, pecas: revisao.pecas.filter((_, pecaIndex) => pecaIndex !== index) }
+        : revisao
+    )));
+  };
+
+  const handleQuantidadeChange = (quantity: number) => {
+    setRevisoes(createRevisoes(quantity));
     setActiveRevTab('0');
   };
 
-  const updateRevisaoField = (
-    idx: number,
-    field: 'quilometragem' | 'tempoMeses',
-    value: number | null,
-  ) => {
-    setRevisoes((prev) =>
-      prev.map((r, i) => (i === idx ? { ...r, [field]: value ?? 0 } : r)),
-    );
-  };
+  const validateRevisoes = () => {
+    const invalidRevision = revisoes.find((revisao) => (
+      !revisao.nome.trim()
+      || revisao.quilometragem < 0
+      || revisao.tempoMeses < 0
+      || revisao.servicosIds.length === 0
+      || revisao.pecas.some((peca) => !peca.pecaId || peca.quantidade <= 0)
+    ));
 
-  const addPeca = (revIdx: number) => {
-    if (!addPecaKey) return;
-    const catalogo = CATALOGO_PECAS.find((p) => p.key === addPecaKey);
-    if (!catalogo) return;
-    const qty = addPecaQty > 0 ? addPecaQty : 1;
-    const newItem: RevisaoPecaItem = {
-      id: `${addPecaKey}-${Date.now()}`,
-      pecaKey: catalogo.key,
-      nome: catalogo.nome,
-      codigo: catalogo.codigo,
-      quantidade: qty,
-      valorUnitario: catalogo.preco,
-      valorTotal: catalogo.preco * qty,
-    };
-    setRevisoes((prev) =>
-      prev.map((r, i) =>
-        i === revIdx ? { ...r, pecas: [...r.pecas, newItem] } : r,
-      ),
-    );
-    setAddPecaKey(null);
-    setAddPecaQty(1);
-  };
+    if (invalidRevision) {
+      message.error('Preencha nome, quilometragem, tempo, serviços e peças válidas em todas as revisões.');
+      return false;
+    }
 
-  const removePeca = (revIdx: number, id: string) => {
-    setRevisoes((prev) =>
-      prev.map((r, i) =>
-        i === revIdx ? { ...r, pecas: r.pecas.filter((p) => p.id !== id) } : r,
-      ),
-    );
-  };
+    if (modelosAtivosDaLinha.length === 0) {
+      message.error('A linha selecionada não possui modelos de moto ativos.');
+      return false;
+    }
 
-  const addServico = (revIdx: number) => {
-    if (!addServKey) return;
-    const catalogo = CATALOGO_SERVICOS.find((s) => s.key === addServKey);
-    if (!catalogo) return;
-    const newItem: RevisaoServicoItem = {
-      id: `${addServKey}-${Date.now()}`,
-      servicoKey: catalogo.key,
-      nome: catalogo.nome,
-      tempoMinutos: catalogo.tempoMinutos,
-      valorMaoObra: catalogo.valor,
-    };
-    setRevisoes((prev) =>
-      prev.map((r, i) =>
-        i === revIdx ? { ...r, servicos: [...r.servicos, newItem] } : r,
-      ),
-    );
-    setAddServKey(null);
-  };
-
-  const removeServico = (revIdx: number, id: string) => {
-    setRevisoes((prev) =>
-      prev.map((r, i) =>
-        i === revIdx ? { ...r, servicos: r.servicos.filter((s) => s.id !== id) } : r,
-      ),
-    );
+    return true;
   };
 
   const goNext = async () => {
     if (currentStep === 0) {
       try {
-        const vals = await step1Form.validateFields();
-        setStep1Data(vals as { nome: string; linha: string; quantidadeRevisoes: 4 | 7 });
+        await form.validateFields();
       } catch {
         return;
       }
     }
-    setCurrentStep((s) => s + 1);
-  };
 
-  const handleSave = (status: 'ativo' | 'rascunho') => {
-    const values = step1Data ?? (step1Form.getFieldsValue() as { nome: string; linha: string; quantidadeRevisoes: 4 | 7 });
-
-    if (status === 'ativo' && linhaJaTemAtivo) {
-      Modal.error({
-        title: 'Não é possível publicar',
-        content:
-          'Esta linha já possui um Modelo de Revisão ativo. Desative o modelo existente antes de publicar um novo.',
-      });
+    if (currentStep === 1 && !validateRevisoes()) {
       return;
     }
 
-    const totalValor = revisoes.reduce((s, r) => s + calcRevisao(r).valorTotal, 0);
-    const totalTempo = revisoes.reduce((s, r) => s + calcRevisao(r).tempoMinutos, 0);
+    setCurrentStep((step) => step + 1);
+  };
 
-    const novoModelo = {
-      key: editModeloKey ?? Date.now().toString(),
-      nome: values.nome,
-      linha: values.linha,
-      quantidadeRevisoes: values.quantidadeRevisoes,
-      modelosVinculados: motosNaLinha.map((m) => `${m.marca} ${m.modelo}`),
-      valorMedioTotal: revisoes.length > 0 ? formatCurrency(totalValor / revisoes.length) : '-',
-      tempoEstimadoTotal: formatTempo(totalTempo),
-      status,
-      revisoes,
-    };
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      if (!validateRevisoes()) return;
 
-    const persist = () => {
-      if (editModeloKey) {
-        // Replace existing draft
-        setModelosRevisao((prev) => prev.map((m) => (m.key === editModeloKey ? novoModelo : m)));
-      } else {
-        setModelosRevisao((prev) => [...prev, novoModelo]);
-      }
+      const payload: RevisaoPadraoLinhaRequest = {
+        nome: values.nome,
+        linhaId: values.linhaId,
+        revisoes: revisoes.map((revisao) => ({
+          nome: revisao.nome,
+          ordem: revisao.ordem,
+          quilometragem: revisao.quilometragem,
+          tempoMeses: revisao.tempoMeses,
+          servicosIds: revisao.servicosIds,
+          pecas: revisao.pecas.length > 0 ? revisao.pecas : undefined,
+        })),
+      };
+
+      setSaving(true);
+      await revisaoPadraoService.criarPorLinha(payload);
+      message.success('Modelo de revisão cadastrado com sucesso.');
       onBack();
-    };
-
-    if (status === 'ativo') {
-      modal.confirm({
-        title: 'Publicar Modelo de Revisão',
-        content: `Este Modelo de Revisão será aplicado automaticamente aos Modelos de Moto vinculados à Linha "${values.linha}".`,
-        okText: 'Publicar',
-        cancelText: 'Cancelar',
-        onOk: persist,
-      });
-    } else {
-      persist();
+    } catch (error) {
+      handleApiError(error);
+    } finally {
+      setSaving(false);
     }
   };
 
-  // ─── Step 1 ───────────────────────────────────────────────────────────────
-  const renderStep1 = () => (
-    <Card title="Dados Gerais">
-      <Form form={step1Form} layout="vertical" style={{ maxWidth: 600 }}>
-        <Form.Item
-          name="nome"
-          label="Nome do Modelo"
-          rules={[{ required: true, message: 'Informe o nome do modelo' }]}
-        >
-          <Input placeholder="Ex: Modelo Padrão - Passeio" />
-        </Form.Item>
-
-        <Form.Item
-          name="linha"
-          label="Linha de Moto"
-          rules={[{ required: true, message: 'Selecione a linha' }]}
-        >
-          <Select
-            placeholder="Selecione uma linha"
-            style={{ width: '100%' }}
-            onChange={(val: string) => {
-              setLinhaSelected(val);
-              const qty = step1Form.getFieldValue('quantidadeRevisoes');
-              if (qty) handleQtdChange(qty);
-            }}
-            options={linhas.map((l) => ({ value: l.nome, label: l.nome }))}
-          />
-        </Form.Item>
-
-        {linhaSelected && (
-          <Form.Item>
-            {linhaJaTemAtivo ? (
-              <Alert
-                type="warning"
-                showIcon
-                message="Esta linha já possui um Modelo de Revisão ativo"
-                description="Você só poderá salvar este modelo como Rascunho. Para publicá-lo, desative o modelo existente."
-              />
-            ) : (
-              <Alert
-                type="info"
-                showIcon
-                message={`Linha ${linhaSelected}: ${motosNaLinha.length} modelo(s) de moto vinculado(s)`}
-                description={
-                  <Flex vertical gap="small">
-                    {motosNaLinha.slice(0, 5).map((m) => (
-                      <Text key={m.key}>
-                        {m.marca} {m.modelo} — {m.ano}
-                      </Text>
-                    ))}
-                    <Text>
-                      Os Modelos de Moto vinculados à Linha {linhaSelected} usarão este Modelo de
-                      Revisão automaticamente.
-                    </Text>
-                  </Flex>
-                }
-              />
-            )}
-          </Form.Item>
-        )}
-
-        <Form.Item
-          name="quantidadeRevisoes"
-          label="Quantidade de Revisões"
-          rules={[{ required: true, message: 'Selecione a quantidade de revisões' }]}
-        >
-          <Select
-            placeholder="Selecione"
-            style={{ width: '100%' }}
-            onChange={(val: number) => handleQtdChange(val)}
-            options={[
-              { value: 4, label: '4 revisões' },
-              { value: 7, label: '7 revisões' },
-            ]}
-          />
-        </Form.Item>
-
-        <Form.Item label="Status">
-          <Flex gap="small" align="center">
-            <Tag color="blue">Rascunho</Tag>
-            <Text type="secondary">
-              O modelo será salvo como rascunho e poderá ser publicado posteriormente.
-            </Text>
-          </Flex>
-        </Form.Item>
-      </Form>
-    </Card>
-  );
-
-  // ─── Step 2 ───────────────────────────────────────────────────────────────
-  const step2Columns: ColumnsType<RevisaoConfig> = [
+  const revisaoColumns: ColumnsType<RevisaoFormItem> = [
     {
-      title: 'Nº Revisão',
-      dataIndex: 'numero',
-      key: 'numero',
-      width: 120,
-      render: (n: number) => ordinal(n),
+      title: 'Ordem',
+      dataIndex: 'ordem',
+      key: 'ordem',
+      width: 90,
+      render: (ordem: number) => `${ordem}ª`,
     },
     {
-      title: 'Quilometragem Máxima',
-      dataIndex: 'quilometragem',
-      key: 'quilometragem',
-      render: (_: number, _record: RevisaoConfig, idx: number) => (
-        <InputNumber
-          style={{ width: '100%' }}
-          min={0}
-          addonAfter="km"
-          value={revisoes[idx]?.quilometragem}
-          onChange={(val) => updateRevisaoField(idx, 'quilometragem', val)}
+      title: 'Nome',
+      dataIndex: 'nome',
+      key: 'nome',
+      render: (_: string, record) => (
+        <Input
+          value={record.nome}
+          onChange={(event) => updateRevisao(record.key, { nome: event.target.value })}
         />
       ),
     },
     {
-      title: 'Tempo Máximo',
+      title: 'Quilometragem',
+      dataIndex: 'quilometragem',
+      key: 'quilometragem',
+      width: 180,
+      render: (_: number, record) => (
+        <InputNumber
+          min={0}
+          precision={0}
+          addonAfter="km"
+          style={{ width: '100%' }}
+          value={record.quilometragem}
+          parser={(value) => value?.replace(/[^\d]/g, '') as any}
+          onChange={(value) => updateRevisao(record.key, { quilometragem: value ?? 0 })}
+        />
+      ),
+    },
+    {
+      title: 'Tempo',
       dataIndex: 'tempoMeses',
       key: 'tempoMeses',
-      render: (_: number, _record: RevisaoConfig, idx: number) => (
+      width: 160,
+      render: (_: number, record) => (
         <InputNumber
-          style={{ width: '100%' }}
           min={0}
+          precision={0}
           addonAfter="meses"
-          value={revisoes[idx]?.tempoMeses}
-          onChange={(val) => updateRevisaoField(idx, 'tempoMeses', val)}
+          style={{ width: '100%' }}
+          value={record.tempoMeses}
+          parser={(value) => value?.replace(/[^\d]/g, '') as any}
+          onChange={(value) => updateRevisao(record.key, { tempoMeses: value ?? 0 })}
+        />
+      ),
+    },
+    {
+      title: 'Serviços',
+      dataIndex: 'servicosIds',
+      key: 'servicosIds',
+      render: (_: number[], record) => (
+        <Select
+          mode="multiple"
+          placeholder="Selecione os serviços"
+          value={record.servicosIds}
+          onChange={(servicosIds) => updateRevisao(record.key, { servicosIds })}
+          options={servicos.map((servico) => ({ value: servico.id, label: servico.nome }))}
         />
       ),
     },
   ];
 
+  const renderStep1 = () => (
+    <Card title="Dados Gerais">
+      <Form form={form} layout="vertical" style={{ maxWidth: 720 }}>
+        <Form.Item
+          name="nome"
+          label="Nome do Modelo de Revisão"
+          rules={[{ required: true, message: 'Informe o nome do modelo de revisão.' }]}
+        >
+          <Input placeholder="Ex: Plano padrão Street" />
+        </Form.Item>
+
+        <Form.Item
+          name="linhaId"
+          label="Linha de Moto"
+          rules={[{ required: true, message: 'Selecione a linha.' }]}
+        >
+          <Select
+            placeholder="Selecione uma linha"
+            onChange={(value) => setLinhaId(value)}
+            options={linhas.map((linha) => ({ value: linha.id, label: linha.nome }))}
+          />
+        </Form.Item>
+
+        {linhaId && (
+          <Alert
+            showIcon
+            type={modelosAtivosDaLinha.length > 0 ? 'info' : 'warning'}
+            message={`${modelosAtivosDaLinha.length} modelo(s) ativo(s) vinculado(s) à linha selecionada`}
+            description={
+              modelosAtivosDaLinha.length > 0
+                ? modelosAtivosDaLinha.map((modelo) => `${modelo.marca} ${modelo.nomeModelo}`).join(', ')
+                : 'Cadastre ou ative ao menos um modelo de moto nesta linha antes de criar revisões.'
+            }
+            style={{ marginBottom: 24 }}
+          />
+        )}
+
+        <Form.Item
+          name="quantidadeRevisoes"
+          label="Quantidade de Revisões"
+          rules={[{ required: true, message: 'Selecione a quantidade de revisões.' }]}
+        >
+          <Select
+            options={[
+              { value: 4, label: '4 revisões' },
+              { value: 7, label: '7 revisões' },
+            ]}
+            onChange={handleQuantidadeChange}
+          />
+        </Form.Item>
+      </Form>
+    </Card>
+  );
+
   const renderStep2 = () => (
     <Card title="Estrutura das Revisões">
       <Table
         dataSource={revisoes}
-        columns={step2Columns}
-        rowKey="numero"
+        columns={revisaoColumns}
+        rowKey="key"
         pagination={false}
         bordered
       />
     </Card>
   );
 
-  // ─── Step 3 ───────────────────────────────────────────────────────────────
-  const renderRevisaoTab = (rev: RevisaoConfig, revIdx: number) => {
-    const { totalPecasValor, totalServicosValor, tempoMinutos, valorTotal } = calcRevisao(rev);
-
-    const pecasJaAdicionadas = new Set(rev.pecas.map((p) => p.pecaKey));
-    const servicosJaAdicionados = new Set(rev.servicos.map((s) => s.servicoKey));
-
-    const pecasDisponiveis = CATALOGO_PECAS.filter((p) => !pecasJaAdicionadas.has(p.key));
-    const servicosDisponiveis = CATALOGO_SERVICOS.filter(
-      (s) => !servicosJaAdicionados.has(s.key),
-    );
-
-    const pecasColumns: ColumnsType<RevisaoPecaItem> = [
-      { title: 'Código', dataIndex: 'codigo', key: 'codigo', width: 100 },
-      { title: 'Peça', dataIndex: 'nome', key: 'nome' },
-      { title: 'Qtd', dataIndex: 'quantidade', key: 'quantidade', width: 80, align: 'center' },
+  const renderPecasTable = (revisao: RevisaoFormItem) => {
+    const columns: ColumnsType<RevisaoPadraoPecaRequest & { index: number }> = [
       {
-        title: 'Valor Unitário',
-        dataIndex: 'valorUnitario',
-        key: 'valorUnitario',
-        width: 130,
-        render: (v: number) => formatCurrency(v),
-      },
-      {
-        title: 'Valor Total',
-        dataIndex: 'valorTotal',
-        key: 'valorTotal',
-        width: 130,
-        render: (v: number) => formatCurrency(v),
-      },
-      {
-        title: '',
-        key: 'actions',
-        width: 60,
-        render: (_: any, record: RevisaoPecaItem) => (
-          <Button
-            type="link"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => removePeca(revIdx, record.id)}
+        title: 'Peça',
+        dataIndex: 'pecaId',
+        key: 'pecaId',
+        render: (_: number, record) => (
+          <Select
+            placeholder="Selecione uma peça"
+            value={record.pecaId || undefined}
+            style={{ width: '100%' }}
+            onChange={(pecaId) => updatePeca(revisao.key, record.index, { pecaId })}
+            options={pecas.map((peca) => ({
+              value: peca.id,
+              label: `${peca.codigo} - ${peca.nome} (${formatCurrency(peca.preco)})`,
+            }))}
           />
         ),
       },
-    ];
-
-    const servicosColumns: ColumnsType<RevisaoServicoItem> = [
-      { title: 'Serviço', dataIndex: 'nome', key: 'nome' },
       {
-        title: 'Tempo Médio',
-        dataIndex: 'tempoMinutos',
-        key: 'tempoMinutos',
-        width: 130,
-        render: (v: number) => formatTempo(v),
+        title: 'Quantidade',
+        dataIndex: 'quantidade',
+        key: 'quantidade',
+        width: 140,
+        render: (_: number, record) => (
+          <InputNumber
+            min={1}
+            precision={0}
+            value={record.quantidade}
+            style={{ width: '100%' }}
+            parser={(value) => value?.replace(/[^\d]/g, '') as any}
+            onChange={(quantidade) => updatePeca(revisao.key, record.index, { quantidade: quantidade ?? 1 })}
+          />
+        ),
       },
       {
-        title: 'Valor Mão de Obra',
-        dataIndex: 'valorMaoObra',
-        key: 'valorMaoObra',
-        width: 160,
-        render: (v: number) => formatCurrency(v),
+        title: 'Total',
+        key: 'total',
+        width: 140,
+        render: (_: any, record) => {
+          const peca = pecaById.get(record.pecaId);
+          return peca ? formatCurrency(peca.preco * record.quantidade) : '-';
+        },
       },
       {
         title: '',
         key: 'actions',
         width: 60,
-        render: (_: any, record: RevisaoServicoItem) => (
+        render: (_: any, record) => (
           <Button
             type="link"
             danger
             icon={<DeleteOutlined />}
-            onClick={() => removeServico(revIdx, record.id)}
+            onClick={() => removePeca(revisao.key, record.index)}
           />
         ),
       },
     ];
 
     return (
-      <Flex vertical gap="middle">
-        <Descriptions size="small" bordered>
-          <Descriptions.Item label="KM Máximo">
-            {rev.quilometragem.toLocaleString('pt-BR')} km
-          </Descriptions.Item>
-          <Descriptions.Item label="Tempo Máximo">{rev.tempoMeses} meses</Descriptions.Item>
-          <Descriptions.Item label="Valor Estimado">{formatCurrency(valorTotal)}</Descriptions.Item>
-        </Descriptions>
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <Flex justify="space-between" align="center">
+          <Text>Peças opcionais da {revisao.ordem}ª revisão</Text>
+          <Button icon={<PlusOutlined />} onClick={() => addPeca(revisao.key)}>
+            Adicionar Peça
+          </Button>
+        </Flex>
 
-        <Tabs
+        <Table
           size="small"
-          items={[
-            {
-              key: 'pecas',
-              label: `Peças (${rev.pecas.length})`,
-              children: (
-                <Flex vertical gap="middle">
-                  <Flex gap="middle" align="center">
-                    <Select
-                      style={{ flex: 1 }}
-                      placeholder="Selecione uma peça"
-                      value={addPecaKey}
-                      onChange={(val) => setAddPecaKey(val)}
-                      options={pecasDisponiveis.map((p) => ({
-                        value: p.key,
-                        label: `${p.codigo} — ${p.nome} (${formatCurrency(p.preco)})`,
-                      }))}
-                    />
-                    <InputNumber
-                      min={1}
-                      value={addPecaQty}
-                      onChange={(val) => setAddPecaQty(val ?? 1)}
-                      style={{ width: 80 }}
-                    />
-                    <Button
-                      type="primary"
-                      disabled={!addPecaKey}
-                      onClick={() => addPeca(revIdx)}
-                    >
-                      Adicionar
-                    </Button>
-                  </Flex>
-                  <Table
-                    dataSource={rev.pecas}
-                    columns={pecasColumns}
-                    rowKey="id"
-                    pagination={false}
-                    bordered
-                    size="small"
-                    summary={() => (
-                      <Table.Summary.Row>
-                        <Table.Summary.Cell index={0} colSpan={4} align="right">
-                          <Text strong>Total Peças:</Text>
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={1}>
-                          <Text strong>{formatCurrency(totalPecasValor)}</Text>
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={2} />
-                      </Table.Summary.Row>
-                    )}
-                  />
-                </Flex>
-              ),
-            },
-            {
-              key: 'servicos',
-              label: `Serviços (${rev.servicos.length})`,
-              children: (
-                <Flex vertical gap="middle">
-                  <Flex gap="middle" align="center">
-                    <Select
-                      style={{ flex: 1 }}
-                      placeholder="Selecione um serviço"
-                      value={addServKey}
-                      onChange={(val) => setAddServKey(val)}
-                      options={servicosDisponiveis.map((s) => ({
-                        value: s.key,
-                        label: `${s.nome} — ${s.tempoMinutos}min — ${formatCurrency(s.valor)}`,
-                      }))}
-                    />
-                    <Button
-                      type="primary"
-                      disabled={!addServKey}
-                      onClick={() => addServico(revIdx)}
-                    >
-                      Adicionar
-                    </Button>
-                  </Flex>
-                  <Table
-                    dataSource={rev.servicos}
-                    columns={servicosColumns}
-                    rowKey="id"
-                    pagination={false}
-                    bordered
-                    size="small"
-                    summary={() => (
-                      <Table.Summary.Row>
-                        <Table.Summary.Cell index={0} align="right">
-                          <Text strong>Total:</Text>
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={1}>
-                          <Text strong>{formatTempo(tempoMinutos)}</Text>
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={2}>
-                          <Text strong>{formatCurrency(totalServicosValor)}</Text>
-                        </Table.Summary.Cell>
-                        <Table.Summary.Cell index={3} />
-                      </Table.Summary.Row>
-                    )}
-                  />
-                </Flex>
-              ),
-            },
-          ]}
+          bordered
+          pagination={false}
+          rowKey="index"
+          dataSource={revisao.pecas.map((peca, index) => ({ ...peca, index }))}
+          columns={columns}
+          locale={{
+            emptyText: (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="Nenhuma peça adicionada."
+              />
+            ),
+          }}
         />
-      </Flex>
+      </Space>
     );
   };
 
   const renderStep3 = () => (
-    <Card title="Peças e Serviços por Revisão">
+    <Card title="Peças por Revisão">
       <Tabs
         activeKey={activeRevTab}
-        onChange={(key) => {
-          setActiveRevTab(key);
-          setAddPecaKey(null);
-          setAddPecaQty(1);
-          setAddServKey(null);
-        }}
-        items={revisoes.map((rev, idx) => ({
-          key: String(idx),
-          label: `${ordinal(rev.numero)} Revisão`,
-          children: renderRevisaoTab(rev, idx),
+        onChange={setActiveRevTab}
+        items={revisoes.map((revisao, index) => ({
+          key: index.toString(),
+          label: `${revisao.ordem}ª Revisão`,
+          children: renderPecasTable(revisao),
         }))}
       />
     </Card>
   );
 
-  // ─── Step 4 ───────────────────────────────────────────────────────────────
   const renderStep4 = () => {
-    const values = step1Data ?? (step1Form.getFieldsValue() as { nome: string; linha: string; quantidadeRevisoes: 4 | 7 });
-    const totalPecasUnicas = new Set(revisoes.flatMap((r) => r.pecas.map((p) => p.pecaKey))).size;
-    const totalServicosUnicos = new Set(
-      revisoes.flatMap((r) => r.servicos.map((s) => s.servicoKey)),
-    ).size;
-    const totalTempo = revisoes.reduce((s, r) => s + calcRevisao(r).tempoMinutos, 0);
-    const totalValor = revisoes.reduce((s, r) => s + calcRevisao(r).valorTotal, 0);
-
-    const resumoColumns: ColumnsType<RevisaoConfig> = [
-      {
-        title: 'Nº Revisão',
-        dataIndex: 'numero',
-        key: 'numero',
-        width: 110,
-        render: (n: number) => ordinal(n),
-      },
-      {
-        title: 'KM Máximo',
-        dataIndex: 'quilometragem',
-        key: 'quilometragem',
-        render: (v: number) => `${v.toLocaleString('pt-BR')} km`,
-      },
-      {
-        title: 'Tempo Máximo',
-        dataIndex: 'tempoMeses',
-        key: 'tempoMeses',
-        render: (v: number) => `${v} meses`,
-      },
-      {
-        title: 'Peças',
-        key: 'pecas',
-        width: 80,
-        align: 'center',
-        render: (_: any, record: RevisaoConfig) => record.pecas.length,
-      },
-      {
-        title: 'Serviços',
-        key: 'servicos',
-        width: 90,
-        align: 'center',
-        render: (_: any, record: RevisaoConfig) => record.servicos.length,
-      },
-      {
-        title: 'Tempo Estimado',
-        key: 'tempo',
-        width: 130,
-        render: (_: any, record: RevisaoConfig) =>
-          formatTempo(calcRevisao(record).tempoMinutos),
-      },
-      {
-        title: 'Valor Médio',
-        key: 'valor',
-        width: 130,
-        render: (_: any, record: RevisaoConfig) =>
-          formatCurrency(calcRevisao(record).valorTotal),
-      },
-    ];
+    const values = form.getFieldsValue();
+    const linha = linhas.find((item) => item.id === values.linhaId);
+    const servicosUnicos = new Set(revisoes.flatMap((revisao) => revisao.servicosIds));
+    const pecasUnicas = new Set(revisoes.flatMap((revisao) => revisao.pecas.map((peca) => peca.pecaId).filter(Boolean)));
 
     return (
-      <Flex vertical gap="large">
-        {linhaJaTemAtivo && (
-          <Alert
-            type="warning"
-            showIcon
-            message="Publicação bloqueada"
-            description="Esta linha já possui um Modelo de Revisão ativo. Você só pode salvar como Rascunho."
-          />
-        )}
-
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
         <Card title="Resumo do Modelo">
           <Descriptions bordered column={2}>
-            <Descriptions.Item label="Nome do Modelo">{values.nome || '-'}</Descriptions.Item>
-            <Descriptions.Item label="Linha de Moto">{values.linha || '-'}</Descriptions.Item>
-            <Descriptions.Item label="Quantidade de Revisões">
-              {values.quantidadeRevisoes || '-'}
-            </Descriptions.Item>
-            <Descriptions.Item label="Modelos de Moto Herdeiros">
-              {motosNaLinha.length} modelo(s)
-            </Descriptions.Item>
-            <Descriptions.Item label="Total de Peças Únicas">{totalPecasUnicas}</Descriptions.Item>
-            <Descriptions.Item label="Total de Serviços Únicos">
-              {totalServicosUnicos}
-            </Descriptions.Item>
-            <Descriptions.Item label="Tempo Estimado Total">
-              {formatTempo(totalTempo)}
-            </Descriptions.Item>
-            <Descriptions.Item label="Valor Médio Total">
-              {revisoes.length > 0 ? formatCurrency(totalValor / revisoes.length) : '-'}
-            </Descriptions.Item>
+            <Descriptions.Item label="Nome">{values.nome || '-'}</Descriptions.Item>
+            <Descriptions.Item label="Linha">{linha?.nome || '-'}</Descriptions.Item>
+            <Descriptions.Item label="Modelos vinculados">{modelosAtivosDaLinha.length}</Descriptions.Item>
+            <Descriptions.Item label="Revisões">{revisoes.length}</Descriptions.Item>
+            <Descriptions.Item label="Serviços únicos">{servicosUnicos.size}</Descriptions.Item>
+            <Descriptions.Item label="Peças únicas">{pecasUnicas.size}</Descriptions.Item>
             <Descriptions.Item label="Status">
-              <Tag color="blue">Rascunho</Tag>
+              <Tag color="green">Ativo</Tag>
             </Descriptions.Item>
           </Descriptions>
         </Card>
 
-        <Card title="Tabela de Revisões">
+        <Card title="Revisões">
           <Table
-            dataSource={revisoes}
-            columns={resumoColumns}
-            rowKey="numero"
-            pagination={false}
-            bordered
             size="small"
+            bordered
+            pagination={false}
+            rowKey="key"
+            dataSource={revisoes}
+            columns={[
+              { title: 'Ordem', dataIndex: 'ordem', key: 'ordem', width: 90, render: (ordem: number) => `${ordem}ª` },
+              { title: 'Nome', dataIndex: 'nome', key: 'nome' },
+              { title: 'KM', dataIndex: 'quilometragem', key: 'quilometragem', render: (value: number) => `${value.toLocaleString('pt-BR')} km` },
+              { title: 'Tempo', dataIndex: 'tempoMeses', key: 'tempoMeses', render: (value: number) => `${value} meses` },
+              {
+                title: 'Serviços',
+                dataIndex: 'servicosIds',
+                key: 'servicosIds',
+                render: (ids: number[]) => ids.map((id) => servicoById.get(id)?.nome).filter(Boolean).join(', '),
+              },
+              {
+                title: 'Peças',
+                dataIndex: 'pecas',
+                key: 'pecas',
+                render: (items: RevisaoPadraoPecaRequest[]) => items.length,
+                width: 90,
+                align: 'center',
+              },
+            ]}
           />
         </Card>
-      </Flex>
+      </Space>
     );
   };
-
-  const stepItems = [
-    { title: 'Dados Gerais' },
-    { title: 'Estrutura das Revisões' },
-    { title: 'Peças e Serviços' },
-    { title: 'Revisão e Publicação' },
-  ];
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -755,66 +536,63 @@ export default function CatalogoModelosRevisaoCreate({ onBack, editModeloKey }: 
   };
 
   return (
-    <Flex vertical gap="large" style={{ width: '100%' }}>
-      {/* Header */}
-      <Flex vertical gap="middle">
-        <Breadcrumb
+    <Spin spinning={loading || saving}>
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <Space direction="vertical" size="middle">
+          <DashboardBreadcrumb
+            userType="concessionaria"
+            items={[
+              {
+                title: 'Modelos de Revisão',
+                icon: <ToolOutlined />,
+              },
+              {
+                title: 'Novo Modelo de Revisão',
+              },
+            ]}
+          />
+
+          <Flex gap="middle" align="center">
+            <Button icon={<ArrowLeftOutlined />} onClick={onBack} />
+            <Title level={2} style={{ margin: 0 }}>
+              Novo Modelo de Revisão
+            </Title>
+          </Flex>
+        </Space>
+
+        <Steps
+          current={currentStep}
           items={[
-            { href: '', title: <HomeOutlined /> },
-            {
-              title: (
-                <>
-                  <ToolOutlined />
-                  <span> Catálogos</span>
-                </>
-              ),
-            },
-            { title: 'Modelos de Revisão' },
-            { title: editModeloKey ? 'Editar Modelo de Revisão' : 'Novo Modelo de Revisão' },
+            { title: 'Dados Gerais' },
+            { title: 'Revisões' },
+            { title: 'Peças' },
+            { title: 'Resumo' },
           ]}
         />
-        <Flex gap="middle" align="center">
-          <Button icon={<ArrowLeftOutlined />} onClick={onBack} />
-          <Title level={2} style={{ margin: 0 }}>
-            {editModeloKey ? 'Editar Modelo de Revisão' : 'Novo Modelo de Revisão'}
-          </Title>
-        </Flex>
-      </Flex>
 
-      {/* Steps indicator */}
-      <Steps current={currentStep} items={stepItems} />
+        {renderCurrentStep()}
 
-      {/* Step content */}
-      {renderCurrentStep()}
-
-      {/* Navigation footer */}
-      <Card>
-        <Flex justify="space-between" align="center">
-          <Button onClick={onBack}>Cancelar</Button>
-          <Flex gap="middle" align="center">
-            {currentStep > 0 && (
-              <Button onClick={() => setCurrentStep((s) => s - 1)}>← Voltar</Button>
-            )}
-            {currentStep < 3 && (
-              <Button type="primary" onClick={goNext}>
-                Próximo →
-              </Button>
-            )}
-            {currentStep === 3 && (
-              <>
-                <Button onClick={() => handleSave('rascunho')}>Salvar como Rascunho</Button>
-                <Button
-                  type="primary"
-                  disabled={linhaJaTemAtivo}
-                  onClick={() => handleSave('ativo')}
-                >
-                  Publicar Modelo de Revisão
+        <Card>
+          <Flex justify="space-between" align="center">
+            <Button onClick={onBack}>Cancelar</Button>
+            <Space>
+              {currentStep > 0 && (
+                <Button onClick={() => setCurrentStep((step) => step - 1)}>Voltar</Button>
+              )}
+              {currentStep < 3 && (
+                <Button type="primary" onClick={goNext}>
+                  Próximo
                 </Button>
-              </>
-            )}
+              )}
+              {currentStep === 3 && (
+                <Button type="primary" loading={saving} onClick={handleSubmit}>
+                  Salvar Modelo de Revisão
+                </Button>
+              )}
+            </Space>
           </Flex>
-        </Flex>
-      </Card>
-    </Flex>
+        </Card>
+      </Space>
+    </Spin>
   );
 }
