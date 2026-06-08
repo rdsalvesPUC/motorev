@@ -18,7 +18,7 @@ public record RevisaoPadraoRequest(
     
     [Required(ErrorMessage = "É necessário informar ao menos um serviço.")]
     [MinLength(1, ErrorMessage = "A revisão deve conter pelo menos um serviço.")]
-    List<int> ServicosIds
-    
-    // TODO: Adicionar a lista de PeçasIds quando o catálogo de peças estiver implementado
+    List<int> ServicosIds,
+
+    List<RevisaoPadraoPecaRequest>? Pecas = null
 ); 

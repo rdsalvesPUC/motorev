@@ -32,7 +32,7 @@ public class RevisaoPadraoControllerTests
     public async Task GetById_DeveRetornarOk_QuandoSucesso()
     {
         // Arrange
-        var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1, "Ninja", new List<ServicoResponse>());
+        var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1, "Ninja", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>());
         _revisaoServiceMock.Setup(s => s.GetByIdAsync(1, 1)).ReturnsAsync(response);
 
         // Act
@@ -49,7 +49,7 @@ public class RevisaoPadraoControllerTests
     {
         // Arrange
         var request = new RevisaoPadraoRequest("Revisão 1000km", 1, 1, new List<int> { 1, 2 });
-        var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1, "Ninja", new List<ServicoResponse>());
+        var response = new RevisaoPadraoResponse(1, "Revisão 1000km", 1, 1, "Ninja", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>());
         
         _revisaoServiceMock.Setup(s => s.CadastrarRevisaoAsync(request, 1)).ReturnsAsync(response);
 

@@ -15,6 +15,6 @@ public class RevisaoPadrao
     public bool Ativo { get; set; } = true;
     
     public virtual ICollection<RevisaoPadraoServico> Servicos { get; set; } = new List<RevisaoPadraoServico>();
-    
-    // TODO: Adicionar relacionamento com Peças quando o catálogo de peças estiver implementado
+
+    public virtual ICollection<RevisaoPadraoPeca> Pecas { get; set; } = new List<RevisaoPadraoPeca>();
 }

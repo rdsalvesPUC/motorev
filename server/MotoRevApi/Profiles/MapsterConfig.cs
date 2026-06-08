@@ -19,6 +19,16 @@ public static class MapsterConfig
         TypeAdapterConfig<RevisaoPadrao, RevisaoPadraoResponse>
             .NewConfig()
             .Map(dest => dest.NomeModeloMoto, src => src.ModeloMoto != null ? src.ModeloMoto.NomeModelo : string.Empty)
-            .Map(dest => dest.Servicos, src => src.Servicos.Select(s => s.Servico));
+            .Map(dest => dest.Servicos, src => src.Servicos.Select(s => s.Servico))
+            .Map(dest => dest.Pecas, src => src.Pecas.Select(p => new RevisaoPadraoPecaResponse(
+                p.Peca.Id,
+                p.Peca.Codigo,
+                p.Peca.Nome,
+                p.Peca.Categoria.ToString(),
+                p.Peca.Preco,
+                p.Peca.Estoque,
+                p.Peca.Status.ToString(),
+                p.Quantidade
+            )));
     }
 }

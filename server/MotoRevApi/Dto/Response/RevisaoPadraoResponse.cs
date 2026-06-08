@@ -6,6 +6,6 @@ public record RevisaoPadraoResponse(
     int Ordem,
     int ModeloMotoId,
     string NomeModeloMoto,
-    List<ServicoResponse> Servicos
-    // TODO: Adicionar a lista de Peças quando o catálogo de peças estiver implementado
+    List<ServicoResponse> Servicos,
+    List<RevisaoPadraoPecaResponse> Pecas
 );
