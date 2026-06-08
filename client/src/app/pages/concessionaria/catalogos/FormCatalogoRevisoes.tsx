@@ -234,17 +234,28 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
   };
 
   const handleQuantidadeChange = (quantity: number) => {
-    setRevisoes(createRevisoes(quantity));
+    if (!isEditMode) {
+      setRevisoes(createRevisoes(quantity));
+    } else {
+      // In edit mode only reset if no revisions loaded yet
+      setRevisoes((prev) =>
+        prev.length === 0 ? createRevisoes(quantity) : prev,
+      );
+    }
     setActiveRevTab('0');
   };
 
   const updateRevisaoField = (
     idx: number,
-    field: 'quilometragem' | 'tempoMeses',
-    value: number | null,
+    field: 'nome' | 'quilometragem' | 'tempoMeses',
+    value: string | number | null,
   ) => {
     setRevisoes((prev) =>
-      prev.map((r, i) => (i === idx ? { ...r, [field]: value ?? 0 } : r)),
+      prev.map((r, i) => {
+        if (i !== idx) return r;
+        const safeValue = value === null ? (field === 'nome' ? '' : 0) : value;
+        return { ...r, [field]: safeValue };
+      }),
     );
   };
 
@@ -486,6 +497,7 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
           <Select
             placeholder="Selecione"
             style={{ width: '100%' }}
+            disabled={isEditMode}
             onChange={(val: number) => handleQuantidadeChange(val)}
             options={[
               { value: 4, label: '4 revisões' },
@@ -512,8 +524,20 @@ export default function CatalogoModelosRevisaoCreate({ onBack }: CatalogoModelos
       title: 'Nº Revisão',
       dataIndex: 'ordem',
       key: 'ordem',
-      width: 120,
+      width: 90,
       render: (n: number) => ordinal(n),
+    },
+    {
+      title: 'Nome da Revisão',
+      dataIndex: 'nome',
+      key: 'nome',
+      render: (_, _record, idx: number) => (
+        <Input
+          value={revisoes[idx]?.nome}
+          onChange={(e) => updateRevisaoField(idx, 'nome', e.target.value)}
+          placeholder="Ex: Primeira revisão"
+        />
+      ),
     },
     {
       title: 'Quilometragem Máxima',
