@@ -28,7 +28,7 @@ public class RevisaoPadraoServiceTests
     {
         // Arrange
         using var context = CreateContext();
-        var concessionaria = new Concessionaria { Id = 1, Nome = "Conc", Cnpj = "123", UsuarioId = "u1" };
+        var concessionaria = new Concessionaria { Id = 1, Nome = "Conc", Cnpj = "123", UsuarioId = "u1", Usuario = new Usuario { Id = "u1", UserName = "user1" }, Telefone = "123", Cep = "12345", Logradouro = "Rua A", Numero = "100", Bairro = "Centro", Cidade = "Cidade", Uf = "UF" };
         var modelo = new ModeloMoto { Id = 1, NomeModelo = "Ninja", Marca = "Kawasaki" };
         var servico = new Servico { Id = 1, Codigo = "S1", Nome = "Oleo", Descricao = "D", Categoria = CategoriaServico.Verificacao };
         
