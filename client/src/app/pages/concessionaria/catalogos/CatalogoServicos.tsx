@@ -1,93 +1,135 @@
-
-import { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router';
-import { Typography, Input, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, InputNumber, Empty } from 'antd';
-import { ToolOutlined, SearchOutlined, EditOutlined, DeleteOutlined, SaveOutlined, CloseOutlined, EyeOutlined } from '@ant-design/icons';
-import type { ColumnType } from 'antd/es/table';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  Button,
+  Empty,
+  Flex,
+  Form,
+  Input,
+  InputNumber,
+  message,
+  Modal,
+  Select,
+  Space,
+  Spin,
+  Switch,
+  Table,
+  Tag,
+  Typography,
+} from 'antd';
+import { EditOutlined, ReloadOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons';
+import type { ColumnsType } from 'antd/es/table';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
-import { servicoService } from '@/app/services/servicoService';
+import { getLocale, t } from '@/app/i18n';
 import { Servico } from '@/app/models/Servico';
-import { t } from '@/app/i18n';
-import { ApiError } from '@/app/services/http';
+import { ServicoRequest } from '@/app/models/ServicoRequest';
+import { PATH_SEGMENTS } from '@/app/paths';
+import { servicoService } from '@/app/services/servicoService';
 import { handleApiError } from '@/app/utils/errorHandler';
-import { PATHS } from '@/app/paths';
 
 const { Title } = Typography;
 
-interface ServicoData extends Servico {
-  key: string;
-}
+type CategoriaServico = 'Verificacao' | 'Ajuste' | 'Limpeza' | 'Troca';
+type TempoFilter = 'ate30' | '31a60' | 'mais60';
+type PrecoFilter = 'ate100' | '101a200' | 'mais200';
 
 interface CatalogoServicosProps {
   onNavigateToForm?: () => void;
 }
 
-interface EditableColumn extends ColumnType<ServicoData> {
-  editable?: boolean;
+interface ServicoFormValues {
+  codigo: string;
+  nome: string;
+  categoria: CategoriaServico;
+  tempoEstimado: number;
+  custo: number;
+  descricao: string;
 }
 
 interface EditableCellProps {
   editing: boolean;
-  dataIndex: string;
-  cellTitle: any;
-  record: ServicoData;
+  dataIndex: keyof ServicoFormValues;
+  record?: Servico;
+  title: string;
   children: React.ReactNode;
-  form: any;
+}
+
+const categoriaOptions: Array<{ value: CategoriaServico; labelKey: string }> = [
+  { value: 'Verificacao', labelKey: 'serviceCatalog.category.verificacao' },
+  { value: 'Ajuste', labelKey: 'serviceCatalog.category.ajuste' },
+  { value: 'Limpeza', labelKey: 'serviceCatalog.category.limpeza' },
+  { value: 'Troca', labelKey: 'serviceCatalog.category.troca' },
+];
+
+function getCategoriaOptions() {
+  return categoriaOptions.map(({ value, labelKey }) => ({ value, label: t(labelKey) }));
+}
+
+function translateCategoria(categoria: string) {
+  const option = categoriaOptions.find((currentOption) => currentOption.value === categoria);
+  return option ? t(option.labelKey) : categoria;
+}
+
+function formatCurrency(value: number) {
+  return value.toLocaleString(getLocale(), {
+    style: 'currency',
+    currency: 'BRL',
+  });
+}
+
+function formatTempoEstimado(tempo: number) {
+  if (tempo < 60) return `${tempo} min`;
+
+  const horas = Math.floor(tempo / 60);
+  const minutos = tempo % 60;
+
+  return minutos > 0 ? `${horas}h ${minutos} min` : `${horas}h`;
+}
+
+function getDecimalSeparator() {
+  return getLocale() === 'pt-BR' ? ',' : '.';
+}
+
+function toUpdateRequest(values: ServicoFormValues): ServicoRequest {
+  return {
+    codigo: values.codigo,
+    nome: values.nome,
+    categoria: values.categoria,
+    tempoEstimado: Number(values.tempoEstimado),
+    custo: Number(values.custo),
+    descricao: values.descricao,
+  };
 }
 
 const EditableCell: React.FC<EditableCellProps> = ({
   editing,
   dataIndex,
-  cellTitle,
+  record: _record,
+  title,
   children,
-  form,
   ...restProps
 }) => {
-  const inputNodeMap: Record<string, React.ReactNode> = {
-    codigo: (
-      <Input
-        style={{ textTransform: 'uppercase' }}
-        onChange={(e) => {
-          form.setFieldsValue({ codigo: e.target.value.toUpperCase() });
-        }}
-      />
-    ),
-    descricao: <Input.TextArea rows={2} />,
-    tempoEstimado: (
-      <InputNumber
-        min={1}
-        max={480}
-        style={{ width: '100%' }}
-        parser={(value) => value?.replace(/[^\d]/g, '') as any}
-      />
-    ),
-    custo: (
-      <InputNumber
-        min={0}
-        max={100000}
-        style={{ width: '100%' }}
-        decimalSeparator=","
-        precision={2}
-        parser={(value) => value?.replace(/[^\d,]/g, '').replace(',', '.') as any}
-        formatter={(value) =>
-          value ? `${value}`.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''
-        }
-      />
-    ),
-    categoria: (
-      <Select
-        style={{ width: '100%' }}
-        options={[
-          { value: 'Verificacao', label: t('serviceCatalog.category.verificacao') },
-          { value: 'Ajuste', label: t('serviceCatalog.category.ajuste') },
-          { value: 'Limpeza', label: t('serviceCatalog.category.limpeza') },
-          { value: 'Troca', label: t('serviceCatalog.category.troca') },
-        ]}
-      />
-    ),
-  };
+  let inputNode: React.ReactNode;
 
-  const inputNode = inputNodeMap[dataIndex] || <Input />;
+  if (dataIndex === 'categoria') {
+    inputNode = <Select options={getCategoriaOptions()} />;
+  } else if (dataIndex === 'tempoEstimado') {
+    inputNode = <InputNumber min={1} max={480} precision={0} style={{ width: '100%' }} />;
+  } else if (dataIndex === 'custo') {
+    inputNode = (
+      <InputNumber
+        addonBefore="R$"
+        decimalSeparator={getDecimalSeparator()}
+        min={0}
+        precision={2}
+        step={0.01}
+        style={{ width: '100%' }}
+      />
+    );
+  } else if (dataIndex === 'descricao') {
+    inputNode = <Input.TextArea rows={2} maxLength={500} />;
+  } else {
+    inputNode = <Input />;
+  }
 
   return (
     <td {...restProps}>
@@ -95,12 +137,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
         <Form.Item
           name={dataIndex}
           style={{ margin: 0 }}
-          rules={[
-            {
-              required: true,
-              message: t('serviceCatalog.enterField', { field: cellTitle }),
-            },
-          ]}
+          rules={[{ required: true, message: t('serviceCatalog.enterField', { field: title }) }]}
         >
           {inputNode}
         </Form.Item>
@@ -112,30 +149,22 @@ const EditableCell: React.FC<EditableCellProps> = ({
 };
 
 export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosProps) {
-  const [form] = Form.useForm();
-  const navigate = useNavigate();
-  const [editingKey, setEditingKey] = useState('');
-  const [data, setData] = useState<ServicoData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [form] = Form.useForm<ServicoFormValues>();
+  const [servicos, setServicos] = useState<Servico[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [savingKey, setSavingKey] = useState<number | null>(null);
+  const [editingKey, setEditingKey] = useState<number | null>(null);
   const [searchText, setSearchText] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string | undefined>(undefined);
+  const [categoryFilter, setCategoryFilter] = useState<CategoriaServico>();
+  const [tempoFilter, setTempoFilter] = useState<TempoFilter>();
+  const [precoFilter, setPrecoFilter] = useState<PrecoFilter>();
 
-  const filteredData = useMemo(() => {
-    if (!searchText) return data;
-    
-    const lowerSearch = searchText.toLowerCase();
-    return data.filter(item => 
-      item.nome.toLowerCase().includes(lowerSearch) || 
-      item.codigo.toLowerCase().includes(lowerSearch)
-    );
-  }, [data, searchText]);
+  const loadServicos = async () => {
+    setLoading(true);
 
-  const fetchServicos = async (categoria?: string) => {
     try {
-      setLoading(true);
-      const servicos = await servicoService.getAll(categoria);
-      const mappedData = servicos.map(s => ({ ...s, key: s.id.toString() }));
-      setData(mappedData);
+      const data = await servicoService.getCatalogo();
+      setServicos(data);
     } catch (error) {
       handleApiError(error, 'error.fetchServices');
     } finally {
@@ -144,219 +173,289 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
   };
 
   useEffect(() => {
-    fetchServicos();
+    loadServicos();
   }, []);
 
-  const handleApplyFilters = () => {
-    fetchServicos(categoryFilter);
+  const filteredServicos = useMemo(() => {
+    const normalizedSearch = searchText.trim().toLowerCase();
+
+    return servicos.filter((servico) => {
+      const matchesSearch =
+        !normalizedSearch ||
+        servico.codigo.toLowerCase().includes(normalizedSearch) ||
+        servico.nome.toLowerCase().includes(normalizedSearch) ||
+        servico.descricao.toLowerCase().includes(normalizedSearch);
+
+      const matchesCategoria = !categoryFilter || servico.categoria === categoryFilter;
+
+      const matchesTempo =
+        !tempoFilter ||
+        (tempoFilter === 'ate30' && servico.tempoEstimado <= 30) ||
+        (tempoFilter === '31a60' && servico.tempoEstimado > 30 && servico.tempoEstimado <= 60) ||
+        (tempoFilter === 'mais60' && servico.tempoEstimado > 60);
+
+      const matchesPreco =
+        !precoFilter ||
+        (precoFilter === 'ate100' && servico.custo <= 100) ||
+        (precoFilter === '101a200' && servico.custo > 100 && servico.custo <= 200) ||
+        (precoFilter === 'mais200' && servico.custo > 200);
+
+      return matchesSearch && matchesCategoria && matchesTempo && matchesPreco;
+    });
+  }, [servicos, searchText, categoryFilter, tempoFilter, precoFilter]);
+
+  const isEditing = (record: Servico) => record.id === editingKey;
+
+  const edit = (record: Servico) => {
+    form.setFieldsValue({
+      codigo: record.codigo,
+      nome: record.nome,
+      categoria: record.categoria as CategoriaServico,
+      tempoEstimado: record.tempoEstimado,
+      custo: record.custo,
+      descricao: record.descricao,
+    });
+    setEditingKey(record.id);
+  };
+
+  const cancel = () => {
+    Modal.confirm({
+      title: t('serviceCatalog.cancelEdit.title'),
+      content: t('serviceCatalog.cancelEdit.content'),
+      okText: t('yes'),
+      cancelText: t('no'),
+      onOk() {
+        form.resetFields();
+        setEditingKey(null);
+      },
+    });
+  };
+
+  const save = async (record: Servico) => {
+    try {
+      const values = await form.validateFields();
+
+      Modal.confirm({
+        title: t('serviceCatalog.saveEdit.title'),
+        content: t('serviceCatalog.saveEdit.content'),
+        okText: t('yes'),
+        cancelText: t('no'),
+        async onOk() {
+          setSavingKey(record.id);
+
+          try {
+            const updatedServico = await servicoService.update(record.id, toUpdateRequest(values));
+            setServicos((currentServicos) =>
+              currentServicos.map((servico) => (servico.id === record.id ? updatedServico : servico)),
+            );
+            form.resetFields();
+            setEditingKey(null);
+            message.success(t('serviceUpdatedSuccess'));
+          } catch (error) {
+            handleApiError(error, 'error.updateService');
+          } finally {
+            setSavingKey(null);
+          }
+        },
+      });
+    } catch {
+      message.error(t('serviceCatalog.save.validationError'));
+    }
+  };
+
+  const toggleStatus = async (record: Servico) => {
+    const nextAtivo = !record.ativo;
+
+    const updateStatus = async () => {
+      setSavingKey(record.id);
+
+      try {
+        const updatedServico = await servicoService.alternarStatus(record.id);
+        setServicos((currentServicos) =>
+          currentServicos.map((servico) => (servico.id === record.id ? updatedServico : servico)),
+        );
+        message.success(
+          updatedServico.ativo
+            ? t('serviceCatalog.activate.success')
+            : t('serviceCatalog.deactivate.success'),
+        );
+      } catch (error) {
+        handleApiError(error, 'serviceCatalog.status.error');
+      } finally {
+        setSavingKey(null);
+      }
+    };
+
+    if (!nextAtivo) {
+      Modal.confirm({
+        title: t('serviceCatalog.deactivate.title'),
+        content: t('serviceCatalog.deactivate.content'),
+        okText: t('yes'),
+        cancelText: t('no'),
+        onOk: updateStatus,
+      });
+      return;
+    }
+
+    await updateStatus();
   };
 
   const handleClearFilters = () => {
     setSearchText('');
-    setCategoryFilter();
-    fetchServicos();
+    setCategoryFilter(undefined);
+    setTempoFilter(undefined);
+    setPrecoFilter(undefined);
+    loadServicos();
   };
 
-  const isEditing = (record: ServicoData) => record.key === editingKey;
+  const emptyText =
+    servicos.length === 0
+      ? t('serviceCatalog.empty')
+      : t('serviceCatalog.emptyFiltered');
 
-  const edit = (record: ServicoData) => {
-    form.setFieldsValue({ ...record });
-    setEditingKey(record.key);
-  };
-
-  const cancel = () => {
-    setEditingKey('');
-  };
-
-  const save = async (key: string) => {
-    try {
-      const row = await form.validateFields();
-      const newData = [...data];
-      const index = newData.findIndex((item) => key === item.key);
-
-      if (index > -1) {
-        const item = newData[index];
-        const updatedItem = { ...item, ...row };
-        
-        setLoading(true);
-        await servicoService.update(item.id, row);
-        
-        newData.splice(index, 1, updatedItem);
-        setData(newData);
-        setEditingKey('');
-
-        message.success(t('serviceUpdatedSuccess'));
-      }
-    } catch (errInfo) {
-      handleApiError(errInfo);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDelete = async (key: string) => {
-    const item = data.find(i => i.key === key);
-    if (!item) return;
-
-    try {
-      setLoading(true);
-      await servicoService.delete(item.id);
-      
-      const newData = data.filter((item) => item.key !== key);
-      setData(newData);
-      message.success(t('serviceDeletedSuccess'));
-    } catch (error) {
-      handleApiError(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const showDetails = (id: number) => {
-    navigate(`${PATHS.CONCESSIONARIA_CATALOGOS_SERVICOS}/${id}`);
-  };
-
-  const getCategoryColor = (categoria: string) => {
-    const colors: Record<string, string> = {
-      'Verificacao': 'blue',
-      'Ajuste': 'orange',
-      'Limpeza': 'green',
-      'Troca': 'red'
-    };
-    return colors[categoria] || 'default';
-  };
-
-  const columns: EditableColumn[] = [
+  const columns: ColumnsType<Servico> = [
     {
       title: t('serviceCatalog.code'),
       dataIndex: 'codigo',
       key: 'codigo',
-      editable: true,
+      width: 130,
+      sorter: (a, b) => a.codigo.localeCompare(b.codigo),
+      onCell: (record) => ({
+        record,
+        dataIndex: 'codigo',
+        title: t('serviceCatalog.code'),
+        editing: isEditing(record),
+      }),
     },
     {
       title: t('serviceCatalog.serviceName'),
       dataIndex: 'nome',
       key: 'nome',
-      editable: true,
+      width: 220,
+      sorter: (a, b) => a.nome.localeCompare(b.nome),
+      onCell: (record) => ({
+        record,
+        dataIndex: 'nome',
+        title: t('serviceCatalog.serviceName'),
+        editing: isEditing(record),
+      }),
     },
     {
       title: t('serviceCatalog.category'),
       dataIndex: 'categoria',
       key: 'categoria',
-      editable: true,
-      render: (categoria: string) => (
-        <Tag color={getCategoryColor(categoria)}>
-          {t(`serviceCatalog.category.${categoria.toLowerCase()}`)}
-        </Tag>
-      ),
+      width: 160,
+      render: translateCategoria,
+      onCell: (record) => ({
+        record,
+        dataIndex: 'categoria',
+        title: t('serviceCatalog.category'),
+        editing: isEditing(record),
+      }),
     },
     {
       title: t('serviceCatalog.estimatedTime'),
       dataIndex: 'tempoEstimado',
       key: 'tempoEstimado',
-      editable: true,
-      render: (tempo: number) => `${tempo} ${t('minutes')}`,
+      width: 170,
+      render: formatTempoEstimado,
+      sorter: (a, b) => a.tempoEstimado - b.tempoEstimado,
+      onCell: (record) => ({
+        record,
+        dataIndex: 'tempoEstimado',
+        title: t('serviceCatalog.estimatedTime'),
+        editing: isEditing(record),
+      }),
     },
     {
       title: t('serviceCatalog.price'),
       dataIndex: 'custo',
       key: 'custo',
-      editable: true,
-      render: (custo: number) => `R$ ${custo.toFixed(2)}`,
+      width: 150,
+      render: formatCurrency,
+      sorter: (a, b) => a.custo - b.custo,
+      onCell: (record) => ({
+        record,
+        dataIndex: 'custo',
+        title: t('serviceCatalog.price'),
+        editing: isEditing(record),
+      }),
     },
     {
       title: t('serviceCatalog.description'),
       dataIndex: 'descricao',
       key: 'descricao',
-      editable: true,
+      ellipsis: true,
+      onCell: (record) => ({
+        record,
+        dataIndex: 'descricao',
+        title: t('serviceCatalog.description'),
+        editing: isEditing(record),
+      }),
+    },
+    {
+      title: t('serviceCatalog.status'),
+      dataIndex: 'ativo',
+      key: 'ativo',
+      width: 160,
+      align: 'center',
+      render: (_ativo: boolean, record) =>
+        isEditing(record) ? (
+          <Tag color={record.ativo ? 'green' : 'red'}>
+            {record.ativo ? t('status.activeSingle') : t('status.inactiveSingle')}
+          </Tag>
+        ) : (
+          <Switch
+            checked={record.ativo}
+            checkedChildren={t('status.activeSingle')}
+            disabled={editingKey !== null || savingKey === record.id}
+            loading={savingKey === record.id}
+            onChange={() => toggleStatus(record)}
+            unCheckedChildren={t('status.inactiveSingle')}
+          />
+        ),
     },
     {
       title: t('serviceCatalog.actions'),
       key: 'actions',
-      width: 180,
-      render: (_: any, record: ServicoData) => {
+      width: 150,
+      render: (_: unknown, record) => {
         const editable = isEditing(record);
         return editable ? (
-          <Space size="small">
-            <Button
-              type="link"
-              icon={<SaveOutlined />}
-              onClick={() => save(record.key)}
-            >
+          <Space>
+            <Button type="link" loading={savingKey === record.id} onClick={() => save(record)}>
               {t('serviceCatalog.save')}
             </Button>
-            <Button
-              type="link"
-              icon={<CloseOutlined />}
-              onClick={cancel}
-            >
+            <Button type="link" danger onClick={cancel}>
               {t('serviceCatalog.cancel')}
             </Button>
           </Space>
         ) : (
-          <Space size="small">
-            <Button
-              type="link"
-              icon={<EyeOutlined />}
-              onClick={() => showDetails(record.id)}
-            >
-              {t('serviceCatalog.details')}
-            </Button>
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              disabled={editingKey !== ''}
-              onClick={() => edit(record)}
-            >
-              {t('serviceCatalog.edit')}
-            </Button>
-            <Popconfirm
-              title={t('confirmDelete')}
-              onConfirm={() => handleDelete(record.key)}
-              okText={t('yes')}
-              cancelText={t('no')}
-            >
-              <Button
-                type="link"
-                danger
-                icon={<DeleteOutlined />}
-                disabled={editingKey !== ''}
-              >
-                {t('serviceCatalog.delete')}
-              </Button>
-            </Popconfirm>
-          </Space>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            disabled={editingKey !== null}
+            onClick={() => edit(record)}
+          >
+            {t('serviceCatalog.edit')}
+          </Button>
         );
       },
     },
   ];
 
-  const mergedColumns = columns.map((col) => {
-    if (!col.editable) {
-      return col;
-    }
-    const { editable, ...colWithoutEditable } = col;
-    return {
-      ...colWithoutEditable,
-      onCell: (record: ServicoData) => ({
-        record,
-        dataIndex: col.dataIndex,
-        cellTitle: col.title,
-        editing: isEditing(record),
-        form: form,
-      }),
-    };
-  });
-
   return (
-    <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+    <Flex vertical gap="large" style={{ width: '100%' }}>
+      <Flex vertical gap="middle" style={{ width: '100%' }}>
         <DashboardBreadcrumb
           userType="concessionaria"
           items={[
             {
-              title: t('serviceCatalog.title'),
+              title: t('dashboard.menu.catalogos'),
               icon: <ToolOutlined />,
+            },
+            {
+              title: t('serviceCatalog.title'),
             },
           ]}
         />
@@ -367,40 +466,63 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
 
         <Flex gap="middle" align="center" wrap="wrap">
           <Input
+            allowClear
             placeholder={t('serviceCatalog.searchPlaceholder')}
             prefix={<SearchOutlined />}
             style={{ width: 300 }}
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            onPressEnter={handleApplyFilters}
+            onChange={(event) => setSearchText(event.target.value)}
           />
 
           <Select
+            allowClear
+            options={getCategoriaOptions()}
             placeholder={t('serviceCatalog.category')}
             style={{ width: 150 }}
             value={categoryFilter}
-            onChange={(value) => setCategoryFilter(value)}
+            onChange={setCategoryFilter}
+          />
+
+          <Select
             allowClear
             options={[
-              { value: 'Verificacao', label: t('serviceCatalog.category.verificacao') },
-              { value: 'Ajuste', label: t('serviceCatalog.category.ajuste') },
-              { value: 'Limpeza', label: t('serviceCatalog.category.limpeza') },
-              { value: 'Troca', label: t('serviceCatalog.category.troca') },
+              { value: 'ate30', label: t('serviceCatalog.time.upTo30') },
+              { value: '31a60', label: t('serviceCatalog.time.from31To60') },
+              { value: 'mais60', label: t('serviceCatalog.time.moreThan60') },
             ]}
+            placeholder={t('serviceCatalog.time.placeholder')}
+            style={{ width: 150 }}
+            value={tempoFilter}
+            onChange={setTempoFilter}
+          />
+
+          <Select
+            allowClear
+            options={[
+              { value: 'ate100', label: t('serviceCatalog.price.upTo100') },
+              { value: '101a200', label: t('serviceCatalog.price.from101To200') },
+              { value: 'mais200', label: t('serviceCatalog.price.moreThan200') },
+            ]}
+            placeholder={t('serviceCatalog.price')}
+            style={{ width: 150 }}
+            value={precoFilter}
+            onChange={setPrecoFilter}
           />
 
           <Flex gap="small" style={{ marginLeft: 'auto' }}>
             <Button onClick={handleClearFilters}>{t('serviceCatalog.clear')}</Button>
-            <Button type="primary" onClick={handleApplyFilters}>{t('serviceCatalog.apply')}</Button>
+            <Button icon={<ReloadOutlined />} loading={loading} onClick={loadServicos}>
+              {t('serviceCatalog.refresh')}
+            </Button>
           </Flex>
         </Flex>
-      </Space>
+      </Flex>
 
       <div style={{ background: '#fff', padding: '24px', borderRadius: '8px' }}>
         <Spin spinning={loading}>
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
             <Flex justify="space-between" align="center">
-              <span>{t('serviceCatalog.totalServices', { count: filteredData.length })}</span>
+              <span>{t('serviceCatalog.totalServices', { count: filteredServicos.length })}</span>
               <Button type="primary" onClick={onNavigateToForm}>
                 {t('serviceCatalog.addService')}
               </Button>
@@ -413,29 +535,26 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
                     cell: EditableCell,
                   },
                 }}
-                columns={mergedColumns as ColumnType<ServicoData>[]}
-                dataSource={filteredData}
-                pagination={{
-                  onChange: cancel,
-                }}
+                columns={columns}
+                dataSource={filteredServicos}
                 locale={{
                   emptyText: (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description={
-                        <span>
-                          {t('serviceCatalog.empty')}<br />
-                          <small>{t('serviceCatalog.emptyDescription')}</small>
-                        </span>
-                      }
+                      description={emptyText}
                     />
-                  )
+                  ),
                 }}
+                pagination={{
+                  onChange: () => setEditingKey(null),
+                  pageSize: 10,
+                }}
+                rowKey="id"
               />
             </Form>
           </Space>
         </Spin>
       </div>
-    </Space>
+    </Flex>
   );
 }

@@ -23,12 +23,7 @@ public class ServicoService
 
     public virtual async Task<ServicoResponse> CreateAsync(ServicoRequest request)
     {
-        var servicoDuplicado = await _context.Servicos
-            .AsNoTracking()
-            .AnyAsync(s => s.Ativo && 
-                (s.Codigo == request.Codigo || (s.Nome == request.Nome && s.Categoria == request.Categoria)));
-
-        if (servicoDuplicado)
+        if (await ServicoAtivoDuplicadoAsync(request.Codigo, request.Nome, request.Categoria))
         {
             throw new DuplicateDataException(
                 $"Já existe um serviço ativo com o código '{request.Codigo}' ou com o nome '{request.Nome}' nesta categoria.");
@@ -41,7 +36,7 @@ public class ServicoService
         {
             await _context.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627))
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
             throw new DuplicateDataException(
                 $"Já existe um serviço ativo com o código '{request.Codigo}' ou com o nome '{request.Nome}' nesta categoria.");
@@ -61,6 +56,29 @@ public class ServicoService
 
         var servicos = await query
             .OrderBy(s => s.Categoria)
+            .ThenBy(s => s.Nome)
+            .ToListAsync();
+
+        return servicos.Adapt<IEnumerable<ServicoResponse>>();
+    }
+
+    public virtual async Task<IEnumerable<ServicoResponse>> GetCatalogoAsync(CategoriaServico? categoria = null, bool? ativo = null)
+    {
+        var query = _context.Servicos.AsNoTracking().AsQueryable();
+
+        if (categoria.HasValue)
+        {
+            query = query.Where(s => s.Categoria == categoria.Value);
+        }
+
+        if (ativo.HasValue)
+        {
+            query = query.Where(s => s.Ativo == ativo.Value);
+        }
+
+        var servicos = await query
+            .OrderByDescending(s => s.Ativo)
+            .ThenBy(s => s.Categoria)
             .ThenBy(s => s.Nome)
             .ToListAsync();
 
@@ -89,12 +107,7 @@ public class ServicoService
             throw new NotFoundException($"Serviço com ID {id} não encontrado.");
         }
 
-        var servicoDuplicado = await _context.Servicos
-            .AsNoTracking()
-            .AnyAsync(s => s.Id != id && s.Ativo 
-                && (s.Codigo == request.Codigo || (s.Nome == request.Nome && s.Categoria == request.Categoria)));
-
-        if (servicoDuplicado)
+        if (await ServicoAtivoDuplicadoAsync(request.Codigo, request.Nome, request.Categoria, id))
         {
             throw new DuplicateDataException(
                 $"Já existe outro serviço ativo com o código '{request.Codigo}' ou com o nome '{request.Nome}' nesta categoria.");
@@ -111,10 +124,38 @@ public class ServicoService
         {
             await _context.SaveChangesAsync();
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627))
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
             throw new DuplicateDataException(
                 $"Já existe outro serviço ativo com o código '{request.Codigo}' ou com o nome '{request.Nome}' nesta categoria.");
+        }
+
+        return servico.Adapt<ServicoResponse>();
+    }
+
+    public virtual async Task<ServicoResponse> AlternarStatusAsync(int id)
+    {
+        var servico = await _context.Servicos.FindAsync(id);
+        if (servico == null)
+        {
+            throw new NotFoundException($"Serviço com ID {id} não encontrado.");
+        }
+
+        if (!servico.Ativo && await ServicoAtivoDuplicadoAsync(servico.Codigo, servico.Nome, servico.Categoria, id))
+        {
+            throw new DuplicateDataException(
+                $"Já existe outro serviço ativo com o código '{servico.Codigo}' ou com o nome '{servico.Nome}' nesta categoria.");
+        }
+
+        servico.Ativo = !servico.Ativo;
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
+        {
+            throw new DuplicateDataException(
+                $"Já existe outro serviço ativo com o código '{servico.Codigo}' ou com o nome '{servico.Nome}' nesta categoria.");
         }
 
         return servico.Adapt<ServicoResponse>();
@@ -133,5 +174,24 @@ public class ServicoService
             servico.Ativo = false;
             await _context.SaveChangesAsync();
         }
+    }
+
+    private Task<bool> ServicoAtivoDuplicadoAsync(
+        string codigo,
+        string nome,
+        CategoriaServico categoria,
+        int? idIgnorado = null)
+    {
+        return _context.Servicos
+            .AsNoTracking()
+            .AnyAsync(s =>
+                s.Ativo &&
+                (!idIgnorado.HasValue || s.Id != idIgnorado.Value) &&
+                (s.Codigo == codigo || (s.Nome == nome && s.Categoria == categoria)));
+    }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
+    {
+        return ex.InnerException is SqlException sqlEx && (sqlEx.Number == 2601 || sqlEx.Number == 2627);
     }
 }

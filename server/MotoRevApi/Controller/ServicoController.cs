@@ -65,6 +65,28 @@ public class ServicoController : ControllerBase
         var response = await _servicoService.GetAllAsync(categoria);
         return Ok(response);
     }
+
+    /// <summary>
+    /// Listar serviços do catálogo administrativo.
+    /// </summary>
+    /// <remarks>
+    /// Endpoint disponível apenas para Concessionárias. Retorna serviços ativos e inativos.
+    /// </remarks>
+    /// <param name="categoria">Filtro opcional por categoria do serviço.</param>
+    /// <param name="ativo">Filtro opcional por status ativo/inativo.</param>
+    /// <response code="200">Retorna a lista de serviços do catálogo.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão (não é concessionária).</response>
+    [HttpGet("catalogo")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(IEnumerable<ServicoResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetCatalogo([FromQuery] CategoriaServico? categoria, [FromQuery] bool? ativo)
+    {
+        var response = await _servicoService.GetCatalogoAsync(categoria, ativo);
+        return Ok(response);
+    }
     
     /// <summary>
     /// Consultar um serviço pelo ID.
@@ -110,6 +132,31 @@ public class ServicoController : ControllerBase
     public async Task<IActionResult> Update(int id, [FromBody] ServicoUpdateRequest request)
     {
         var response = await _servicoService.UpdateAsync(id, request);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Alternar o status ativo/inativo de um serviço.
+    /// </summary>
+    /// <remarks>
+    /// Endpoint disponível apenas para Concessionárias. Realiza soft delete ao alternar para inativo.
+    /// </remarks>
+    /// <param name="id">ID do serviço a ter o status alternado.</param>
+    /// <response code="200">Retorna o serviço com status atualizado.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão (não é concessionária).</response>
+    /// <response code="404">Se o serviço não for encontrado.</response>
+    /// <response code="409">Se a reativação conflitar com outro serviço ativo.</response>
+    [HttpPatch("{id}/alternar-status")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(ServicoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AlternarStatus(int id)
+    {
+        var response = await _servicoService.AlternarStatusAsync(id);
         return Ok(response);
     }
 

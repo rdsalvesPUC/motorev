@@ -7,4 +7,5 @@ export interface Servico {
   categoria: string;
   tempoEstimado: number;
   custo: number;
+  ativo: boolean;
 }
