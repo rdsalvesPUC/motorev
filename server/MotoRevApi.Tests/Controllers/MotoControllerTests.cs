@@ -309,4 +309,50 @@ public class MotoControllerTests
         // Act & Assert
         await Assert.ThrowsAsync<BusinessRuleException>(() => _controller.InativarMoto(1));
     }
+
+    [Fact]
+    public async Task ListarMinhasMotos_DeveRetornarUnauthorized_QuandoSemUserId()
+    {
+        // Arrange
+        var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity()); // Sem NameIdentifier Claim
+
+        _controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userPrincipal }
+        };
+
+        // Act
+        var result = await _controller.ListarMinhasMotos();
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task AdicionarMoto_DeveRetornarBadRequest_QuandoModeloEstadoForInvalido()
+    {
+        // Arrange
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Vermelha", 0, DateTime.Now, null, null);
+        _controller.ModelState.AddModelError("Placa", "A placa é obrigatória.");
+
+        // Act
+        var result = await _controller.AdicionarMoto(request);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task AtualizarMoto_DeveRetornarBadRequest_QuandoModeloEstadoForInvalido()
+    {
+        // Arrange
+        var request = new MotoUpdateRequest("XYZ-9999", "Azul", 0);
+        _controller.ModelState.AddModelError("Placa", "A placa é obrigatória.");
+
+        // Act
+        var result = await _controller.AtualizarMoto(1, request);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
 }
