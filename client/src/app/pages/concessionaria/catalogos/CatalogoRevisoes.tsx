@@ -1,8 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, Input, Select, Button, Table, Space, Flex, Popconfirm, message, Spin, Tag, Card, Empty, Switch } from 'antd';
-import { ToolOutlined, SearchOutlined, PlusOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router';
+import {
+  Breadcrumb,
+  Typography,
+  Input,
+  Select,
+  Button,
+  Table,
+  Space,
+  Flex,
+  Modal,
+  Switch,
+  Spin,
+  Card,
+  message,
+} from 'antd';
+import {
+  HomeOutlined,
+  ToolOutlined,
+  SearchOutlined,
+  EyeOutlined,
+  PlusOutlined,
+} from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { revisaoPadraoService } from '@/app/services/revisaoPadraoService';
 import { linhaService } from '@/app/services/linhaService';
 import { handleApiError } from '@/app/utils/errorHandler';
@@ -57,14 +77,9 @@ const groupByLinha = (revisoes: RevisaoPadraoListResponse[]): RevisaoLinhaData[]
   }).sort((a, b) => a.nomeLinha.localeCompare(b.nomeLinha));
 };
 
-const formatRange = (values: number[], suffix: string) => {
-  if (values.length === 0) return '-';
-  if (values.length === 1) return `${values[0].toLocaleString('pt-BR')} ${suffix}`;
-
-  return `${values[0].toLocaleString('pt-BR')} - ${values[values.length - 1].toLocaleString('pt-BR')} ${suffix}`;
-};
-
 export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoModelosRevisaoProps) {
+  const navigate = useNavigate();
+
   const [data, setData] = useState<RevisaoLinhaData[]>([]);
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,6 +125,15 @@ export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoMod
   }, [data, linhaFilter, searchText, statusFilter]);
 
   const handleStatusToggle = async (record: RevisaoLinhaData) => {
+    if (record.ativo && record.modelosVinculados.length > 0) {
+      Modal.error({
+        title: 'Não é possível desativar',
+        content: 'Este modelo de revisão não pode ser desativado porque possui modelos de moto vinculados.',
+        okText: 'Entendido',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
       await revisaoPadraoService.alternarStatusPorLinha(record.linhaId);
@@ -130,10 +154,14 @@ export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoMod
 
   const columns: ColumnsType<RevisaoLinhaData> = [
     {
+      title: 'Modelo de Revisão',
+      key: 'modeloRevisao',
+      render: (_, record) => <strong>Plano Padrão — {record.nomeLinha}</strong>,
+    },
+    {
       title: 'Linha de Moto',
       dataIndex: 'nomeLinha',
       key: 'nomeLinha',
-      render: (nomeLinha: string) => <strong>{nomeLinha}</strong>,
     },
     {
       title: 'Qtd. Revisões',
@@ -150,54 +178,55 @@ export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoMod
       render: (modelos: string[]) => `${modelos.length} modelo(s)`,
     },
     {
-      title: 'Quilometragem',
-      dataIndex: 'quilometragens',
-      key: 'quilometragens',
-      width: 180,
-      render: (values: number[]) => formatRange(values, 'km'),
-    },
-    {
-      title: 'Tempo',
-      dataIndex: 'tempoMeses',
-      key: 'tempoMeses',
-      width: 160,
-      render: (values: number[]) => formatRange(values, 'meses'),
-    },
-    {
       title: 'Status',
       key: 'status',
       width: 180,
       align: 'center',
-      render: (_: any, record) => (
-        <Space size="small">
-          <Tag color={record.ativo ? 'green' : 'red'}>
-            {record.ativo ? 'Ativo' : 'Inativo'}
-          </Tag>
-          <Popconfirm
-            title={record.ativo ? 'Inativar revisões da linha' : 'Ativar revisões da linha'}
-            description={record.ativo ? 'Tem certeza que deseja inativar as revisões desta linha?' : 'Tem certeza que deseja ativar as revisões desta linha?'}
-            okText="Sim"
-            cancelText="Não"
-            onConfirm={() => handleStatusToggle(record)}
-          >
-            <Switch checked={record.ativo} />
-          </Popconfirm>
-        </Space>
+      render: (_, record) => (
+        <Switch
+          checked={record.ativo}
+          disabled={record.ativo && record.modelosVinculados.length > 0}
+          onChange={() => handleStatusToggle(record)}
+          checkedChildren="Ativo"
+          unCheckedChildren="Inativo"
+        />
+      ),
+    },
+    {
+      title: 'Ações',
+      key: 'actions',
+      width: 120,
+      align: 'center',
+      render: (_, record) => (
+        <Button
+          type="link"
+          icon={<EyeOutlined />}
+          onClick={() => {
+            navigate(`/dashboard/concessionaria/catalogos-revisoes/linha/${record.linhaId}`);
+          }}
+        >
+          Detalhes
+        </Button>
       ),
     },
   ];
 
   return (
     <Spin spinning={loading}>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-          <DashboardBreadcrumb
-            userType="concessionaria"
+      <Flex vertical gap="large" style={{ width: '100%' }}>
+        <Flex vertical gap="middle" style={{ width: '100%' }}>
+          <Breadcrumb
             items={[
+              { href: '', title: <HomeOutlined /> },
               {
-                title: 'Modelos de Revisão',
-                icon: <ToolOutlined />,
+                title: (
+                  <>
+                    <ToolOutlined />
+                    <span> Catálogos</span>
+                  </>
+                ),
               },
+              { title: 'Modelos de Revisão' },
             ]}
           />
 
@@ -207,7 +236,7 @@ export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoMod
 
           <Flex gap="middle" align="center" wrap="wrap">
             <Input
-              placeholder="Buscar por linha ou modelo..."
+              placeholder="Buscar modelos..."
               prefix={<SearchOutlined />}
               style={{ width: 300 }}
               value={searchText}
@@ -240,12 +269,12 @@ export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoMod
               <Button type="primary" onClick={fetchRevisoes}>Aplicar</Button>
             </Flex>
           </Flex>
-        </Space>
+        </Flex>
 
         <Card>
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
             <Flex justify="space-between" align="center">
-              <span>Total: {filteredData.length} linha(s) com revisões</span>
+              <span>Total: {filteredData.length} modelos de revisão</span>
               <Button type="primary" icon={<PlusOutlined />} onClick={onNavigateToForm}>
                 Adicionar Modelo de Revisão
               </Button>
@@ -255,53 +284,11 @@ export default function CatalogoModelosRevisao({ onNavigateToForm }: CatalogoMod
               dataSource={filteredData}
               columns={columns}
               rowKey="key"
-              expandable={{
-                expandedRowRender: (record) => (
-                  <Table
-                    size="small"
-                    rowKey={(item) => `${item.modeloMotoId}-${item.ordem}`}
-                    dataSource={record.revisoes}
-                    pagination={false}
-                    columns={[
-                      { title: 'Ordem', dataIndex: 'ordem', key: 'ordem', width: 90 },
-                      { title: 'Revisão', dataIndex: 'nome', key: 'nome' },
-                      { title: 'Modelo', dataIndex: 'nomeModeloMoto', key: 'nomeModeloMoto' },
-                      {
-                        title: 'KM',
-                        dataIndex: 'quilometragem',
-                        key: 'quilometragem',
-                        render: (value: number) => `${value.toLocaleString('pt-BR')} km`,
-                      },
-                      {
-                        title: 'Tempo',
-                        dataIndex: 'tempoMeses',
-                        key: 'tempoMeses',
-                        render: (value: number) => `${value} meses`,
-                      },
-                      {
-                        title: 'Status',
-                        dataIndex: 'ativo',
-                        key: 'ativo',
-                        render: (ativo: boolean) => (
-                          <Tag color={ativo ? 'green' : 'red'}>{ativo ? 'Ativo' : 'Inativo'}</Tag>
-                        ),
-                      },
-                    ]}
-                  />
-                ),
-              }}
-              locale={{
-                emptyText: (
-                  <Empty
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description="Nenhum modelo de revisão encontrado."
-                  />
-                ),
-              }}
+              bordered
             />
           </Space>
         </Card>
-      </Space>
+      </Flex>
     </Spin>
   );
 }

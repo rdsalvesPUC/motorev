@@ -1,4 +1,4 @@
-﻿using Mapster;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using MotoRevApi.Data;
@@ -67,7 +67,7 @@ public class RevisaoPadraoService
                 .ThenInclude(rs => rs.Servico)
             .Include(rp => rp.Pecas)
                 .ThenInclude(rp => rp.Peca)
-            .FirstOrDefaultAsync(rp => rp.Id == id && rp.ConcessionariaId == concessionariaId && rp.Ativo);
+            .FirstOrDefaultAsync(rp => rp.Id == id && rp.ConcessionariaId == concessionariaId);
 
         if (revisao == null)
         {
@@ -325,6 +325,15 @@ public class RevisaoPadraoService
         }
 
         var novoStatus = !revisoes.Any(rp => rp.Ativo);
+        if (novoStatus == false)
+        {
+            var temModelosAtivos = await _context.ModelosMotos.AnyAsync(m => m.LinhaId == linhaId && m.Ativo);
+            if (temModelosAtivos)
+            {
+                throw new BusinessRuleException("Não é possível desativar este modelo de revisão porque ele possui modelos de moto ativos vinculados.");
+            }
+        }
+
         foreach (var revisao in revisoes)
         {
             revisao.Ativo = novoStatus;

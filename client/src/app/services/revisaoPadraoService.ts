@@ -36,5 +36,10 @@ export const revisaoPadraoService = {
 
     return handleResponse(response, 'Erro ao alternar status das revisões padrão.');
   },
+
+  getById: async (id: number): Promise<RevisaoPadraoResponse> => {
+    const response = await apiFetch(`${REVISAO_PADRAO_URL}/${id}`);
+    return handleResponse(response, 'Erro ao carregar detalhes da revisão padrão.');
+  },
 };
 

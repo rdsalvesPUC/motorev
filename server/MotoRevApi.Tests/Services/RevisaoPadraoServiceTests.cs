@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Enums;
@@ -522,7 +522,7 @@ public class RevisaoPadraoServiceTests
         // Arrange
         using var context = CreateContext();
         context.Linhas.Add(new Linha { Id = 1, Nome = "Street" });
-        context.ModelosMotos.Add(new ModeloMoto { Id = 1, NomeModelo = "Ninja", Marca = "Kawasaki", LinhaId = 1 });
+        context.ModelosMotos.Add(new ModeloMoto { Id = 1, NomeModelo = "Ninja", Marca = "Kawasaki", LinhaId = 1, Ativo = false });
         context.RevisoesPadrao.AddRange(
             new RevisaoPadrao { Id = 1, Nome = "Rev 1", ModeloMotoId = 1, ConcessionariaId = 1, Ordem = 1, Quilometragem = 1000, TempoMeses = 6, Ativo = true },
             new RevisaoPadrao { Id = 2, Nome = "Rev 2", ModeloMotoId = 1, ConcessionariaId = 1, Ordem = 2, Quilometragem = 6000, TempoMeses = 12, Ativo = true },
