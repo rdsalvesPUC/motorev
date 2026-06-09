@@ -34,6 +34,7 @@ public class ModeloMotoControllerTests
         var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", 1, "400cc", 2023, true);
 
         _modeloMotoServiceMock.Setup(s => s.CadastrarModeloMoto(request)).Returns(response);
+        _controller.ModelState.Clear();
 
         var result = _controller.AdicionarModeloMoto(request);
 
@@ -51,6 +52,26 @@ public class ModeloMotoControllerTests
         var result = _controller.AdicionarModeloMoto(request);
 
         Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public void AdicionarModeloMoto_DeveLancarDuplicateDataException_QuandoNomeJaExiste()
+    {
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", 1, "400cc", 2023);
+        _modeloMotoServiceMock.Setup(s => s.CadastrarModeloMoto(request))
+            .Throws(new DuplicateDataException("Já existe um modelo de moto ativo com este nome."));
+
+        Assert.Throws<DuplicateDataException>(() => _controller.AdicionarModeloMoto(request));
+    }
+
+    [Fact]
+    public void AdicionarModeloMoto_DeveLancarNotFoundException_QuandoLinhaInativa()
+    {
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", 99, "400cc", 2023);
+        _modeloMotoServiceMock.Setup(s => s.CadastrarModeloMoto(request))
+            .Throws(new NotFoundException("Linha informada não encontrada."));
+
+        Assert.Throws<NotFoundException>(() => _controller.AdicionarModeloMoto(request));
     }
 
     [Fact]
@@ -133,6 +154,7 @@ public class ModeloMotoControllerTests
         var response = new ModeloMotoResponse(1, "Ninja ZX-6R", "Kawasaki", 1, "600cc", 2024, true);
 
         _modeloMotoServiceMock.Setup(s => s.AtualizarModeloMoto(1, request)).Returns(response);
+        _controller.ModelState.Clear();
 
         var result = _controller.AtualizarModeloMoto(1, request);
 
@@ -153,6 +175,27 @@ public class ModeloMotoControllerTests
     }
 
     [Fact]
+    public void AtualizarModeloMoto_DeveRetornarBadRequest_QuandoModelStateInvalido()
+    {
+        _controller.ModelState.AddModelError("NomeModelo", "Obrigatório");
+        var request = new ModeloMotoRequest("", "Kawasaki", 1, null, null);
+
+        var result = _controller.AtualizarModeloMoto(1, request);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public void AtualizarModeloMoto_DeveLancarDuplicateDataException_QuandoNovoNomeJaExiste()
+    {
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", 1, "400cc", 2023);
+        _modeloMotoServiceMock.Setup(s => s.AtualizarModeloMoto(1, request))
+            .Throws(new DuplicateDataException("Já existe outro modelo de moto ativo com este nome."));
+
+        Assert.Throws<DuplicateDataException>(() => _controller.AtualizarModeloMoto(1, request));
+    }
+
+    [Fact]
     public void AlternarStatusModeloMoto_DeveRetornarOk_QuandoSucesso()
     {
         var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", 1, "400cc", 2023, false);
@@ -165,12 +208,11 @@ public class ModeloMotoControllerTests
     }
 
     [Fact]
-    public void AlternarStatusModeloMoto_DeveLancarNotFoundException_QuandoModeloNaoExiste()
+    public void AlternarStatusModeloMoto_DeveLancarDuplicateDataException_QuandoReativarComNomeJaExistente()
     {
-        _modeloMotoServiceMock
-            .Setup(s => s.AlternarStatus(1))
-            .Throws(new NotFoundException("Modelo de moto não encontrado."));
+        _modeloMotoServiceMock.Setup(s => s.AlternarStatus(1))
+            .Throws(new DuplicateDataException("Já existe outro modelo de moto ativo com este nome."));
 
-        Assert.Throws<NotFoundException>(() => _controller.AlternarStatusModeloMoto(1));
+        Assert.Throws<DuplicateDataException>(() => _controller.AlternarStatusModeloMoto(1));
     }
 }

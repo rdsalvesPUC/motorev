@@ -340,6 +340,74 @@ public class ConcessionariaControllerTests
     }
 
     [Fact]
+    public async Task AddMinhaLoja_DeveRetornarBadRequest_QuandoModelStateInvalido()
+    {
+        SetAuthenticatedConcessionaria();
+        _controller.ModelState.AddModelError("Nome", "Obrigatório");
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+
+        var result = await _controller.AddMinhaLoja(request);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task UpdateMinhaLoja_DeveRetornarBadRequest_QuandoModelStateInvalido()
+    {
+        SetAuthenticatedConcessionaria();
+        _controller.ModelState.AddModelError("Nome", "Obrigatório");
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+
+        var result = await _controller.UpdateMinhaLoja(1, request);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task AddLoja_DeveRetornarBadRequest_QuandoModelStateInvalido()
+    {
+        SetAuthenticatedConcessionaria();
+        _controller.ModelState.AddModelError("Nome", "Obrigatório");
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+
+        var result = await _controller.AddLoja(1, request);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task UpdateLoja_DeveRetornarBadRequest_QuandoModelStateInvalido()
+    {
+        SetAuthenticatedConcessionaria();
+        _controller.ModelState.AddModelError("Nome", "Obrigatório");
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+
+        var result = await _controller.UpdateLoja(1, 1, request);
+
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public async Task GetMinhasLojas_DeveRetornarUnauthorized_QuandoSemUserId()
+    {
+        _controller.ControllerContext.HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) };
+
+        var result = await _controller.GetMinhasLojas();
+
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task GetLojaById_DeveRetornarUnauthorized_QuandoSemUserId()
+    {
+        _controller.ControllerContext.HttpContext = new DefaultHttpContext { User = new ClaimsPrincipal(new ClaimsIdentity()) };
+
+        var result = await _controller.GetLojaById(1, 1);
+
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
     public async Task GetAll_DeveRetornarOk()
     {
         // Arrange

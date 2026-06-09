@@ -1028,4 +1028,54 @@ public class ConcessionariaServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(() => service.GetByUserIdAsync("invalido"));
     }
+
+    [Fact]
+    public async Task ConcessionariaPertenceAoUsuarioAsync_DeveRetornarTrue_QuandoPertence()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var concessionaria = CreateConcessionaria(1, "Teste", "user1");
+        context.Concessionarias.Add(concessionaria);
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act
+        var result = await service.ConcessionariaPertenceAoUsuarioAsync("user1", 1);
+
+        // Assert
+        Assert.True(result);
+    }
+
+    [Fact]
+    public async Task ConcessionariaPertenceAoUsuarioAsync_DeveRetornarFalse_QuandoNaoPertence()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var concessionaria = CreateConcessionaria(1, "Teste", "user1");
+        context.Concessionarias.Add(concessionaria);
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act
+        var result = await service.ConcessionariaPertenceAoUsuarioAsync("user2", 1);
+
+        // Assert
+        Assert.False(result);
+    }
+
+    [Fact]
+    public async Task ConcessionariaPertenceAoUsuarioAsync_DeveRetornarFalse_QuandoConcessionariaNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+
+        // Act
+        var result = await service.ConcessionariaPertenceAoUsuarioAsync("user1", 99);
+
+        // Assert
+        Assert.False(result);
+    }
 }

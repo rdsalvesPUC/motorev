@@ -189,6 +189,11 @@ public class ConcessionariaController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> AddMinhaLoja([FromBody] LojaRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         var userId = ObterUserId();
         if (userId == null)
         {
@@ -274,6 +279,11 @@ public class ConcessionariaController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdateMinhaLoja(int lojaId, [FromBody] LojaRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         var userId = ObterUserId();
         if (userId == null)
         {
@@ -334,6 +344,11 @@ public class ConcessionariaController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> AddLoja(int id, [FromBody] LojaRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         var ownershipResult = await ValidarOwnershipAsync(id);
         if (ownershipResult != null)
         {
@@ -428,6 +443,11 @@ public class ConcessionariaController : ControllerBase
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> UpdateLoja(int id, int lojaId, [FromBody] LojaRequest request)
     {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
         var ownershipResult = await ValidarOwnershipAsync(id);
         if (ownershipResult != null)
         {

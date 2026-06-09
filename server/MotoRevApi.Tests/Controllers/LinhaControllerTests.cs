@@ -117,6 +117,85 @@ public class LinhaControllerTests
     }
 
     [Fact]
+    public void CriarLinha_DeveRetornarBadRequest_QuandoModelStateInvalido()
+    {
+        // Arrange
+        _controller.ModelState.AddModelError("Nome", "O campo Nome é obrigatório");
+        var request = new LinhaRequest("", "Desc");
+
+        // Act
+        var result = _controller.CriarLinha(request);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public void AtualizarLinha_DeveRetornarBadRequest_QuandoModelStateInvalido()
+    {
+        // Arrange
+        _controller.ModelState.AddModelError("Nome", "O campo Nome é obrigatório");
+        var request = new LinhaRequest("", "Desc");
+
+        // Act
+        var result = _controller.AtualizarLinha(1, request);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(result);
+    }
+
+    [Fact]
+    public void CriarLinha_DeveLancarDuplicateDataException_QuandoNomeJaExiste()
+    {
+        // Arrange
+        var request = new LinhaRequest("Existente", "Desc");
+        _linhaServiceMock.Setup(s => s.CadastrarLinha(request))
+            .Throws(new DuplicateDataException("Linha já cadastrada."));
+
+        // Act & Assert
+        var exception = Assert.Throws<DuplicateDataException>(() => _controller.CriarLinha(request));
+        Assert.Equal("Linha já cadastrada.", exception.Message);
+    }
+
+    [Fact]
+    public void AtualizarLinha_DeveLancarDuplicateDataException_QuandoNovoNomeJaExiste()
+    {
+        // Arrange
+        var id = 1;
+        var request = new LinhaRequest("Existente", "Desc");
+        _linhaServiceMock.Setup(s => s.AtualizarLinha(id, request))
+            .Throws(new DuplicateDataException("Outra linha com este nome já existe."));
+
+        // Act & Assert
+        var exception = Assert.Throws<DuplicateDataException>(() => _controller.AtualizarLinha(id, request));
+        Assert.Equal("Outra linha com este nome já existe.", exception.Message);
+    }
+
+    [Fact]
+    public void InativarLinha_DeveLancarNotFoundException_QuandoLinhaNaoExiste()
+    {
+        // Arrange
+        var id = 999;
+        _linhaServiceMock.Setup(s => s.InativarLinha(id))
+            .Throws(new NotFoundException("Linha não encontrada."));
+
+        // Act & Assert
+        Assert.Throws<NotFoundException>(() => _controller.InativarLinha(id));
+    }
+
+    [Fact]
+    public void AlternarStatus_DeveLancarNotFoundException_QuandoLinhaNaoExiste()
+    {
+        // Arrange
+        var id = 999;
+        _linhaServiceMock.Setup(s => s.AlternarStatus(id))
+            .Throws(new NotFoundException("Linha não encontrada."));
+
+        // Act & Assert
+        Assert.Throws<NotFoundException>(() => _controller.AlternarStatus(id));
+    }
+
+    [Fact]
     public void InativarLinha_DeveRetornarOk_QuandoLinhaExiste()
     {
         // Arrange
