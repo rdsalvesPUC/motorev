@@ -1,4 +1,4 @@
-import { apiFetch } from './http';
+import { BASE_URL, apiFetch } from './http';
 import { AlertaResponse, AlertaNaoLidosCountResponse, TipoAlerta } from '../models/Alerta';
 
 export const alertaService = {
@@ -7,22 +7,25 @@ export const alertaService = {
     if (lido !== undefined) params.append('lido', String(lido));
     if (tipo !== undefined) params.append('tipo', tipo);
     
-    return await apiFetch<AlertaResponse[]>(`/api/alertas?${params.toString()}`);
+    const response = await apiFetch(`${BASE_URL}/alertas?${params.toString()}`);
+    return await response.json();
   },
 
   async contarNaoLidos(): Promise<number> {
-    const response = await apiFetch<AlertaNaoLidosCountResponse>('/api/alertas/nao-lidos/total');
-    return response.total;
+    const response = await apiFetch(`${BASE_URL}/alertas/nao-lidos/total`);
+    const data = await response.json();
+    return data.total;
   },
 
   async marcarComoLido(id: number): Promise<AlertaResponse> {
-    return await apiFetch<AlertaResponse>(`/api/alertas/${id}/ler`, {
+    const response = await apiFetch(`${BASE_URL}/alertas/${id}/ler`, {
       method: 'PUT'
     });
+    return await response.json();
   },
 
   async marcarTodosComoLidos(): Promise<void> {
-    await apiFetch('/api/alertas/ler-todos', {
+    await apiFetch(`${BASE_URL}/alertas/ler-todos`, {
       method: 'PUT'
     });
   }

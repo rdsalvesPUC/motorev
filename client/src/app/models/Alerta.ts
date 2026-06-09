@@ -3,7 +3,12 @@ export type TipoAlerta =
   | 'RevisaoAtrasada'
   | 'AgendamentoCriado'
   | 'AgendamentoAlterado'
-  | 'RevisaoConcluida';
+  | 'RevisaoConcluida'
+  | 'AgendamentoAprovado'
+  | 'AgendamentoRecusado'
+  | 'NovaSolicitacao'
+  | 'Cancelamento'
+  | 'Reagendamento';
 
 export interface AlertaResponse {
   id: number;
@@ -13,6 +18,9 @@ export interface AlertaResponse {
   motoId?: number;
   agendamentoId?: number;
   quilometragem?: number;
+  ordemRevisao?: number;
+  modeloMotoNome?: string;
+  marcaMoto?: string;
 }
 
 export interface AlertaNaoLidosCountResponse {

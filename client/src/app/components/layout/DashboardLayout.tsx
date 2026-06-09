@@ -67,14 +67,17 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
 
   const fetchAlertas = useCallback(async () => {
     try {
+      console.log('[DashboardLayout] Buscando alertas...');
       const [lista, total] = await Promise.all([
         alertaService.listar(),
         alertaService.contarNaoLidos()
       ]);
+      console.log('[DashboardLayout] Alertas carregados:', lista);
+      console.log('[DashboardLayout] Total não lidos:', total);
       setNotificacoes(Array.isArray(lista) ? lista : []);
       setUnreadCount(typeof total === 'number' ? total : 0);
     } catch (error) {
-      console.error('Erro ao buscar notificações:', error);
+      console.error('[DashboardLayout] Erro ao buscar notificações:', error);
     }
   }, []);
 
@@ -83,8 +86,14 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
     
     // Configurar SignalR
     signalRService.onAlertaRecebido((novoAlerta) => {
-      setNotificacoes((prev) => [novoAlerta, ...prev]);
+      console.log('[DashboardLayout] Novo alerta recebido via SignalR:', novoAlerta);
+      setNotificacoes((prev) => {
+        // Evitar duplicidade caso o alerta já exista
+        if (prev.some(a => a.id === novoAlerta.id)) return prev;
+        return [novoAlerta, ...prev];
+      });
       setUnreadCount((prev) => prev + 1);
+      message.info(t(`alertas.titulo.${novoAlerta.tipo}`));
     });
 
     signalRService.startConnection();
@@ -313,7 +322,7 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
 
       <FloatButton
         icon={<BellOutlined />}
-        badge={{ count: unreadCount }}
+        badge={{ count: unreadCount, color: '#1677ff', overflowCount: 99 }}
         onClick={() => setDrawerOpen(true)}
         style={{ right: 24, bottom: 24 }}
       />

@@ -3,6 +3,7 @@ import { Drawer, List, Typography, Button, Empty, Tag, Flex, Badge, Divider } fr
 import {
   BellOutlined,
   CheckOutlined,
+  CloseOutlined,
   ClockCircleOutlined,
   CalendarOutlined,
   ToolOutlined,
@@ -26,25 +27,36 @@ interface NotificationsDrawerProps {
 
 function NotificationIcon({ tipo }: { tipo: TipoAlerta }) {
   const iconMap: Record<TipoAlerta, React.ReactNode> = {
-    RevisaoProxima: <ClockCircleOutlined style={{ color: '#faad14' }} />,
+    RevisaoProxima: <CalendarOutlined style={{ color: '#1677ff' }} />,
     RevisaoAtrasada: <WarningOutlined style={{ color: '#ff4d4f' }} />,
     AgendamentoCriado: <CalendarOutlined style={{ color: '#1677ff' }} />,
     AgendamentoAlterado: <CalendarOutlined style={{ color: '#faad14' }} />,
     RevisaoConcluida: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+    AgendamentoAprovado: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+    AgendamentoRecusado: <CloseOutlined style={{ color: '#ff4d4f' }} />,
+    NovaSolicitacao: <BellOutlined style={{ color: '#1677ff' }} />,
+    Cancelamento: <CloseOutlined style={{ color: '#ff4d4f' }} />,
+    Reagendamento: <CalendarOutlined style={{ color: '#faad14' }} />,
   };
   return iconMap[tipo] || <InfoCircleOutlined />;
 }
 
 function NotificationTag({ tipo }: { tipo: TipoAlerta }) {
   const tagMap: Record<TipoAlerta, { label: string; color: string }> = {
-    RevisaoProxima: { label: t('status.revisaoProxima', 'Próxima'), color: 'orange' },
-    RevisaoAtrasada: { label: t('status.revisaoAtrasada', 'Atrasada'), color: 'red' },
-    AgendamentoCriado: { label: t('status.novo', 'Novo'), color: 'blue' },
-    AgendamentoAlterado: { label: t('status.alterado', 'Alterado'), color: 'orange' },
-    RevisaoConcluida: { label: t('status.concluido', 'Concluído'), color: 'green' },
+    RevisaoProxima: { label: t('status.revisaoProxima'), color: 'blue' },
+    RevisaoAtrasada: { label: t('status.urgente'), color: 'red' },
+    AgendamentoCriado: { label: t('status.novo'), color: 'blue' },
+    AgendamentoAlterado: { label: t('status.reagendamento'), color: 'orange' },
+    RevisaoConcluida: { label: t('status.concluido'), color: 'green' },
+    AgendamentoAprovado: { label: t('status.aprovado'), color: 'green' },
+    AgendamentoRecusado: { label: t('status.recusado'), color: 'red' },
+    NovaSolicitacao: { label: t('status.novo'), color: 'blue' },
+    Cancelamento: { label: t('status.cancelado'), color: 'red' },
+    Reagendamento: { label: t('status.reagendamento'), color: 'orange' },
   };
 
   const config = tagMap[tipo];
+  if (!config) return null;
   return <Tag color={config.color} style={{ fontSize: 11 }}>{config.label}</Tag>;
 }
 
@@ -57,10 +69,12 @@ export default function NotificationsDrawer({
   onMarkAllAsRead
 }: NotificationsDrawerProps) {
 
+  console.log('[NotificationsDrawer] Renderizando notificações:', notificacoes);
+
   return (
     <Drawer
       title={
-        <Flex justify="space-between" align="center">
+        <Flex justify="space-between" align="center" style={{ width: '100%' }}>
           <Flex align="center" gap={8}>
             <Title level={4} style={{ margin: 0 }}>
               {t('alertas.drawer.title')}
@@ -75,7 +89,7 @@ export default function NotificationsDrawer({
               onClick={onMarkAllAsRead}
               icon={<CheckOutlined />}
             >
-              {t('alertas.drawer.markAllAsRead')}
+              {t('alertas.drawer.markAll')}
             </Button>
           )}
         </Flex>
@@ -129,12 +143,17 @@ export default function NotificationsDrawer({
                   style={{ margin: 0, fontSize: 13, color: '#595959' }}
                   ellipsis={{ rows: 2 }}
                 >
-                  {t(`alertas.mensagem.${notif.tipo}`, { km: notif.quilometragem })}
+                  {t(`alertas.mensagem.${notif.tipo}`, { 
+                    quilometragem: notif.quilometragem,
+                    ordemRevisao: notif.ordemRevisao,
+                    modeloMotoNome: notif.modeloMotoNome,
+                    marcaMoto: notif.marcaMoto
+                  })}
                 </Paragraph>
 
                 <Flex justify="space-between" align="center">
                   <Text type="secondary" style={{ fontSize: 12 }}>
-                    {new Date(notif.criadoEm).toLocaleString()}
+                    {new Date(notif.criadoEm).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                   </Text>
                   {!notif.lido && (
                     <Button
@@ -147,7 +166,7 @@ export default function NotificationsDrawer({
                       icon={<CheckOutlined />}
                       style={{ padding: 0, height: 'auto', fontSize: 12 }}
                     >
-                      {t('alertas.marcarLida', 'Marcar como lida')}
+                      {t('alertas.marcarLida')}
                     </Button>
                   )}
                 </Flex>

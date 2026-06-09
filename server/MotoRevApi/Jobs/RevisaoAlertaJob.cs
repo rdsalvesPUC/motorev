@@ -38,7 +38,7 @@ public class RevisaoAlertaJob : BackgroundService
                 _logger.LogError(ex, "Erro durante a execução do RevisaoAlertaJob.");
             }
 
-            await Task.Delay(TimeSpan.FromHours(intervalHoras), stoppingToken);
+            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
         }
     }
 
@@ -51,6 +51,7 @@ public class RevisaoAlertaJob : BackgroundService
         var motos = await context.Motos
             .Include(m => m.ModeloMoto)
             .Include(m => m.Cliente)
+            .Include(m => m.RevisoesPlanejadas)
             .Where(m => m.Ativo)
             .ToListAsync(stoppingToken);
 
@@ -73,47 +74,39 @@ public class RevisaoAlertaJob : BackgroundService
 
     private async Task VerificarMotoAsync(Moto moto, AppDbContext context, AlertaService alertaService, CancellationToken stoppingToken)
     {
-        // 1. Buscar a linha da moto
-        var linhaId = moto.ModeloMoto.LinhaId;
-
-        // 2. Buscar revisões padrão para esta linha
-        var revisoesPadrao = await context.RevisoesPadrao
-            .Where(r => r.LinhaId == linhaId && r.Ativo)
+        // 1. Determinar a próxima revisão baseada nas revisões planejadas da moto
+        // Buscamos a primeira que ainda está com status "Planejada" (não foi concluída ou cancelada)
+        var proximaRevisao = moto.RevisoesPlanejadas
+            .Where(r => r.Status == "Planejada")
             .OrderBy(r => r.Ordem)
-            .ToListAsync(stoppingToken);
+            .FirstOrDefault();
 
-        if (!revisoesPadrao.Any()) return;
-
-        // 3. Determinar a próxima revisão. 
-        // Como o histórico de revisões não está implementado, vamos assumir a primeira revisão baseada na KM
-        // ou a revisão que mais se aproxima da KM atual.
-        // TODO: Quando o histórico de revisões estiver pronto, buscar a primeira que não consta no histórico.
-        
-        RevisaoPadrao? proximaRevisao = null;
-        RevisaoPadrao? revisaoAnterior = null;
-
-        foreach (var rev in revisoesPadrao)
-        {
-            if (moto.KilometragemAtual < rev.Quilometragem)
-            {
-                proximaRevisao = rev;
-                break;
-            }
-            revisaoAnterior = rev;
-        }
-
-        // Se não houver próxima revisão (já fez todas), encerra
         if (proximaRevisao == null) return;
 
-        // 4. Lógica de Revisão Próxima (80% do intervalo)
+        // 2. Determinar a revisão anterior para calcular o intervalo (se houver)
+        var revisaoAnterior = moto.RevisoesPlanejadas
+            .Where(r => r.Ordem < proximaRevisao.Ordem)
+            .OrderByDescending(r => r.Ordem)
+            .FirstOrDefault();
+
+        // 3. Lógica de Revisão Próxima (80% do intervalo de KM ou Próximo da Data)
         var kmAnterior = revisaoAnterior?.Quilometragem ?? 0;
         var intervalKm = proximaRevisao.Quilometragem - kmAnterior;
         var limiarKm = kmAnterior + (intervalKm * 0.80);
 
-        // Alerta Próximo
-        if (moto.KilometragemAtual >= limiarKm)
+        // Alerta Próximo por Quilometragem
+        var deveGerarAlertaProximo = moto.KilometragemAtual >= limiarKm;
+
+        // Alerta Próximo por Data (ex: faltando 30 dias para a data prevista)
+        var limiarData = proximaRevisao.DataPrevista.AddDays(-30);
+        if (DateTime.UtcNow >= limiarData)
         {
-            // Deduplicação (ver plano 5.6)
+            deveGerarAlertaProximo = true;
+        }
+
+        if (deveGerarAlertaProximo)
+        {
+            // Deduplicação
             var jaExiste = await context.Alertas.AnyAsync(a => 
                 a.UsuarioId == moto.Cliente.UsuarioId && 
                 a.Tipo == TipoAlerta.RevisaoProxima && 
@@ -127,8 +120,10 @@ public class RevisaoAlertaJob : BackgroundService
             }
         }
 
-        // 5. Lógica de Revisão Atrasada
-        if (moto.KilometragemAtual > proximaRevisao.Quilometragem)
+        // 4. Lógica de Revisão Atrasada (Passou da KM ou Passou da Data)
+        var estaAtrasada = moto.KilometragemAtual > proximaRevisao.Quilometragem || DateTime.UtcNow > proximaRevisao.DataPrevista;
+
+        if (estaAtrasada)
         {
             var jaExisteAtrasada = await context.Alertas.AnyAsync(a => 
                 a.UsuarioId == moto.Cliente.UsuarioId && 

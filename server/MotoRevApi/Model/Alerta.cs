@@ -12,4 +12,7 @@ public class Alerta
     public int? MotoId { get; set; }
     public int? AgendamentoId { get; set; }
     public int? Quilometragem { get; set; }
+    public int? OrdemRevisao { get; set; }
+    public string? ModeloMotoNome { get; set; }
+    public string? MarcaMoto { get; set; }
 }

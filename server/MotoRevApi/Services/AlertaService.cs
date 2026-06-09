@@ -1,6 +1,8 @@
+using Mapster;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
+using MotoRevApi.Dto.Response;
 using MotoRevApi.Enums;
 using MotoRevApi.Hubs;
 using MotoRevApi.Model;
@@ -26,7 +28,10 @@ public class AlertaService
         string usuarioId,
         int? motoId = null,
         int? agendamentoId = null,
-        int? quilometragem = null)
+        int? quilometragem = null,
+        int? ordemRevisao = null,
+        string? modeloMotoNome = null,
+        string? marcaMoto = null)
     {
         var alerta = new Alerta
         {
@@ -35,6 +40,9 @@ public class AlertaService
             MotoId = motoId,
             AgendamentoId = agendamentoId,
             Quilometragem = quilometragem,
+            OrdemRevisao = ordemRevisao,
+            ModeloMotoNome = modeloMotoNome,
+            MarcaMoto = marcaMoto,
             Lido = false,
             CriadoEm = DateTime.UtcNow
         };
@@ -43,7 +51,8 @@ public class AlertaService
         await _context.SaveChangesAsync();
 
         // Notificar via SignalR
-        await _hubContext.Clients.User(usuarioId).SendAsync("ReceberAlerta", alerta);
+        var response = alerta.Adapt<AlertaResponse>();
+        await _hubContext.Clients.User(usuarioId).SendAsync("ReceberAlerta", response);
     }
 
     public virtual async Task GerarAlertaRevisaoProximaAsync(
@@ -51,7 +60,22 @@ public class AlertaService
         int motoId,
         int quilometragemRevisao)
     {
-        await CriarAlertaAsync(TipoAlerta.RevisaoProxima, usuarioId, motoId: motoId, quilometragem: quilometragemRevisao);
+        var moto = await _context.Motos
+            .Include(m => m.ModeloMoto)
+            .Include(m => m.RevisoesPlanejadas)
+            .FirstOrDefaultAsync(m => m.Id == motoId);
+
+        var ordem = moto?.RevisoesPlanejadas
+            .FirstOrDefault(r => r.Quilometragem == quilometragemRevisao)?.Ordem;
+
+        await CriarAlertaAsync(
+            TipoAlerta.RevisaoProxima,
+            usuarioId,
+            motoId: motoId,
+            quilometragem: quilometragemRevisao,
+            ordemRevisao: ordem,
+            modeloMotoNome: moto?.ModeloMoto?.NomeModelo,
+            marcaMoto: moto?.ModeloMoto?.Marca);
     }
 
     public virtual async Task GerarAlertaRevisaoAtrasadaAsync(
@@ -59,17 +83,36 @@ public class AlertaService
         int motoId,
         int quilometragemAtrasada)
     {
-        // Alerta para o Cliente
-        await CriarAlertaAsync(TipoAlerta.RevisaoAtrasada, usuarioId, motoId: motoId, quilometragem: quilometragemAtrasada);
-
-        // Alerta para a Concessionária
         var moto = await _context.Motos
+            .Include(m => m.ModeloMoto)
             .Include(m => m.Concessionaria)
+            .Include(m => m.RevisoesPlanejadas)
             .FirstOrDefaultAsync(m => m.Id == motoId);
 
+        int? ordem = moto?.RevisoesPlanejadas
+            .FirstOrDefault(r => r.Quilometragem == quilometragemAtrasada)?.Ordem;
+
+        // Alerta para o Cliente
+        await CriarAlertaAsync(
+            TipoAlerta.RevisaoAtrasada,
+            usuarioId,
+            motoId: motoId,
+            quilometragem: quilometragemAtrasada,
+            ordemRevisao: ordem,
+            modeloMotoNome: moto?.ModeloMoto?.NomeModelo,
+            marcaMoto: moto?.ModeloMoto?.Marca);
+
+        // Alerta para a Concessionária
         if (moto?.Concessionaria != null)
         {
-            await CriarAlertaAsync(TipoAlerta.RevisaoAtrasada, moto.Concessionaria.UsuarioId, motoId: motoId, quilometragem: quilometragemAtrasada);
+            await CriarAlertaAsync(
+                TipoAlerta.RevisaoAtrasada,
+                moto.Concessionaria.UsuarioId,
+                motoId: motoId,
+                quilometragem: quilometragemAtrasada,
+                ordemRevisao: ordem,
+                modeloMotoNome: moto?.ModeloMoto?.NomeModelo,
+                marcaMoto: moto?.ModeloMoto?.Marca);
         }
     }
 
@@ -101,7 +144,7 @@ public class AlertaService
     }
 
     // Métodos de consulta para o Controller
-    public virtual async Task<List<Alerta>> ListarAlertasAsync(string usuarioId, bool? lido = null, TipoAlerta? tipo = null)
+    public virtual async Task<List<AlertaResponse>> ListarAlertasAsync(string usuarioId, bool? lido = null, TipoAlerta? tipo = null)
     {
         var query = _context.Alertas.Where(a => a.UsuarioId == usuarioId);
 
@@ -111,7 +154,8 @@ public class AlertaService
         if (tipo.HasValue)
             query = query.Where(a => a.Tipo == tipo.Value);
 
-        return await query.OrderByDescending(a => a.CriadoEm).ToListAsync();
+        var alertas = await query.OrderByDescending(a => a.CriadoEm).ToListAsync();
+        return alertas.Adapt<List<AlertaResponse>>();
     }
 
     public virtual async Task<int> ContarNaoLidosAsync(string usuarioId)
@@ -119,7 +163,7 @@ public class AlertaService
         return await _context.Alertas.CountAsync(a => a.UsuarioId == usuarioId && !a.Lido);
     }
 
-    public virtual async Task<Alerta?> MarcarComoLidoAsync(int id, string usuarioId)
+    public virtual async Task<AlertaResponse?> MarcarComoLidoAsync(int id, string usuarioId)
     {
         var alerta = await _context.Alertas.FirstOrDefaultAsync(a => a.Id == id && a.UsuarioId == usuarioId);
         if (alerta == null) return null;
@@ -130,7 +174,7 @@ public class AlertaService
             await _context.SaveChangesAsync();
         }
 
-        return alerta;
+        return alerta.Adapt<AlertaResponse>();
     }
 
     public virtual async Task MarcarTodosComoLidosAsync(string usuarioId)

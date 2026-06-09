@@ -6,5 +6,10 @@ public enum TipoAlerta
     RevisaoAtrasada,
     AgendamentoCriado,
     AgendamentoAlterado,
-    RevisaoConcluida
+    RevisaoConcluida,
+    AgendamentoAprovado,
+    AgendamentoRecusado,
+    NovaSolicitacao,
+    Cancelamento,
+    Reagendamento
 }
