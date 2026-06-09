@@ -55,7 +55,7 @@ public class ModeloMotoService
     
     public virtual List<ModeloMotoResponse> ListarModelosMotos(bool apenasAtivos = true)
     {
-        var query = _context.ModelosMotos.AsQueryable();
+        var query = _context.ModelosMotos.AsNoTracking();
 
         if (apenasAtivos)
         {
@@ -71,7 +71,7 @@ public class ModeloMotoService
 
     public virtual List<ModeloMotoResponse> ListarCatalogoModelosMotos(bool? ativo = null)
     {
-        var query = _context.ModelosMotos.AsQueryable();
+        var query = _context.ModelosMotos.AsNoTracking();
 
         if (ativo.HasValue)
         {
