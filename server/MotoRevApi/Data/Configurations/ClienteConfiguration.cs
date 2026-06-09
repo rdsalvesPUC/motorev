@@ -14,12 +14,6 @@ public class ClienteConfiguration : IEntityTypeConfiguration<Cliente>
         builder.HasIndex(c => c.Cpf).IsUnique().HasFilter("[Cpf] IS NOT NULL");
         builder.HasIndex(c => c.EnderecoId).IsUnique().HasFilter("[EnderecoId] IS NOT NULL");
 
-        // Relacionamento 1:1 com Usuario
-        builder.HasOne(c => c.Usuario)
-            .WithOne(u => u.Cliente)
-            .HasForeignKey<Cliente>(c => c.UsuarioId)
-            .IsRequired();
-
         builder.HasOne(c => c.Endereco)
             .WithOne()
             .HasForeignKey<Cliente>(c => c.EnderecoId)

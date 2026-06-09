@@ -11,9 +11,6 @@ public class RevisaoPadrao
     public int LinhaId { get; set; }
     public virtual Linha Linha { get; set; } = null!;
     
-    public int ConcessionariaId { get; set; }
-    public virtual Concessionaria Concessionaria { get; set; } = null!;
-    
     public bool Ativo { get; set; } = true;
     
     public virtual ICollection<RevisaoPadraoServico> Servicos { get; set; } = new List<RevisaoPadraoServico>();
