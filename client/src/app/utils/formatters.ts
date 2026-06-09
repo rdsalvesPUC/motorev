@@ -7,6 +7,8 @@ type CurrencyFractionOptions = Pick<
 
 export const getDecimalSeparator = () => (getLocale() === 'pt-BR' ? ',' : '.');
 
+export const getThousandSeparator = () => (getLocale() === 'pt-BR' ? '.' : ',');
+
 export const getCurrencySymbol = () => (getLocale() === 'pt-BR' ? 'R$' : '$');
 
 export const formatCurrency = (value: number, options: CurrencyFractionOptions = {}) => {
@@ -40,6 +42,18 @@ export const parseCurrencyInput = (value?: string) => {
   return getDecimalSeparator() === ','
     ? value.replace(/[^\d,]/g, '').replace(',', '.')
     : value.replace(/[^\d.]/g, '');
+};
+
+export const formatIntegerInput = (value?: string | number) => {
+  if (value === undefined || value === null || value === '') return '';
+
+  return String(value).replace(/\B(?=(\d{3})+(?!\d))/g, getThousandSeparator());
+};
+
+export const parseIntegerInput = (value?: string) => {
+  if (!value) return 0;
+
+  return Number(value.replace(/[.,]/g, ''));
 };
 
 export const formatCPF = (value: string) => {

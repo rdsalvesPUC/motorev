@@ -16,5 +16,6 @@ public record MotoResponse(
     int KilometragemAtual,
     DateTime DataVenda,
     string Linha,
-    string Cilindrada
+    string Cilindrada,
+    List<RevisaoMotoResponse> RevisoesPlanejadas
 );

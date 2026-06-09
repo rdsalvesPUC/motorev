@@ -23,6 +23,7 @@ public class AppDbContext : IdentityDbContext<Usuario>
     public DbSet<RevisaoPadraoServico> RevisaoPadraoServicos { get; set; }
     public DbSet<RevisaoPadraoPeca> RevisaoPadraoPecas { get; set; }
     public DbSet<Alerta> Alertas { get; set; }
+    public DbSet<RevisaoMoto> RevisoesMotos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

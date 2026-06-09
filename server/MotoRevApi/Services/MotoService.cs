@@ -36,6 +36,15 @@ public class MotoService
             .Include(m => m.ModeloMoto)
                 .ThenInclude(mm => mm.Linha)
             .Include(m => m.Concessionaria)
+            .Include(m => m.RevisoesPlanejadas)
+                .ThenInclude(rm => rm.RevisaoPadrao)
+                    .ThenInclude(rp => rp.Servicos)
+                        .ThenInclude(rps => rps.Servico)
+            .Include(m => m.RevisoesPlanejadas)
+                .ThenInclude(rm => rm.RevisaoPadrao)
+                    .ThenInclude(rp => rp.Pecas)
+                        .ThenInclude(rpp => rpp.Peca)
+            .AsSplitQuery()
             .Where(m => m.ClienteId == cliente.Id && m.Ativo)
             .ToListAsync();
 
@@ -64,16 +73,10 @@ public class MotoService
             throw new NotFoundException("Modelo de moto não encontrado.");
         }
 
-        // Validar a existência opcional da Concessionária
-        if (request.ConcessionariaId.HasValue)
-        {
-            var concessionariaExiste = await _context.Concessionarias
-                .AnyAsync(c => c.Id == request.ConcessionariaId.Value);
-            if (!concessionariaExiste)
-            {
-                throw new NotFoundException("Concessionária não encontrada.");
-            }
-        }
+        var revisoesPadrao = await _context.RevisoesPadrao
+            .Where(rp => rp.LinhaId == modelo.LinhaId && rp.Ativo)
+            .OrderBy(rp => rp.Ordem)
+            .ToListAsync();
 
         // Buscar o cliente a partir do User ID
         var cliente = await _context.Clientes
@@ -92,15 +95,38 @@ public class MotoService
             moto.ClienteId = cliente.Id;
             moto.Ativo = true;
 
+            foreach (var revisaoPadrao in revisoesPadrao)
+            {
+                moto.RevisoesPlanejadas.Add(new RevisaoMoto
+                {
+                    RevisaoPadraoId = revisaoPadrao.Id,
+                    Nome = revisaoPadrao.Nome,
+                    Ordem = revisaoPadrao.Ordem,
+                    Quilometragem = revisaoPadrao.Quilometragem,
+                    TempoMeses = revisaoPadrao.TempoMeses,
+                    DataPrevista = moto.DataVenda.AddMonths(revisaoPadrao.TempoMeses),
+                    Status = "Planejada",
+                });
+            }
+
             _context.Motos.Add(moto);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
-            // Retorna o response carregando os dados do modelo e concessionária associados
+            // Retorna o response carregando os dados associados ao modelo e ao plano de revisões.
             var savedMoto = await _context.Motos
                 .Include(m => m.ModeloMoto)
                     .ThenInclude(mm => mm.Linha)
                 .Include(m => m.Concessionaria)
+                .Include(m => m.RevisoesPlanejadas)
+                    .ThenInclude(rm => rm.RevisaoPadrao)
+                        .ThenInclude(rp => rp.Servicos)
+                            .ThenInclude(rps => rps.Servico)
+                .Include(m => m.RevisoesPlanejadas)
+                    .ThenInclude(rm => rm.RevisaoPadrao)
+                        .ThenInclude(rp => rp.Pecas)
+                            .ThenInclude(rpp => rpp.Peca)
+                .AsSplitQuery()
                 .FirstAsync(m => m.Id == moto.Id);
 
             return savedMoto.Adapt<MotoResponse>();
@@ -124,6 +150,15 @@ public class MotoService
             .Include(m => m.ModeloMoto)
                 .ThenInclude(mm => mm.Linha)
             .Include(m => m.Concessionaria)
+            .Include(m => m.RevisoesPlanejadas)
+                .ThenInclude(rm => rm.RevisaoPadrao)
+                    .ThenInclude(rp => rp.Servicos)
+                        .ThenInclude(rps => rps.Servico)
+            .Include(m => m.RevisoesPlanejadas)
+                .ThenInclude(rm => rm.RevisaoPadrao)
+                    .ThenInclude(rp => rp.Pecas)
+                        .ThenInclude(rpp => rpp.Peca)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(m => m.Id == id && m.ClienteId == cliente.Id && m.Ativo);
 
         if (moto == null)
@@ -185,6 +220,15 @@ public class MotoService
                 .Include(m => m.ModeloMoto)
                     .ThenInclude(mm => mm.Linha)
                 .Include(m => m.Concessionaria)
+                .Include(m => m.RevisoesPlanejadas)
+                    .ThenInclude(rm => rm.RevisaoPadrao)
+                        .ThenInclude(rp => rp.Servicos)
+                            .ThenInclude(rps => rps.Servico)
+                .Include(m => m.RevisoesPlanejadas)
+                    .ThenInclude(rm => rm.RevisaoPadrao)
+                        .ThenInclude(rp => rp.Pecas)
+                            .ThenInclude(rpp => rpp.Peca)
+                .AsSplitQuery()
                 .FirstAsync(m => m.Id == moto.Id);
 
             return updatedMoto.Adapt<MotoResponse>();
