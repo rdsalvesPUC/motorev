@@ -491,12 +491,26 @@ export default function MotoDetalhes() {
   }
 
   if (errorStatus) {
+    const resultStatus = errorStatus === 403 ? '403' : errorStatus === 404 ? '404' : '500';
+    const resultTitle =
+      errorStatus === 403
+        ? t('motoDetalhes.forbidden.title')
+        : errorStatus === 404
+          ? t('motoDetalhes.notFound.title')
+          : t('motoDetalhes.error.title');
+    const resultMessage =
+      errorStatus === 403
+        ? t('motoDetalhes.forbidden.message')
+        : errorStatus === 404
+          ? t('motoDetalhes.notFound.message')
+          : t('motoDetalhes.error.message');
+
     return (
       <Flex vertical justify="center" align="center" style={{ width: '100%', minHeight: '60vh' }}>
         <Result
-          status="404"
-          title={t('motoDetalhes.notFound.title')}
-          subTitle={t('motoDetalhes.notFound.message')}
+          status={resultStatus}
+          title={resultTitle}
+          subTitle={resultMessage}
           extra={
             <Button type="primary" icon={<ArrowLeftOutlined />} onClick={() => navigate(PATHS.CLIENTE_MOTOS)}>
               {t('motoDetalhes.back')}

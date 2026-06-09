@@ -520,6 +520,8 @@
   "motoDetalhes.notFound.message": "A moto que você está procurando não existe, foi desativada ou pertence a outro cliente.",
   "motoDetalhes.forbidden.title": "Acesso Negado",
   "motoDetalhes.forbidden.message": "Você não possui permissão para visualizar as informações deste veículo.",
+  "motoDetalhes.error.title": "Erro ao Carregar Moto",
+  "motoDetalhes.error.message": "Não foi possível carregar os detalhes da moto. Tente novamente mais tarde.",
   "motoDetalhes.section.vehicle": "Dados do Veículo",
   "motoDetalhes.section.model": "Especificações do Modelo",
   "motoDetalhes.alert.overdue.title": "{{count}} revisão(ões) em atraso",

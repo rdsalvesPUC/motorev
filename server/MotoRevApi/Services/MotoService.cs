@@ -44,6 +44,7 @@ public class MotoService
                 .ThenInclude(rm => rm.RevisaoPadrao)
                     .ThenInclude(rp => rp.Pecas)
                         .ThenInclude(rpp => rpp.Peca)
+            .AsSplitQuery()
             .Where(m => m.ClienteId == cliente.Id && m.Ativo)
             .ToListAsync();
 
@@ -94,14 +95,10 @@ public class MotoService
             moto.ClienteId = cliente.Id;
             moto.Ativo = true;
 
-            _context.Motos.Add(moto);
-            await _context.SaveChangesAsync();
-
             foreach (var revisaoPadrao in revisoesPadrao)
             {
-                _context.RevisoesMotos.Add(new RevisaoMoto
+                moto.RevisoesPlanejadas.Add(new RevisaoMoto
                 {
-                    MotoId = moto.Id,
                     RevisaoPadraoId = revisaoPadrao.Id,
                     Nome = revisaoPadrao.Nome,
                     Ordem = revisaoPadrao.Ordem,
@@ -112,6 +109,7 @@ public class MotoService
                 });
             }
 
+            _context.Motos.Add(moto);
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
 
@@ -128,6 +126,7 @@ public class MotoService
                     .ThenInclude(rm => rm.RevisaoPadrao)
                         .ThenInclude(rp => rp.Pecas)
                             .ThenInclude(rpp => rpp.Peca)
+                .AsSplitQuery()
                 .FirstAsync(m => m.Id == moto.Id);
 
             return savedMoto.Adapt<MotoResponse>();
@@ -159,6 +158,7 @@ public class MotoService
                 .ThenInclude(rm => rm.RevisaoPadrao)
                     .ThenInclude(rp => rp.Pecas)
                         .ThenInclude(rpp => rpp.Peca)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(m => m.Id == id && m.ClienteId == cliente.Id && m.Ativo);
 
         if (moto == null)
@@ -228,6 +228,7 @@ public class MotoService
                     .ThenInclude(rm => rm.RevisaoPadrao)
                         .ThenInclude(rp => rp.Pecas)
                             .ThenInclude(rpp => rpp.Peca)
+                .AsSplitQuery()
                 .FirstAsync(m => m.Id == moto.Id);
 
             return updatedMoto.Adapt<MotoResponse>();

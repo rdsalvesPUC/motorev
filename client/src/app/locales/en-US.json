@@ -520,6 +520,8 @@
   "motoDetalhes.notFound.message": "The motorcycle you are looking for does not exist, has been deactivated, or belongs to another client.",
   "motoDetalhes.forbidden.title": "Access Denied",
   "motoDetalhes.forbidden.message": "You do not have permission to view this vehicle's details.",
+  "motoDetalhes.error.title": "Error Loading Motorcycle",
+  "motoDetalhes.error.message": "Could not load the motorcycle details. Please try again later.",
   "motoDetalhes.section.vehicle": "Vehicle Details",
   "motoDetalhes.section.model": "Model Specifications",
   "motoDetalhes.alert.overdue.title": "{{count}} overdue revision(s)",
