@@ -73,6 +73,14 @@ public class MotoService
             throw new NotFoundException("Modelo de moto não encontrado.");
         }
 
+        // Buscar o cliente a partir do User ID
+        var cliente = await _context.Clientes
+            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+        if (cliente == null)
+        {
+            throw new NotFoundException("Cliente não encontrado.");
+        }
+
         var revisoesPadrao = await _context.RevisoesPadrao
             .Where(rp => rp.LinhaId == modelo.LinhaId && rp.Ativo)
             .OrderBy(rp => rp.Ordem)
@@ -82,14 +90,6 @@ public class MotoService
         {
             throw new BusinessRuleException(
                 "Este modelo de moto ainda não possui um modelo de revisão ativo vinculado à sua linha.");
-        }
-
-        // Buscar o cliente a partir do User ID
-        var cliente = await _context.Clientes
-            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
-        if (cliente == null)
-        {
-            throw new NotFoundException("Cliente não encontrado.");
         }
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
