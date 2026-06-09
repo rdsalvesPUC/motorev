@@ -71,6 +71,7 @@ function ConcessionariaCard({
             icon={<CompassOutlined />}
             href={mapsUrl}
             target="_blank"
+            rel="noopener noreferrer"
           >
             {t('lojas.actions.directions')}
           </Button>,
