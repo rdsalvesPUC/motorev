@@ -16,6 +16,18 @@ SET NUMERIC_ROUNDABORT OFF;
 BEGIN TRY
     BEGIN TRANSACTION;
 
+    DELETE revisaoServico
+    FROM [dbo].[RevisaoPadraoServicos] AS revisaoServico
+    INNER JOIN [dbo].[Servicos] AS servico
+        ON servico.[Id] = revisaoServico.[ServicoId]
+    WHERE servico.[Codigo] LIKE N'SEED-SRV-%';
+
+    DELETE revisaoPeca
+    FROM [dbo].[RevisaoPadraoPecas] AS revisaoPeca
+    INNER JOIN [dbo].[Pecas] AS peca
+        ON peca.[Id] = revisaoPeca.[PecaId]
+    WHERE peca.[Codigo] LIKE N'SEED-PEC-%';
+
     DELETE FROM [dbo].[Servicos]
     WHERE [Codigo] LIKE N'SEED-SRV-%';
 
