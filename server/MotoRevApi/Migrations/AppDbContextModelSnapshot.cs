@@ -414,10 +414,6 @@ namespace MotoRevApi.Migrations
                     b.Property<bool>("Ativo")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Categoria")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("Cilindrada")
                         .HasColumnType("nvarchar(max)");
 
@@ -441,7 +437,8 @@ namespace MotoRevApi.Migrations
                     b.HasIndex("Marca");
 
                     b.HasIndex("NomeModelo")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Ativo] = 1");
 
                     b.ToTable("ModelosMotos");
                 });

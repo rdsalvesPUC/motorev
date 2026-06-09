@@ -27,15 +27,6 @@ const marcaOptions = [
   { value: 'Ducati', label: 'Ducati' },
 ];
 
-const categoriaOptions = [
-  { value: 'Street', label: 'Street' },
-  { value: 'Trail', label: 'Trail' },
-  { value: 'Scooter', label: 'Scooter' },
-  { value: 'Custom', label: 'Custom' },
-  { value: 'Sport', label: 'Sport' },
-  { value: 'Adventure', label: 'Adventure' },
-];
-
 const currentYear = new Date().getFullYear();
 const minModelYear = 1901;
 
@@ -129,17 +120,6 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
               ]}
             >
               <Input placeholder="Ex: CG 160, MT-03, GSX-S750" />
-            </Form.Item>
-
-            <Form.Item
-              label={t('modeloMotoCatalog.category')}
-              name="categoria"
-            >
-              <Select
-                allowClear
-                placeholder={t('modeloMotoCatalog.categoryPlaceholder')}
-                options={categoriaOptions}
-              />
             </Form.Item>
 
             <Form.Item

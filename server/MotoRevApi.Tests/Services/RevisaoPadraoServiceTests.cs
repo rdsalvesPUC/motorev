@@ -268,7 +268,7 @@ public class RevisaoPadraoServiceTests
         // Arrange
         using var context = CreateContext();
         var linha = new Linha { Id = 1, Nome = "Street" };
-        var modelo1 = new ModeloMoto { Id = 1, NomeModelo = "Ninja", Marca = "Kawasaki", Categoria = "Esportiva", LinhaId = 1 };
+        var modelo1 = new ModeloMoto { Id = 1, NomeModelo = "Ninja", Marca = "Kawasaki", LinhaId = 1 };
         context.Linhas.Add(linha);
         context.ModelosMotos.Add(modelo1);
 
@@ -665,5 +665,4 @@ public class RevisaoPadraoServiceTests
         Assert.Equal(2, updatedRev.Pecas.First().Quantidade);
     }
 }
-
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Typography, Input, InputNumber, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, Card, Empty, Switch } from 'antd';
-import { CarOutlined, SearchOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
+import { CarOutlined, SearchOutlined, EditOutlined, SaveOutlined, CloseOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnType } from 'antd/es/table';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { modeloMotoService } from '@/app/services/modeloMotoService';
@@ -48,15 +48,6 @@ const marcaOptions = [
   { value: 'Ducati', label: 'Ducati' },
 ];
 
-const categoriaOptions = [
-  { value: 'Street', label: 'Street' },
-  { value: 'Trail', label: 'Trail' },
-  { value: 'Scooter', label: 'Scooter' },
-  { value: 'Custom', label: 'Custom' },
-  { value: 'Sport', label: 'Sport' },
-  { value: 'Adventure', label: 'Adventure' },
-];
-
 const currentYear = new Date().getFullYear();
 const minModelYear = 1901;
 
@@ -72,7 +63,6 @@ const EditableCell: React.FC<EditableCellProps> = ({
 }) => {
   const inputNodeMap: Record<string, React.ReactNode> = {
     marca: <Select options={marcaOptions} />,
-    categoria: <Select allowClear options={categoriaOptions} />,
     linhaId: <Select options={linhas.map((linha) => ({ value: linha.id, label: linha.nome }))} />,
     ano: (
       <InputNumber
@@ -129,7 +119,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
     try {
       setLoading(true);
       const [modelos, linhasData] = await Promise.all([
-        modeloMotoService.getAll(),
+        modeloMotoService.getCatalogo(),
         linhaService.getAll(false),
       ]);
 
@@ -178,12 +168,11 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
   };
 
   const buildRequest = (record: ModeloMotoData, values: Partial<ModeloMotoRequest>): ModeloMotoRequest => ({
-    nomeModelo: values.nomeModelo ?? record.nomeModelo,
+    nomeModelo: (values.nomeModelo ?? record.nomeModelo).trim(),
     marca: values.marca ?? record.marca,
-    categoria: values.categoria,
     linhaId: values.linhaId ?? record.linhaId,
-    cilindrada: values.cilindrada,
-    ano: values.ano,
+    cilindrada: values.cilindrada ?? record.cilindrada,
+    ano: values.ano ?? record.ano,
   });
 
   const save = async (key: string) => {
@@ -237,14 +226,6 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
       dataIndex: 'nomeModelo',
       key: 'nomeModelo',
       editable: true,
-    },
-    {
-      title: t('modeloMotoCatalog.category'),
-      dataIndex: 'categoria',
-      key: 'categoria',
-      editable: true,
-      required: false,
-      render: (categoria?: string) => categoria ? <Tag>{categoria}</Tag> : '-',
     },
     {
       title: t('modeloMotoCatalog.year'),
@@ -386,6 +367,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
               style={{ width: 300 }}
               value={searchText}
               onChange={(event) => setSearchText(event.target.value)}
+              allowClear
             />
 
             <Select
@@ -431,7 +413,9 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
 
             <Flex gap="small" style={{ marginLeft: 'auto' }}>
               <Button onClick={handleClearFilters}>{t('modeloMotoCatalog.clear')}</Button>
-              <Button type="primary" onClick={fetchModelos}>{t('modeloMotoCatalog.apply')}</Button>
+              <Button type="primary" icon={<ReloadOutlined />} onClick={fetchModelos}>
+                {t('modeloMotoCatalog.refresh')}
+              </Button>
             </Flex>
           </Flex>
         </Space>

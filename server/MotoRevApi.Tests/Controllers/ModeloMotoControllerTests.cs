@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using MotoRevApi.Controller;
+using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Exceptions;
 using MotoRevApi.Services;
 using Xunit;
-using MotoRevApi.Data;
-using Microsoft.EntityFrameworkCore;
 
 namespace MotoRevApi.Tests.Controllers;
 
@@ -17,12 +18,11 @@ public class ModeloMotoControllerTests
 
     public ModeloMotoControllerTests()
     {
-        // Precisamos mockar o DbContext para poder mockar o service que não possui interface
         var dbContextOptions = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
         var context = new AppDbContext(dbContextOptions);
-        
+
         _modeloMotoServiceMock = new Mock<ModeloMotoService>(context);
         _controller = new ModeloMotoController(_modeloMotoServiceMock.Object);
     }
@@ -30,16 +30,13 @@ public class ModeloMotoControllerTests
     [Fact]
     public void AdicionarModeloMoto_DeveRetornarCreatedAtAction_QuandoSucesso()
     {
-        // Arrange
-        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva", 1, "400cc", 2023);
-        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", 1, "400cc", 2023, true);
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", 1, "400cc", 2023);
+        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", 1, "400cc", 2023, true);
 
         _modeloMotoServiceMock.Setup(s => s.CadastrarModeloMoto(request)).Returns(response);
 
-        // Act
         var result = _controller.AdicionarModeloMoto(request);
 
-        // Assert
         var createdResult = Assert.IsType<CreatedAtActionResult>(result);
         Assert.Equal(201, createdResult.StatusCode);
         Assert.Equal(response, createdResult.Value);
@@ -48,28 +45,22 @@ public class ModeloMotoControllerTests
     [Fact]
     public void AdicionarModeloMoto_DeveRetornarBadRequest_QuandoModelStateInvalido()
     {
-        // Arrange
         _controller.ModelState.AddModelError("NomeModelo", "Obrigatório");
-        var request = new ModeloMotoRequest("", "Kawasaki", "Esportiva", 1, null, null);
+        var request = new ModeloMotoRequest("", "Kawasaki", 1, null, null);
 
-        // Act
         var result = _controller.AdicionarModeloMoto(request);
 
-        // Assert
         Assert.IsType<BadRequestObjectResult>(result);
     }
 
     [Fact]
     public void ObterModeloMoto_DeveRetornarOk_QuandoModeloExiste()
     {
-        // Arrange
-        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", 1, "400cc", 2023, true);
+        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", 1, "400cc", 2023, true);
         _modeloMotoServiceMock.Setup(s => s.ObterModeloMoto(1)).Returns(response);
 
-        // Act
         var result = _controller.ObterModeloMoto(1);
 
-        // Assert
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal(200, okResult.StatusCode);
         Assert.Equal(response, okResult.Value);
@@ -78,45 +69,73 @@ public class ModeloMotoControllerTests
     [Fact]
     public void ObterModeloMoto_DeveLancarNotFoundException_QuandoModeloNaoExiste()
     {
-        // Arrange
-        _modeloMotoServiceMock.Setup(s => s.ObterModeloMoto(1)).Throws(new MotoRevApi.Exceptions.NotFoundException("Modelo de moto não encontrado."));
+        _modeloMotoServiceMock
+            .Setup(s => s.ObterModeloMoto(1))
+            .Throws(new NotFoundException("Modelo de moto não encontrado."));
 
-        // Act & Assert
-        Assert.Throws<MotoRevApi.Exceptions.NotFoundException>(() => _controller.ObterModeloMoto(1));
+        Assert.Throws<NotFoundException>(() => _controller.ObterModeloMoto(1));
     }
 
     [Fact]
-    public void ObterModelosMotos_DeveRetornarLista()
+    public void ObterModelosMotos_DeveRetornarListaDeAtivosPorPadrao()
     {
-        // Arrange
-        var list = new List<ModeloMotoResponse> 
-        { 
-            new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", 1, "400cc", 2023, true) 
+        var list = new List<ModeloMotoResponse>
+        {
+            new(1, "Ninja", "Kawasaki", 1, "400cc", 2023, true)
         };
-        _modeloMotoServiceMock.Setup(s => s.ListarModelosMotos()).Returns(list);
+        _modeloMotoServiceMock.Setup(s => s.ListarModelosMotos(true)).Returns(list);
 
-        // Act
         var result = _controller.ObterModelosMotos();
 
-        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(list, okResult.Value);
+        _modeloMotoServiceMock.Verify(s => s.ListarModelosMotos(true), Times.Once);
+    }
+
+    [Fact]
+    public void ObterCatalogoModelosMotos_DeveRetornarLista()
+    {
+        var list = new List<ModeloMotoResponse>
+        {
+            new(1, "Ninja", "Kawasaki", 1, "400cc", 2023, true),
+            new(2, "R1", "Yamaha", 1, "1000cc", 2024, false)
+        };
+        _modeloMotoServiceMock.Setup(s => s.ListarCatalogoModelosMotos(null)).Returns(list);
+
+        var result = _controller.ObterCatalogoModelosMotos(null);
+
         var okResult = Assert.IsType<OkObjectResult>(result.Result);
         Assert.Equal(200, okResult.StatusCode);
         Assert.Equal(list, okResult.Value);
     }
 
     [Fact]
+    public void ObterCatalogoModelosMotos_DeveRepasseFiltroStatus()
+    {
+        var list = new List<ModeloMotoResponse>
+        {
+            new(2, "R1", "Yamaha", 1, "1000cc", 2024, false)
+        };
+        _modeloMotoServiceMock.Setup(s => s.ListarCatalogoModelosMotos(false)).Returns(list);
+
+        var result = _controller.ObterCatalogoModelosMotos(false);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(list, okResult.Value);
+        _modeloMotoServiceMock.Verify(s => s.ListarCatalogoModelosMotos(false), Times.Once);
+    }
+
+    [Fact]
     public void AtualizarModeloMoto_DeveRetornarOk_QuandoSucesso()
     {
-        // Arrange
-        var request = new ModeloMotoRequest("Ninja ZX-6R", "Kawasaki", "Esportiva", 1, "600cc", 2024);
-        var response = new ModeloMotoResponse(1, "Ninja ZX-6R", "Kawasaki", "Esportiva", 1, "600cc", 2024, true);
+        var request = new ModeloMotoRequest("Ninja ZX-6R", "Kawasaki", 1, "600cc", 2024);
+        var response = new ModeloMotoResponse(1, "Ninja ZX-6R", "Kawasaki", 1, "600cc", 2024, true);
 
         _modeloMotoServiceMock.Setup(s => s.AtualizarModeloMoto(1, request)).Returns(response);
 
-        // Act
         var result = _controller.AtualizarModeloMoto(1, request);
 
-        // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
         Assert.Equal(response, okResult.Value);
@@ -125,25 +144,22 @@ public class ModeloMotoControllerTests
     [Fact]
     public void AtualizarModeloMoto_DeveLancarNotFoundException_QuandoModeloNaoExiste()
     {
-        // Arrange
-        var request = new ModeloMotoRequest("Ninja", "Kawasaki", "Esportiva", 1, null, null);
-        _modeloMotoServiceMock.Setup(s => s.AtualizarModeloMoto(1, request)).Throws(new MotoRevApi.Exceptions.NotFoundException("Modelo de moto não encontrado."));
+        var request = new ModeloMotoRequest("Ninja", "Kawasaki", 1, null, null);
+        _modeloMotoServiceMock
+            .Setup(s => s.AtualizarModeloMoto(1, request))
+            .Throws(new NotFoundException("Modelo de moto não encontrado."));
 
-        // Act & Assert
-        Assert.Throws<MotoRevApi.Exceptions.NotFoundException>(() => _controller.AtualizarModeloMoto(1, request));
+        Assert.Throws<NotFoundException>(() => _controller.AtualizarModeloMoto(1, request));
     }
 
     [Fact]
     public void AlternarStatusModeloMoto_DeveRetornarOk_QuandoSucesso()
     {
-        // Arrange
-        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", "Esportiva", 1, "400cc", 2023, false);
+        var response = new ModeloMotoResponse(1, "Ninja", "Kawasaki", 1, "400cc", 2023, false);
         _modeloMotoServiceMock.Setup(s => s.AlternarStatus(1)).Returns(response);
 
-        // Act
         var result = _controller.AlternarStatusModeloMoto(1);
 
-        // Assert
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(200, okResult.StatusCode);
     }
@@ -151,10 +167,10 @@ public class ModeloMotoControllerTests
     [Fact]
     public void AlternarStatusModeloMoto_DeveLancarNotFoundException_QuandoModeloNaoExiste()
     {
-        // Arrange
-        _modeloMotoServiceMock.Setup(s => s.AlternarStatus(1)).Throws(new MotoRevApi.Exceptions.NotFoundException("Modelo de moto não encontrado."));
+        _modeloMotoServiceMock
+            .Setup(s => s.AlternarStatus(1))
+            .Throws(new NotFoundException("Modelo de moto não encontrado."));
 
-        // Act & Assert
-        Assert.Throws<MotoRevApi.Exceptions.NotFoundException>(() => _controller.AlternarStatusModeloMoto(1));
+        Assert.Throws<NotFoundException>(() => _controller.AlternarStatusModeloMoto(1));
     }
 }
