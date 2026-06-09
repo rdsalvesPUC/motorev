@@ -244,7 +244,6 @@ public class MotoServiceTests
         var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "Linha" }, Cilindrada = "100cc" };
         context.ModelosMotos.Add(modelo);
         await context.SaveChangesAsync();
-        SeedRevisaoPadrao(context, modelo);
 
         var service = new MotoService(context);
         var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now);
