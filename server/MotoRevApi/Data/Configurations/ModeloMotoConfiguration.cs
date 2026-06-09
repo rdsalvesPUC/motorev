@@ -15,16 +15,14 @@ public class ModeloMotoConfiguration : IEntityTypeConfiguration<ModeloMoto>
             .HasMaxLength(100);
 
         builder.HasIndex(m => m.NomeModelo)
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[Ativo] = 1");
 
         builder.Property(m => m.Marca)
             .IsRequired()
             .HasMaxLength(50);
 
         builder.HasIndex(m => m.Marca);
-
-        builder.Property(m => m.Categoria)
-            .HasMaxLength(50);
 
         builder.HasOne(m => m.Linha)
             .WithMany()

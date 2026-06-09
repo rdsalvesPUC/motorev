@@ -11,6 +11,16 @@ export const modeloMotoService = {
     return handleResponse(response, t('error.fetchModelosMotos'));
   },
 
+  getCatalogo: async (ativo?: boolean): Promise<ModeloMoto[]> => {
+    const url = new URL(`${MODELO_MOTO_URL}/catalogo`);
+    if (ativo !== undefined) {
+      url.searchParams.append('ativo', String(ativo));
+    }
+
+    const response = await apiFetch(url.toString());
+    return handleResponse(response, t('error.fetchModelosMotos'));
+  },
+
   getById: async (id: number): Promise<ModeloMoto> => {
     const response = await apiFetch(`${MODELO_MOTO_URL}/id/${id}`);
     return handleResponse(response, t('error.modeloMotoNotFound'));

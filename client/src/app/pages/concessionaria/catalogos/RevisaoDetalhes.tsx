@@ -19,11 +19,9 @@ import {
 import { revisaoPadraoService } from '@/app/services/revisaoPadraoService';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { RevisaoPadraoResponse } from '@/app/models/RevisaoPadrao';
+import { formatCurrency } from '@/app/utils/formatters';
 
 const { Title } = Typography;
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const formatTempo = (minutos: number) => {
   if (minutos === 0) return '-';

@@ -236,6 +236,9 @@ namespace MotoRevApi.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Nome = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Cnpj = table.Column<string>(type: "nvarchar(18)", maxLength: 18, nullable: false),
+                    Telefone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Tipo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Matriz"),
                     UsuarioId = table.Column<string>(type: "nvarchar(450)", nullable: false)
                 },
                 constraints: table =>
@@ -285,7 +288,6 @@ namespace MotoRevApi.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     NomeModelo = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Marca = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Categoria = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     LinhaId = table.Column<int>(type: "int", nullable: false),
                     Cilindrada = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Ano = table.Column<int>(type: "int", nullable: true),
@@ -300,6 +302,60 @@ namespace MotoRevApi.Migrations
                         principalTable: "Linhas",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RevisoesPadrao",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nome = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Ordem = table.Column<int>(type: "int", nullable: false),
+                    Quilometragem = table.Column<int>(type: "int", nullable: false),
+                    TempoMeses = table.Column<int>(type: "int", nullable: false),
+                    LinhaId = table.Column<int>(type: "int", nullable: false),
+                    Ativo = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RevisoesPadrao", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RevisoesPadrao_Linhas_LinhaId",
+                        column: x => x.LinhaId,
+                        principalTable: "Linhas",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Lojas",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Nome = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Tipo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Filial"),
+                    Cnpj = table.Column<string>(type: "nvarchar(18)", maxLength: 18, nullable: false),
+                    Telefone = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Cep = table.Column<string>(type: "nvarchar(9)", maxLength: 9, nullable: false),
+                    Logradouro = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    Numero = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Bairro = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Cidade = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Uf = table.Column<string>(type: "nvarchar(2)", maxLength: 2, nullable: false),
+                    Ativo = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    ConcessionariaId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Lojas", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Lojas_Concessionarias_ConcessionariaId",
+                        column: x => x.ConcessionariaId,
+                        principalTable: "Concessionarias",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -340,6 +396,55 @@ namespace MotoRevApi.Migrations
                         principalTable: "ModelosMotos",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RevisaoPadraoPecas",
+                columns: table => new
+                {
+                    RevisaoPadraoId = table.Column<int>(type: "int", nullable: false),
+                    PecaId = table.Column<int>(type: "int", nullable: false),
+                    Quantidade = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RevisaoPadraoPecas", x => new { x.RevisaoPadraoId, x.PecaId });
+                    table.ForeignKey(
+                        name: "FK_RevisaoPadraoPecas_Pecas_PecaId",
+                        column: x => x.PecaId,
+                        principalTable: "Pecas",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RevisaoPadraoPecas_RevisoesPadrao_RevisaoPadraoId",
+                        column: x => x.RevisaoPadraoId,
+                        principalTable: "RevisoesPadrao",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "RevisaoPadraoServicos",
+                columns: table => new
+                {
+                    RevisaoPadraoId = table.Column<int>(type: "int", nullable: false),
+                    ServicoId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RevisaoPadraoServicos", x => new { x.RevisaoPadraoId, x.ServicoId });
+                    table.ForeignKey(
+                        name: "FK_RevisaoPadraoServicos_RevisoesPadrao_RevisaoPadraoId",
+                        column: x => x.RevisaoPadraoId,
+                        principalTable: "RevisoesPadrao",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_RevisaoPadraoServicos_Servicos_ServicoId",
+                        column: x => x.ServicoId,
+                        principalTable: "Servicos",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -398,19 +503,47 @@ namespace MotoRevApi.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_Clientes_UsuarioId",
                 table: "Clientes",
-                column: "UsuarioId",
+                column: "UsuarioId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Concessionarias_Cnpj",
+                table: "Concessionarias",
+                column: "Cnpj",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Concessionarias_UsuarioId",
                 table: "Concessionarias",
-                column: "UsuarioId",
-                unique: true);
+                column: "UsuarioId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Linhas_Nome",
                 table: "Linhas",
                 column: "Nome",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Lojas_Cnpj",
+                table: "Lojas",
+                column: "Cnpj",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Lojas_ConcessionariaId",
+                table: "Lojas",
+                column: "ConcessionariaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Lojas_ConcessionariaId_Tipo",
+                table: "Lojas",
+                columns: new[] { "ConcessionariaId", "Tipo" },
+                unique: true,
+                filter: "[Tipo] = 'Matriz'");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Lojas_Telefone",
+                table: "Lojas",
+                column: "Telefone",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -427,7 +560,8 @@ namespace MotoRevApi.Migrations
                 name: "IX_ModelosMotos_NomeModelo",
                 table: "ModelosMotos",
                 column: "NomeModelo",
-                unique: true);
+                unique: true,
+                filter: "[Ativo] = 1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Motos_Chassi",
@@ -475,6 +609,27 @@ namespace MotoRevApi.Migrations
                 column: "Status");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RevisaoPadraoPecas_PecaId",
+                table: "RevisaoPadraoPecas",
+                column: "PecaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RevisaoPadraoServicos_ServicoId",
+                table: "RevisaoPadraoServicos",
+                column: "ServicoId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RevisoesPadrao_LinhaId",
+                table: "RevisoesPadrao",
+                column: "LinhaId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RevisoesPadrao_LinhaId_Ordem",
+                table: "RevisoesPadrao",
+                columns: new[] { "LinhaId", "Ordem" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Servicos_Categoria_Nome",
                 table: "Servicos",
                 columns: new[] { "Categoria", "Nome" },
@@ -508,13 +663,16 @@ namespace MotoRevApi.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
+                name: "Lojas");
+
+            migrationBuilder.DropTable(
                 name: "Motos");
 
             migrationBuilder.DropTable(
-                name: "Pecas");
+                name: "RevisaoPadraoPecas");
 
             migrationBuilder.DropTable(
-                name: "Servicos");
+                name: "RevisaoPadraoServicos");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
@@ -527,6 +685,15 @@ namespace MotoRevApi.Migrations
 
             migrationBuilder.DropTable(
                 name: "ModelosMotos");
+
+            migrationBuilder.DropTable(
+                name: "Pecas");
+
+            migrationBuilder.DropTable(
+                name: "RevisoesPadrao");
+
+            migrationBuilder.DropTable(
+                name: "Servicos");
 
             migrationBuilder.DropTable(
                 name: "Enderecos");

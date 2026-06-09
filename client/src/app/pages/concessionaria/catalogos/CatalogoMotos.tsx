@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, Input, InputNumber, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, Card, Empty, Switch } from 'antd';
-import { CarOutlined, SearchOutlined, EditOutlined, SaveOutlined, CloseOutlined } from '@ant-design/icons';
+import { Typography, Input, InputNumber, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, Card, Empty, Switch, AutoComplete } from 'antd';
+import { CarOutlined, SearchOutlined, EditOutlined, SaveOutlined, CloseOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnType } from 'antd/es/table';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { modeloMotoService } from '@/app/services/modeloMotoService';
@@ -9,7 +9,7 @@ import { ModeloMoto } from '@/app/models/ModeloMoto';
 import { Linha } from '@/app/models/Linha';
 import { ModeloMotoRequest } from '@/app/models/ModeloMotoRequest';
 import { handleApiError } from '@/app/utils/errorHandler';
-import { t } from '@/app/i18n';
+import { getLocale, t } from '@/app/i18n';
 
 const { Title } = Typography;
 
@@ -35,27 +35,15 @@ interface EditableCellProps {
   rules?: any[];
   children: React.ReactNode;
   linhas: Linha[];
+  marcaOptions: SelectOption[];
 }
 
-const marcaOptions = [
-  { value: 'Honda', label: 'Honda' },
-  { value: 'Yamaha', label: 'Yamaha' },
-  { value: 'Suzuki', label: 'Suzuki' },
-  { value: 'Kawasaki', label: 'Kawasaki' },
-  { value: 'BMW', label: 'BMW' },
-  { value: 'Harley-Davidson', label: 'Harley-Davidson' },
-  { value: 'Triumph', label: 'Triumph' },
-  { value: 'Ducati', label: 'Ducati' },
-];
+interface SelectOption {
+  value: string;
+  label: string;
+}
 
-const categoriaOptions = [
-  { value: 'Street', label: 'Street' },
-  { value: 'Trail', label: 'Trail' },
-  { value: 'Scooter', label: 'Scooter' },
-  { value: 'Custom', label: 'Custom' },
-  { value: 'Sport', label: 'Sport' },
-  { value: 'Adventure', label: 'Adventure' },
-];
+type StatusFilter = 'active' | 'inactive' | 'all';
 
 const currentYear = new Date().getFullYear();
 const minModelYear = 1901;
@@ -68,11 +56,18 @@ const EditableCell: React.FC<EditableCellProps> = ({
   rules,
   children,
   linhas = [],
+  marcaOptions = [],
   ...restProps
 }) => {
   const inputNodeMap: Record<string, React.ReactNode> = {
-    marca: <Select options={marcaOptions} />,
-    categoria: <Select allowClear options={categoriaOptions} />,
+    marca: (
+      <AutoComplete
+        options={marcaOptions}
+        filterOption={(inputValue, option) =>
+          String(option?.value ?? '').toLowerCase().includes(inputValue.toLowerCase())
+        }
+      />
+    ),
     linhaId: <Select options={linhas.map((linha) => ({ value: linha.id, label: linha.nome }))} />,
     ano: (
       <InputNumber
@@ -81,7 +76,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
         parser={(value) => value?.replace(/[^\d]/g, '') as any}
       />
     ),
-    cilindrada: <Input placeholder="Ex: 160cc" />,
+    cilindrada: <Input placeholder={t('modeloMotoCatalog.engineShortPlaceholder')} />,
   };
 
   const inputNode = inputNodeMap[dataIndex] || <Input />;
@@ -119,17 +114,27 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
   const [marcaFilter, setMarcaFilter] = useState<string | undefined>();
   const [linhaFilter, setLinhaFilter] = useState<number | undefined>();
   const [anoFilter, setAnoFilter] = useState<number | undefined>();
-  const [statusFilter, setStatusFilter] = useState<'Ativo' | 'Inativo' | 'Todos'>('Ativo');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
 
   const linhaById = useMemo(() => {
     return new Map(linhas.map((linha) => [linha.id, linha.nome]));
   }, [linhas]);
 
+  const marcaOptions = useMemo<SelectOption[]>(() => {
+    const marcas = data
+      .map((modelo) => modelo.marca.trim())
+      .filter(Boolean);
+
+    return Array.from(new Set(marcas))
+      .sort((a, b) => a.localeCompare(b, getLocale()))
+      .map((marca) => ({ value: marca, label: marca }));
+  }, [data]);
+
   const fetchModelos = async () => {
     try {
       setLoading(true);
       const [modelos, linhasData] = await Promise.all([
-        modeloMotoService.getAll(),
+        modeloMotoService.getCatalogo(),
         linhaService.getAll(false),
       ]);
 
@@ -158,9 +163,9 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
       const matchesMarca = !marcaFilter || item.marca === marcaFilter;
       const matchesLinha = !linhaFilter || item.linhaId === linhaFilter;
       const matchesAno = !anoFilter || item.ano === anoFilter;
-      const matchesStatus = statusFilter === 'Todos'
-        || (statusFilter === 'Ativo' && item.ativo)
-        || (statusFilter === 'Inativo' && !item.ativo);
+      const matchesStatus = statusFilter === 'all'
+        || (statusFilter === 'active' && item.ativo)
+        || (statusFilter === 'inactive' && !item.ativo);
 
       return matchesSearch && matchesMarca && matchesLinha && matchesAno && matchesStatus;
     });
@@ -178,12 +183,11 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
   };
 
   const buildRequest = (record: ModeloMotoData, values: Partial<ModeloMotoRequest>): ModeloMotoRequest => ({
-    nomeModelo: values.nomeModelo ?? record.nomeModelo,
+    nomeModelo: (values.nomeModelo ?? record.nomeModelo).trim(),
     marca: values.marca ?? record.marca,
-    categoria: values.categoria,
     linhaId: values.linhaId ?? record.linhaId,
-    cilindrada: values.cilindrada,
-    ano: values.ano,
+    cilindrada: values.cilindrada ?? record.cilindrada,
+    ano: values.ano ?? record.ano,
   });
 
   const save = async (key: string) => {
@@ -198,7 +202,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
       await fetchModelos();
       message.success(t('modeloMotoUpdatedSuccess'));
     } catch (error) {
-      handleApiError(error);
+      handleApiError(error, 'error.updateModeloMoto', { conflictKey: 'error.modeloMotoConflict' });
     } finally {
       setLoading(false);
     }
@@ -211,7 +215,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
       await fetchModelos();
       message.success(t('modeloMotoStatusUpdatedSuccess'));
     } catch (error) {
-      handleApiError(error);
+      handleApiError(error, 'error.toggleModeloMotoStatus', { conflictKey: 'error.modeloMotoConflict' });
     } finally {
       setLoading(false);
     }
@@ -222,7 +226,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
     setMarcaFilter(undefined);
     setLinhaFilter(undefined);
     setAnoFilter(undefined);
-    setStatusFilter('Ativo');
+    setStatusFilter('active');
   };
 
   const columns: EditableColumn[] = [
@@ -237,14 +241,6 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
       dataIndex: 'nomeModelo',
       key: 'nomeModelo',
       editable: true,
-    },
-    {
-      title: t('modeloMotoCatalog.category'),
-      dataIndex: 'categoria',
-      key: 'categoria',
-      editable: true,
-      required: false,
-      render: (categoria?: string) => categoria ? <Tag>{categoria}</Tag> : '-',
     },
     {
       title: t('modeloMotoCatalog.year'),
@@ -357,6 +353,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
         rules: col.rules,
         editing: isEditing(record),
         linhas,
+        marcaOptions,
       }),
     };
   });
@@ -386,6 +383,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
               style={{ width: 300 }}
               value={searchText}
               onChange={(event) => setSearchText(event.target.value)}
+              allowClear
             />
 
             <Select
@@ -423,15 +421,17 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
               value={statusFilter}
               onChange={setStatusFilter}
               options={[
-                { value: 'Ativo', label: t('status.active') },
-                { value: 'Inativo', label: t('status.inactive') },
-                { value: 'Todos', label: t('status.all') },
+                { value: 'active', label: t('status.active') },
+                { value: 'inactive', label: t('status.inactive') },
+                { value: 'all', label: t('status.all') },
               ]}
             />
 
             <Flex gap="small" style={{ marginLeft: 'auto' }}>
               <Button onClick={handleClearFilters}>{t('modeloMotoCatalog.clear')}</Button>
-              <Button type="primary" onClick={fetchModelos}>{t('modeloMotoCatalog.apply')}</Button>
+              <Button type="primary" icon={<ReloadOutlined />} onClick={fetchModelos}>
+                {t('modeloMotoCatalog.refresh')}
+              </Button>
             </Flex>
           </Flex>
         </Space>

@@ -23,11 +23,9 @@ import { modeloMotoService } from '@/app/services/modeloMotoService';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { Linha } from '@/app/models/Linha';
 import { RevisaoPadraoResponse } from '@/app/models/RevisaoPadrao';
+import { formatCurrency } from '@/app/utils/formatters';
 
 const { Title } = Typography;
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const formatTempo = (minutos: number) => {
   if (minutos === 0) return '-';

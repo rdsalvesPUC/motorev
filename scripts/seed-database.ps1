@@ -29,7 +29,7 @@ function Invoke-SqlScript {
 
     $sqlcmd = Get-Command sqlcmd -ErrorAction SilentlyContinue
     if ($sqlcmd) {
-        & $sqlcmd.Source -S $Server -d $Database -U $User -P $Password -b -i $Path
+        & $sqlcmd.Source -S $Server -d $Database -U $User -P $Password -C -b -i $Path
         if ($LASTEXITCODE -ne 0) {
             throw "sqlcmd failed for script: $Path"
         }

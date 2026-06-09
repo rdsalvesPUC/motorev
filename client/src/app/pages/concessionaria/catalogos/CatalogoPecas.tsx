@@ -30,7 +30,8 @@ import {
   type StatusPecaFilter,
 } from '@/app/services/pecaService';
 import { PATHS } from '@/app/paths';
-import { getLocale, t } from '@/app/i18n';
+import { t } from '@/app/i18n';
+import { formatCurrency, getCurrencySymbol, getDecimalSeparator } from '@/app/utils/formatters';
 
 const { Title, Text } = Typography;
 
@@ -88,7 +89,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
   } else if (dataIndex === 'preco') {
     inputNode = (
       <InputNumber
-        addonBefore="R$"
+        addonBefore={getCurrencySymbol()}
         decimalSeparator={getDecimalSeparator()}
         min={0.01}
         precision={2}
@@ -123,17 +124,6 @@ const EditableCell: React.FC<EditableCellProps> = ({
     </td>
   );
 };
-
-function formatCurrency(value: number) {
-  return value.toLocaleString(getLocale(), {
-    style: 'currency',
-    currency: 'BRL',
-  });
-}
-
-function getDecimalSeparator() {
-  return getLocale() === 'pt-BR' ? ',' : '.';
-}
 
 function getEstoqueTag(estoque: number) {
   const color = estoque > 10 ? 'green' : estoque > 0 ? 'orange' : 'red';

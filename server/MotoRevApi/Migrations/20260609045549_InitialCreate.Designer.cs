@@ -12,8 +12,8 @@ using MotoRevApi.Data;
 namespace MotoRevApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260608164505_newmain2")]
-    partial class newmain2
+    [Migration("20260609045549_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -192,8 +192,7 @@ namespace MotoRevApi.Migrations
                         .IsUnique()
                         .HasFilter("[EnderecoId] IS NOT NULL");
 
-                    b.HasIndex("UsuarioId")
-                        .IsUnique();
+                    b.HasIndex("UsuarioId");
 
                     b.ToTable("Clientes");
                 });
@@ -237,8 +236,7 @@ namespace MotoRevApi.Migrations
                     b.HasIndex("Cnpj")
                         .IsUnique();
 
-                    b.HasIndex("UsuarioId")
-                        .IsUnique();
+                    b.HasIndex("UsuarioId");
 
                     b.ToTable("Concessionarias");
                 });
@@ -417,10 +415,6 @@ namespace MotoRevApi.Migrations
                     b.Property<bool>("Ativo")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Categoria")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
                     b.Property<string>("Cilindrada")
                         .HasColumnType("nvarchar(max)");
 
@@ -444,7 +438,8 @@ namespace MotoRevApi.Migrations
                     b.HasIndex("Marca");
 
                     b.HasIndex("NomeModelo")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Ativo] = 1");
 
                     b.ToTable("ModelosMotos");
                 });
@@ -572,9 +567,6 @@ namespace MotoRevApi.Migrations
                     b.Property<bool>("Ativo")
                         .HasColumnType("bit");
 
-                    b.Property<int>("ConcessionariaId")
-                        .HasColumnType("int");
-
                     b.Property<int>("LinhaId")
                         .HasColumnType("int");
 
@@ -593,11 +585,9 @@ namespace MotoRevApi.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ConcessionariaId");
-
                     b.HasIndex("LinhaId");
 
-                    b.HasIndex("ConcessionariaId", "LinhaId", "Ordem")
+                    b.HasIndex("LinhaId", "Ordem")
                         .IsUnique();
 
                     b.ToTable("RevisoesPadrao");
@@ -692,9 +682,6 @@ namespace MotoRevApi.Migrations
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
-
-                    b.Property<bool>("Ativo")
-                        .HasColumnType("bit");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -818,8 +805,8 @@ namespace MotoRevApi.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("MotoRevApi.Model.Usuario", "Usuario")
-                        .WithOne("Cliente")
-                        .HasForeignKey("MotoRevApi.Model.Cliente", "UsuarioId")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -831,8 +818,8 @@ namespace MotoRevApi.Migrations
             modelBuilder.Entity("MotoRevApi.Model.Concessionaria", b =>
                 {
                     b.HasOne("MotoRevApi.Model.Usuario", "Usuario")
-                        .WithOne("Concessionaria")
-                        .HasForeignKey("MotoRevApi.Model.Concessionaria", "UsuarioId")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -889,19 +876,11 @@ namespace MotoRevApi.Migrations
 
             modelBuilder.Entity("MotoRevApi.Model.RevisaoPadrao", b =>
                 {
-                    b.HasOne("MotoRevApi.Model.Concessionaria", "Concessionaria")
-                        .WithMany()
-                        .HasForeignKey("ConcessionariaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("MotoRevApi.Model.Linha", "Linha")
                         .WithMany()
                         .HasForeignKey("LinhaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Concessionaria");
 
                     b.Navigation("Linha");
                 });
@@ -964,13 +943,6 @@ namespace MotoRevApi.Migrations
             modelBuilder.Entity("MotoRevApi.Model.Servico", b =>
                 {
                     b.Navigation("RevisoesPadrao");
-                });
-
-            modelBuilder.Entity("MotoRevApi.Model.Usuario", b =>
-                {
-                    b.Navigation("Cliente");
-
-                    b.Navigation("Concessionaria");
                 });
 #pragma warning restore 612, 618
         }

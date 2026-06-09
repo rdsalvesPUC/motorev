@@ -64,7 +64,6 @@ public class MotoEndpointsTests : IDisposable
             NomeModelo = "Titan 160",
             Marca = "Honda",
             LinhaId = linha.Id,
-            Categoria = "Street",
             Ativo = true
         };
         context.ModelosMotos.Add(modelo);
