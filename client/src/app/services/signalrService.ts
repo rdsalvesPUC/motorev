@@ -1,5 +1,5 @@
 import * as signalR from '@microsoft/signalr';
-import { tokenManager } from './authService';
+import { tokenManager } from './tokenManager';
 import { Alerta } from '../models/Alerta';
 
 class SignalRService {

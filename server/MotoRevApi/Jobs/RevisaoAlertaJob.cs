@@ -76,12 +76,9 @@ public class RevisaoAlertaJob : BackgroundService
         // 1. Buscar a linha da moto
         var linhaId = moto.ModeloMoto.LinhaId;
 
-        // 2. Buscar revisões padrão para esta linha (da concessionária vinculada à moto)
-        // Se a moto não tiver concessionária, não temos como saber o catálogo de revisões dela
-        if (moto.ConcessionariaId == null) return;
-
+        // 2. Buscar revisões padrão para esta linha
         var revisoesPadrao = await context.RevisoesPadrao
-            .Where(r => r.ConcessionariaId == moto.ConcessionariaId && r.LinhaId == linhaId && r.Ativo)
+            .Where(r => r.LinhaId == linhaId && r.Ativo)
             .OrderBy(r => r.Ordem)
             .ToListAsync(stoppingToken);
 
