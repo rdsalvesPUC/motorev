@@ -1,6 +1,0 @@
-<Solution>
-  <Folder Name="/server/">
-    <Project Path="server/MotoRevApi/MotoRevApi.csproj" />
-    <Project Path="server/MotoRevApi.Tests/MotoRevApi.Tests.csproj" />
-  </Folder>
-</Solution>
