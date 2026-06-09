@@ -129,7 +129,7 @@ export default function NotificationsDrawer({
                   style={{ margin: 0, fontSize: 13, color: '#595959' }}
                   ellipsis={{ rows: 2 }}
                 >
-                  {t(`alertas.mensagem.${notif.tipo}`, { km: notif.valorReferencia })}
+                  {t(`alertas.mensagem.${notif.tipo}`, { km: notif.quilometragem })}
                 </Paragraph>
 
                 <Flex justify="space-between" align="center">

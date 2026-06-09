@@ -26,7 +26,7 @@ public class AlertaService
         string usuarioId,
         int? motoId = null,
         int? agendamentoId = null,
-        int? valorReferencia = null)
+        int? quilometragem = null)
     {
         var alerta = new Alerta
         {
@@ -34,7 +34,7 @@ public class AlertaService
             UsuarioId = usuarioId,
             MotoId = motoId,
             AgendamentoId = agendamentoId,
-            ValorReferencia = valorReferencia,
+            Quilometragem = quilometragem,
             Lido = false,
             CriadoEm = DateTime.UtcNow
         };
@@ -43,10 +43,7 @@ public class AlertaService
         await _context.SaveChangesAsync();
 
         // Notificar via SignalR
-        if (_hubContext != null)
-        {
-            await _hubContext.Clients.User(usuarioId).SendAsync("ReceberAlerta", alerta);
-        }
+        await _hubContext.Clients.User(usuarioId).SendAsync("ReceberAlerta", alerta);
     }
 
     public virtual async Task GerarAlertaRevisaoProximaAsync(
@@ -54,7 +51,7 @@ public class AlertaService
         int motoId,
         int quilometragemRevisao)
     {
-        await CriarAlertaAsync(TipoAlerta.RevisaoProxima, usuarioId, motoId: motoId, valorReferencia: quilometragemRevisao);
+        await CriarAlertaAsync(TipoAlerta.RevisaoProxima, usuarioId, motoId: motoId, quilometragem: quilometragemRevisao);
     }
 
     public virtual async Task GerarAlertaRevisaoAtrasadaAsync(
@@ -63,7 +60,7 @@ public class AlertaService
         int quilometragemAtrasada)
     {
         // Alerta para o Cliente
-        await CriarAlertaAsync(TipoAlerta.RevisaoAtrasada, usuarioId, motoId: motoId, valorReferencia: quilometragemAtrasada);
+        await CriarAlertaAsync(TipoAlerta.RevisaoAtrasada, usuarioId, motoId: motoId, quilometragem: quilometragemAtrasada);
 
         // Alerta para a Concessionária
         var moto = await _context.Motos
@@ -72,7 +69,7 @@ public class AlertaService
 
         if (moto?.Concessionaria != null)
         {
-            await CriarAlertaAsync(TipoAlerta.RevisaoAtrasada, moto.Concessionaria.UsuarioId, motoId: motoId, valorReferencia: quilometragemAtrasada);
+            await CriarAlertaAsync(TipoAlerta.RevisaoAtrasada, moto.Concessionaria.UsuarioId, motoId: motoId, quilometragem: quilometragemAtrasada);
         }
     }
 

@@ -12,7 +12,7 @@ export interface AlertaResponse {
   criadoEm: string;
   motoId?: number;
   agendamentoId?: number;
-  valorReferencia?: number;
+  quilometragem?: number;
 }
 
 export interface AlertaNaoLidosCountResponse {

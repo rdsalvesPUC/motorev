@@ -11,5 +11,5 @@ public class Alerta
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
     public int? MotoId { get; set; }
     public int? AgendamentoId { get; set; }
-    public int? ValorReferencia { get; set; }
+    public int? Quilometragem { get; set; }
 }

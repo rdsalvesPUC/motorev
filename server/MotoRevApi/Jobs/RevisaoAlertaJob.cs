@@ -118,7 +118,7 @@ public class RevisaoAlertaJob : BackgroundService
                 a.UsuarioId == moto.Cliente.UsuarioId && 
                 a.Tipo == TipoAlerta.RevisaoProxima && 
                 a.MotoId == moto.Id &&
-                a.ValorReferencia == proximaRevisao.Quilometragem, stoppingToken);
+                a.Quilometragem == proximaRevisao.Quilometragem, stoppingToken);
 
             if (!jaExiste)
             {
@@ -134,7 +134,7 @@ public class RevisaoAlertaJob : BackgroundService
                 a.UsuarioId == moto.Cliente.UsuarioId && 
                 a.Tipo == TipoAlerta.RevisaoAtrasada && 
                 a.MotoId == moto.Id &&
-                a.ValorReferencia == proximaRevisao.Quilometragem, stoppingToken);
+                a.Quilometragem == proximaRevisao.Quilometragem, stoppingToken);
 
             if (!jaExisteAtrasada)
             {
