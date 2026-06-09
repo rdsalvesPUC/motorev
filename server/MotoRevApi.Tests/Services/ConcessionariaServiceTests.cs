@@ -95,6 +95,81 @@ public class ConcessionariaServiceTests
     }
 
     [Fact]
+    public async Task FluxoCompleto_DeveCadastrarConcessionariaMatrizEFilial()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var registerRequest = CreateRegisterRequest(
+            email: "fluxo@motorev.com",
+            nome: "Concessionaria Fluxo",
+            cnpj: "10.111.222/0001-33");
+        var matrizRequest = new LojaRequest(
+            "MotoRev Matriz",
+            "10.111.222/0001-33",
+            "(11) 3000-0000",
+            "01001-000",
+            "Rua Matriz",
+            "100",
+            "Centro",
+            "Sao Paulo",
+            "SP",
+            IsMatriz: true,
+            Foto: "/uploads/matriz.png");
+        var filialRequest = new LojaRequest(
+            "MotoRev Filial",
+            "10.111.222/0002-14",
+            "(11) 4000-0000",
+            "04000-000",
+            "Rua Filial",
+            "200",
+            "Bairro",
+            "Sao Paulo",
+            "SP",
+            IsMatriz: false,
+            Foto: "/uploads/filial.png");
+
+        _mockUserManager.Setup(x => x.FindByEmailAsync(registerRequest.Email)).ReturnsAsync((Usuario)null);
+        _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<Usuario>(), registerRequest.Password)).ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(x => x.AddToRoleAsync(It.IsAny<Usuario>(), "Concessionaria")).ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var concessionaria = await service.RegisterAsync(registerRequest);
+        var concessionariaDb = await context.Concessionarias.SingleAsync(c => c.Cnpj == registerRequest.Cnpj);
+        context.Users.Add(new Usuario
+        {
+            Id = concessionariaDb.UsuarioId,
+            UserName = registerRequest.Email,
+            Email = registerRequest.Email
+        });
+        await context.SaveChangesAsync();
+
+        var matriz = await service.AddLojaAsync(concessionariaDb.Id, matrizRequest);
+        var filial = await service.AddLojaAsync(concessionariaDb.Id, filialRequest);
+        var perfil = await service.GetByIdAsync(concessionariaDb.Id);
+
+        // Assert
+        Assert.Equal("Concessionaria Fluxo", concessionaria.Nome);
+        Assert.Equal("Matriz", matriz.Tipo);
+        Assert.True(matriz.Ativo);
+        Assert.Equal("/uploads/matriz.png", matriz.Foto);
+        Assert.Equal("Filial", filial.Tipo);
+        Assert.True(filial.Ativo);
+        Assert.Equal("/uploads/filial.png", filial.Foto);
+
+        var lojas = (await service.GetLojasAsync(concessionariaDb.Id)).ToList();
+        Assert.Equal(2, lojas.Count);
+        Assert.Equal(matriz.Id, lojas[0].Id);
+        Assert.Equal(filial.Id, lojas[1].Id);
+        Assert.Single(lojas, loja => loja.Tipo == "Matriz");
+        Assert.Single(lojas, loja => loja.Tipo == "Filial");
+        Assert.Equal("01001-000", perfil.Cep);
+        Assert.Equal("Rua Matriz", perfil.Logradouro);
+        Assert.Equal("100", perfil.Numero);
+        Assert.Equal("Centro", perfil.Bairro);
+    }
+
+    [Fact]
     public async Task RegisterAsync_DeveLancarExcecao_QuandoEmailJaExiste()
     {
         // Arrange
@@ -176,7 +251,7 @@ public class ConcessionariaServiceTests
     }
 
     [Fact]
-    public async Task UpdatePerfilAsync_DeveAtualizarDadosDaMatriz()
+    public async Task UpdatePerfilAsync_DeveAtualizarDadosSemCriarLojaMatriz()
     {
         // Arrange
         using var context = CreateContext();
@@ -212,13 +287,10 @@ public class ConcessionariaServiceTests
         Assert.Equal("Concessionaria Atualizada", result.Nome);
         Assert.Equal("nova@conc.com", result.Email);
         Assert.Equal("(21) 98888-7777", result.Telefone);
-        Assert.Equal("RJ", result.Uf);
+        Assert.Equal(string.Empty, result.Uf);
         Assert.Equal("Matriz", result.Tipo);
         var lojaMatriz = await context.Lojas.SingleOrDefaultAsync(l => l.ConcessionariaId == 1 && l.Tipo == "Matriz");
-        Assert.NotNull(lojaMatriz);
-        Assert.Equal("Concessionaria Atualizada", lojaMatriz.Nome);
-        Assert.Equal("(21) 98888-7777", lojaMatriz.Telefone);
-        Assert.Equal("RJ", lojaMatriz.Uf);
+        Assert.Null(lojaMatriz);
     }
 
     [Fact]
@@ -265,6 +337,7 @@ public class ConcessionariaServiceTests
         // Assert
         var lojaMatriz = await context.Lojas.SingleAsync(l => l.ConcessionariaId == 1 && l.Tipo == "Matriz");
         Assert.False(lojaMatriz.Ativo);
+        Assert.Equal("Rua Teste", lojaMatriz.Logradouro);
     }
 
     [Fact]
@@ -309,10 +382,9 @@ public class ConcessionariaServiceTests
 
         // Assert
         var concessionaria = await context.Concessionarias.SingleAsync(c => c.UsuarioId == userId);
-        var lojaMatriz = await context.Lojas.SingleAsync(l => l.ConcessionariaId == concessionaria.Id && l.Tipo == "Matriz");
         Assert.Equal("98.765.432/0001-10", result.Cnpj);
         Assert.Equal("98.765.432/0001-10", concessionaria.Cnpj);
-        Assert.Equal("98.765.432/0001-10", lojaMatriz.Cnpj);
+        Assert.Empty(await context.Lojas.Where(l => l.ConcessionariaId == concessionaria.Id && l.Tipo == "Matriz").ToListAsync());
     }
 
     [Fact]
@@ -382,7 +454,8 @@ public class ConcessionariaServiceTests
             "200",
             "Vila Teste",
             "Sao Paulo",
-            "SP"
+            "SP",
+            Foto: "/uploads/loja.png"
         );
 
         // Act
@@ -392,9 +465,65 @@ public class ConcessionariaServiceTests
         Assert.Equal("Loja Zona Sul", result.Nome);
         Assert.Equal("(11) 3000-0000", result.Telefone);
         Assert.Equal("Filial", result.Tipo);
+        Assert.Equal("/uploads/loja.png", result.Foto);
         Assert.Equal(1, result.ConcessionariaId);
         Assert.True(result.Ativo);
         Assert.Equal(2, context.Lojas.Count());
+    }
+
+    [Fact]
+    public async Task AddLojaAsync_DeveCriarPrimeiraLojaComoMatriz()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(CreateConcessionaria());
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new LojaRequest("Matriz", "98.765.432/0001-10", "(11) 3000-0000", "01001-000", "Rua", "1", "Centro", "Sao Paulo", "SP");
+
+        // Act
+        var result = await service.AddLojaAsync(1, request);
+
+        // Assert
+        Assert.Equal("Matriz", result.Tipo);
+        Assert.True(result.Ativo);
+    }
+
+    [Fact]
+    public async Task AddLojaAsync_DevePromoverNovaMatrizEDemoverAnterior()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(CreateConcessionaria());
+        context.Lojas.Add(new Loja
+        {
+            Id = 1,
+            Nome = "Matriz Antiga",
+            Tipo = "Matriz",
+            Cnpj = "98.765.432/0001-10",
+            Telefone = "(11) 99999-9999",
+            Cep = "01001-000",
+            Logradouro = "Rua Teste",
+            Numero = "100",
+            Bairro = "Centro",
+            Cidade = "Sao Paulo",
+            Uf = "SP",
+            ConcessionariaId = 1
+        });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new LojaRequest("Nova Matriz", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "1", "Bairro", "Cidade", "SP", IsMatriz: true);
+
+        // Act
+        var result = await service.AddLojaAsync(1, request);
+
+        // Assert
+        Assert.Equal("Matriz", result.Tipo);
+        var lojas = await context.Lojas.OrderBy(l => l.Id).ToListAsync();
+        Assert.Equal("Filial", lojas[0].Tipo);
+        Assert.Single(lojas, l => l.Tipo == "Matriz");
     }
 
     [Fact]
@@ -571,7 +700,7 @@ public class ConcessionariaServiceTests
     }
 
     [Fact]
-    public async Task UpdateLojaAsync_DeveLancarExcecao_QuandoLojaForMatriz()
+    public async Task UpdateLojaAsync_DeveAtualizarLojaMatriz()
     {
         // Arrange
         using var context = CreateContext();
@@ -593,10 +722,66 @@ public class ConcessionariaServiceTests
         await context.SaveChangesAsync();
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);
-        var request = new LojaRequest("Matriz Nova", "98.765.432/0001-10", "(11) 99999-9999", "01001-000", "Rua", "1", "Bairro", "Cidade", "SP");
+        var request = new LojaRequest("Matriz Nova", "98.765.432/0001-10", "(11) 99999-9999", "01001-000", "Rua", "1", "Bairro", "Cidade", "SP", IsMatriz: true, Foto: "/uploads/matriz.png");
 
-        // Act & Assert
-        await Assert.ThrowsAsync<BusinessRuleException>(() => service.UpdateLojaAsync(1, 10, request));
+        // Act
+        var result = await service.UpdateLojaAsync(1, 10, request);
+
+        // Assert
+        Assert.Equal("Matriz Nova", result.Nome);
+        Assert.Equal("Matriz", result.Tipo);
+        Assert.Equal("/uploads/matriz.png", result.Foto);
+    }
+
+    [Fact]
+    public async Task UpdateLojaAsync_DevePromoverFilialParaMatriz()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.Add(CreateConcessionaria());
+        context.Lojas.AddRange(
+            new Loja
+            {
+                Id = 10,
+                Nome = "Matriz",
+                Tipo = "Matriz",
+                Cnpj = "98.765.432/0001-10",
+                Telefone = "(11) 99999-9999",
+                Cep = "01001-000",
+                Logradouro = "Rua Teste",
+                Numero = "100",
+                Bairro = "Centro",
+                Cidade = "Sao Paulo",
+                Uf = "SP",
+                ConcessionariaId = 1
+            },
+            new Loja
+            {
+                Id = 11,
+                Nome = "Filial",
+                Tipo = "Filial",
+                Cnpj = "11.222.333/0001-44",
+                Telefone = "(11) 3000-0000",
+                Cep = "04000-000",
+                Logradouro = "Rua",
+                Numero = "10",
+                Bairro = "Bairro",
+                Cidade = "Cidade",
+                Uf = "SP",
+                ConcessionariaId = 1
+            });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new LojaRequest("Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", IsMatriz: true);
+
+        // Act
+        var result = await service.UpdateLojaAsync(1, 11, request);
+
+        // Assert
+        Assert.Equal("Matriz", result.Tipo);
+        Assert.Equal("Filial", (await context.Lojas.SingleAsync(l => l.Id == 10)).Tipo);
+        Assert.Single(await context.Lojas.ToListAsync(), l => l.Tipo == "Matriz");
     }
 
     [Fact]
@@ -762,7 +947,7 @@ public class ConcessionariaServiceTests
     }
 
     [Fact]
-    public async Task AlternarStatusLojaAsync_DeveAlternarAtivo_QuandoLojaForMatriz()
+    public async Task AlternarStatusLojaAsync_DeveLancarExcecao_QuandoLojaForMatriz()
     {
         // Arrange
         using var context = CreateContext();
@@ -786,11 +971,8 @@ public class ConcessionariaServiceTests
 
         var service = new ConcessionariaService(context, _mockUserManager.Object);
 
-        // Act
-        var result = await service.AlternarStatusLojaAsync(1, 10);
-
-        // Assert
-        Assert.False(result.Ativo);
+        // Act & Assert
+        await Assert.ThrowsAsync<BusinessRuleException>(() => service.AlternarStatusLojaAsync(1, 10));
     }
 
     [Fact]

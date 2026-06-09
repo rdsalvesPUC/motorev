@@ -8,4 +8,6 @@ export interface LojaRequest {
   bairro: string;
   cidade: string;
   uf: string;
+  isMatriz?: boolean;
+  foto?: string;
 }

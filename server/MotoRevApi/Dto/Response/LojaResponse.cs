@@ -13,5 +13,6 @@ public record LojaResponse(
     string Cidade,
     string Uf,
     int ConcessionariaId,
-    bool Ativo
+    bool Ativo,
+    string? Foto = null
 );

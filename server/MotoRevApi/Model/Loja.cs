@@ -13,6 +13,7 @@ public class Loja
     public required string Bairro { get; set; }
     public required string Cidade { get; set; }
     public required string Uf { get; set; }
+    public string? Foto { get; set; }
     public bool Ativo { get; set; } = true;
     public int ConcessionariaId { get; set; }
     public virtual Concessionaria Concessionaria { get; set; } = null!;
