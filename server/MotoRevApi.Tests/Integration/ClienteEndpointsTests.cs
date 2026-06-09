@@ -232,6 +232,84 @@ public class ClienteEndpointsTests : IDisposable
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetMe_DeveRetornarUnauthorized_QuandoTokenNaoTemUserId()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var token = TestJwtTokenFactory.CreateTokenWithoutId(Roles.Cliente);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Act
+        var response = await client.GetAsync("/api/Cliente/me");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_DeveRetornarUnauthorized_QuandoTokenNaoTemUserId()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var token = TestJwtTokenFactory.CreateTokenWithoutId(Roles.Cliente);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        // Act
+        var response = await client.GetAsync("/api/Cliente");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateDadosPessoais_DeveRetornarUnauthorized_QuandoTokenNaoTemUserId()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var token = TestJwtTokenFactory.CreateTokenWithoutId(Roles.Cliente);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var request = new { nome = "Novo Nome", email = "novo@email.com", telefone = "11999990000" };
+
+        // Act
+        var response = await client.PutAsJsonAsync("/api/Cliente/me/dados-pessoais", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateEndereco_DeveRetornarUnauthorized_QuandoTokenNaoTemUserId()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var token = TestJwtTokenFactory.CreateTokenWithoutId(Roles.Cliente);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var request = new { cep = "04538132", logradouro = "Rua", numero = "1", bairro = "B", cidade = "C", uf = "SP" };
+
+        // Act
+        var response = await client.PutAsJsonAsync("/api/Cliente/me/endereco", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AlterarSenha_DeveRetornarUnauthorized_QuandoTokenNaoTemUserId()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+        var token = TestJwtTokenFactory.CreateTokenWithoutId(Roles.Cliente);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var request = new { senhaAtual = "Old123!", novaSenha = "New123!", confirmarNovaSenha = "New123!" };
+
+        // Act
+        var response = await client.PutAsJsonAsync("/api/Cliente/me/senha", request);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
     public void Dispose()
     {
         _factory.Dispose();

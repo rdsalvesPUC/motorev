@@ -137,4 +137,31 @@ public class RevisaoPadraoControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(response, okResult.Value);
     }
+
+    [Fact]
+    public async Task PutPorLinha_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var request = new RevisaoPadraoLinhaRequest(
+            "Plano Street Updated",
+            2,
+            new List<RevisaoPadraoLinhaItemRequest>
+            {
+                new("Revisão 1000km", 1, 1000, 6, new List<int> { 1 })
+            });
+        var response = new List<RevisaoPadraoResponse>
+        {
+            new(1, "Revisão 1000km", 1, 1000, 6, 2, "Street", new List<ServicoResponse>(), new List<RevisaoPadraoPecaResponse>())
+        };
+
+        _revisaoServiceMock.Setup(s => s.AtualizarRevisoesPorLinhaAsync(2, request)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.PutPorLinha(2, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
 }

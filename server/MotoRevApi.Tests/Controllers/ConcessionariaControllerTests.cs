@@ -338,4 +338,113 @@ public class ConcessionariaControllerTests
         var okResult = Assert.IsType<OkObjectResult>(result);
         Assert.Equal(response, okResult.Value);
     }
+
+    [Fact]
+    public async Task GetAll_DeveRetornarOk()
+    {
+        // Arrange
+        var response = new[] { CreateConcessionariaResponse(1, "Conc 1"), CreateConcessionariaResponse(2, "Conc 2") };
+        _serviceMock.Setup(s => s.GetAllAsync()).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.GetAll();
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task GetMinhaLojaById_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true);
+        _serviceMock.Setup(s => s.GetLojaByIdAsync(userId, 1)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.GetMinhaLojaById(1);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task UpdateMinhaLoja_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var request = new LojaRequest("Loja", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP");
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true);
+        _serviceMock.Setup(s => s.UpdateLojaAsync(userId, 1, request)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.UpdateMinhaLoja(1, request);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task AlternarStatusMinhaLoja_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, false);
+        _serviceMock.Setup(s => s.AlternarStatusLojaAsync(userId, 1)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.AlternarStatusMinhaLoja(1);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task GetLojas_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var response = new[] { new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true) };
+        _serviceMock.Setup(s => s.ConcessionariaPertenceAoUsuarioAsync(userId, 1)).ReturnsAsync(true);
+        _serviceMock.Setup(s => s.GetLojasAsync(1)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.GetLojas(1);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
+
+    [Fact]
+    public async Task GetLojaById_DeveRetornarOk_QuandoSucesso()
+    {
+        // Arrange
+        var userId = "user-123";
+        SetAuthenticatedConcessionaria(userId);
+        var response = new LojaResponse(1, "Loja", "Filial", "11.222.333/0001-44", "(11) 3000-0000", "04000-000", "Rua", "10", "Bairro", "Cidade", "SP", 1, true);
+        _serviceMock.Setup(s => s.ConcessionariaPertenceAoUsuarioAsync(userId, 1)).ReturnsAsync(true);
+        _serviceMock.Setup(s => s.GetLojaByIdAsync(1, 1)).ReturnsAsync(response);
+
+        // Act
+        var result = await _controller.GetLojaById(1, 1);
+
+        // Assert
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(response, okResult.Value);
+    }
 }

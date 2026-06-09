@@ -16,6 +16,25 @@ public static class TestJwtTokenFactory
         return CreateToken(role, Guid.NewGuid().ToString());
     }
 
+    public static string CreateTokenWithoutId(string role)
+    {
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Role, role)
+        };
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Secret));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        var token = new JwtSecurityToken(
+            Issuer,
+            Audience,
+            claims,
+            expires: DateTime.UtcNow.AddMinutes(15),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
     public static string CreateToken(string role, string userId)
     {
         var claims = new[]

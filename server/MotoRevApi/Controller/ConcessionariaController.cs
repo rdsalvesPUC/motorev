@@ -169,6 +169,16 @@ public class ConcessionariaController : ControllerBase
     /// <summary>
     /// Cadastrar uma loja filial para a concessionaria matriz autenticada.
     /// </summary>
+    /// <remarks>
+    /// O ID da concessionária matriz é extraído automaticamente do token JWT.
+    /// </remarks>
+    /// <param name="request">Os dados da nova loja filial.</param>
+    /// <response code="201">Retorna a loja recém-criada.</response>
+    /// <response code="400">Se os dados fornecidos forem inválidos.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de 'Concessionaria'.</response>
+    /// <response code="404">Se a concessionária matriz não for encontrada.</response>
+    /// <response code="409">Se já existir uma matriz ou filial com o mesmo CNPJ.</response>
     [HttpPost("me/lojas")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status201Created)]
@@ -192,6 +202,13 @@ public class ConcessionariaController : ControllerBase
     /// <summary>
     /// Obter todas as lojas da concessionaria matriz autenticada.
     /// </summary>
+    /// <remarks>
+    /// Retorna tanto a matriz quanto as filiais vinculadas ao usuário autenticado.
+    /// </remarks>
+    /// <response code="200">Retorna a lista de lojas da concessionária.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de 'Concessionaria'.</response>
+    /// <response code="404">Se a concessionária matriz não for encontrada.</response>
     [HttpGet("me/lojas")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(IEnumerable<LojaResponse>), StatusCodes.Status200OK)]
@@ -211,8 +228,13 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
-    /// Obter uma loja da concessionaria matriz autenticada.
+    /// Obter uma loja específica da concessionaria matriz autenticada.
     /// </summary>
+    /// <param name="lojaId">O ID da loja (matriz ou filial).</param>
+    /// <response code="200">Retorna os dados da loja.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de 'Concessionaria'.</response>
+    /// <response code="404">Se a loja não for encontrada ou não pertencer à concessionária do usuário.</response>
     [HttpGet("me/lojas/{lojaId}")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
@@ -232,8 +254,16 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
-    /// Atualizar uma loja filial da concessionaria matriz autenticada.
+    /// Atualizar os dados de uma loja filial da concessionaria matriz autenticada.
     /// </summary>
+    /// <param name="lojaId">O ID da loja a ser atualizada.</param>
+    /// <param name="request">Os novos dados da loja.</param>
+    /// <response code="200">Retorna a loja atualizada.</response>
+    /// <response code="400">Se os dados fornecidos forem inválidos.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de 'Concessionaria'.</response>
+    /// <response code="404">Se a loja não for encontrada ou não pertencer à concessionária do usuário.</response>
+    /// <response code="409">Se o CNPJ informado já estiver em uso por outra loja.</response>
     [HttpPut("me/lojas/{lojaId}")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
@@ -257,6 +287,11 @@ public class ConcessionariaController : ControllerBase
     /// <summary>
     /// Alternar status ativo/inativo de uma loja da concessionaria matriz autenticada.
     /// </summary>
+    /// <param name="lojaId">O ID da loja.</param>
+    /// <response code="200">Retorna a loja com status atualizado.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não tiver permissão de 'Concessionaria'.</response>
+    /// <response code="404">Se a loja não for encontrada ou não pertencer à concessionária do usuário.</response>
     [HttpPatch("me/lojas/{lojaId}/alternar-status")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
@@ -276,18 +311,25 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
-    /// Cadastrar uma loja filial para uma concessionaria matriz.
+    /// Cadastrar uma loja filial para uma concessionaria matriz específica.
     /// </summary>
-    /// <param name="id">O ID da concessionaria matriz.</param>
-    /// <param name="request">Os dados da loja filial.</param>
-    /// <response code="201">Retorna a loja recem-criada.</response>
-    /// <response code="400">Se os dados fornecidos forem invalidos.</response>
-    /// <response code="404">Se a concessionaria matriz nao for encontrada.</response>
-    /// <response code="409">Se ja existir uma matriz ou filial com o mesmo CNPJ.</response>
+    /// <remarks>
+    /// Requer que o usuário autenticado seja o proprietário da concessionária matriz informada.
+    /// </remarks>
+    /// <param name="id">O ID da concessionária matriz.</param>
+    /// <param name="request">Os dados da nova loja filial.</param>
+    /// <response code="201">Retorna a loja recém-criada.</response>
+    /// <response code="400">Se os dados fornecidos forem inválidos.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não for o proprietário da matriz.</response>
+    /// <response code="404">Se a concessionária matriz não for encontrada.</response>
+    /// <response code="409">Se já existir uma matriz ou filial com o mesmo CNPJ.</response>
     [HttpPost("{id}/lojas")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     public async Task<IActionResult> AddLoja(int id, [FromBody] LojaRequest request)
@@ -303,11 +345,16 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
-    /// Obter todas as lojas filiais de uma concessionaria matriz.
+    /// Obter todas as lojas filiais de uma concessionaria matriz específica.
     /// </summary>
-    /// <param name="id">O ID da concessionaria matriz.</param>
-    /// <response code="200">Retorna a lista de lojas da concessionaria.</response>
-    /// <response code="404">Se a concessionaria matriz nao for encontrada.</response>
+    /// <remarks>
+    /// Requer que o usuário autenticado seja o proprietário da concessionária matriz informada.
+    /// </remarks>
+    /// <param name="id">O ID da concessionária matriz.</param>
+    /// <response code="200">Retorna a lista de lojas da concessionária.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não for o proprietário da matriz.</response>
+    /// <response code="404">Se a concessionária matriz não for encontrada.</response>
     [HttpGet("{id}/lojas")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(IEnumerable<LojaResponse>), StatusCodes.Status200OK)]
@@ -327,12 +374,17 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
-    /// Obter uma loja filial especifica de uma concessionaria matriz.
+    /// Obter uma loja filial específica de uma concessionaria matriz.
     /// </summary>
-    /// <param name="id">O ID da concessionaria matriz.</param>
+    /// <remarks>
+    /// Requer que o usuário autenticado seja o proprietário da concessionária matriz informada.
+    /// </remarks>
+    /// <param name="id">O ID da concessionária matriz.</param>
     /// <param name="lojaId">O ID da loja filial.</param>
     /// <response code="200">Retorna os dados da loja.</response>
-    /// <response code="404">Se a loja nao for encontrada.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não for o proprietário da matriz.</response>
+    /// <response code="404">Se a loja não for encontrada.</response>
     [HttpGet("{id}/lojas/{lojaId}")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
@@ -352,15 +404,20 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
-    /// Atualizar uma loja filial de uma concessionaria matriz.
+    /// Atualizar uma loja filial de uma concessionaria matriz específica.
     /// </summary>
-    /// <param name="id">O ID da concessionaria matriz.</param>
-    /// <param name="lojaId">O ID da loja filial.</param>
-    /// <param name="request">Os novos dados da loja filial.</param>
+    /// <remarks>
+    /// Requer que o usuário autenticado seja o proprietário da concessionária matriz informada.
+    /// </remarks>
+    /// <param name="id">O ID da concessionária matriz.</param>
+    /// <param name="lojaId">O ID da loja filial a ser atualizada.</param>
+    /// <param name="request">Os novos dados da loja.</param>
     /// <response code="200">Retorna a loja atualizada.</response>
-    /// <response code="400">Se os dados fornecidos forem invalidos.</response>
-    /// <response code="404">Se a loja nao for encontrada.</response>
-    /// <response code="409">Se ja existir uma matriz ou filial com o mesmo CNPJ.</response>
+    /// <response code="400">Se os dados fornecidos forem inválidos.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não for o proprietário da matriz.</response>
+    /// <response code="404">Se a loja não for encontrada.</response>
+    /// <response code="409">Se o CNPJ informado já estiver em uso por outra loja.</response>
     [HttpPut("{id}/lojas/{lojaId}")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]
@@ -382,12 +439,17 @@ public class ConcessionariaController : ControllerBase
     }
 
     /// <summary>
-    /// Alternar status ativo/inativo de uma loja filial.
+    /// Alternar status ativo/inativo de uma loja filial específica.
     /// </summary>
-    /// <param name="id">O ID da concessionaria matriz.</param>
+    /// <remarks>
+    /// Requer que o usuário autenticado seja o proprietário da concessionária matriz informada.
+    /// </remarks>
+    /// <param name="id">O ID da concessionária matriz.</param>
     /// <param name="lojaId">O ID da loja filial.</param>
     /// <response code="200">Retorna a loja com status atualizado.</response>
-    /// <response code="404">Se a loja nao for encontrada.</response>
+    /// <response code="401">Se o usuário não estiver autenticado.</response>
+    /// <response code="403">Se o usuário não for o proprietário da matriz.</response>
+    /// <response code="404">Se a loja não for encontrada.</response>
     [HttpPatch("{id}/lojas/{lojaId}/alternar-status")]
     [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(LojaResponse), StatusCodes.Status200OK)]

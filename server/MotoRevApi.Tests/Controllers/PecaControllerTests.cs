@@ -8,6 +8,7 @@ using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
 using MotoRevApi.Enums;
+using MotoRevApi.Model;
 using MotoRevApi.Services;
 using Xunit;
 using PecaApiController = MotoRevApi.Controller.PecaController;
@@ -79,5 +80,76 @@ public class PecaControllerTests
             .Select(attribute => attribute.StatusCode);
 
         Assert.Contains(statusCode, declaredStatusCodes);
+    }
+
+    [Fact]
+    public void ObterPeca_DeveRetornarOk_QuandoEncontrado()
+    {
+        using var context = CreateContext();
+        var peca = new Peca { Codigo = "P001", Nome = "Peca 1", Categoria = CategoriaPeca.Motor, Preco = 100, Estoque = 10, Status = StatusCadastro.Ativo };
+        context.Pecas.Add(peca);
+        context.SaveChanges();
+        
+        var controller = new PecaApiController(new PecaService(context));
+
+        var result = controller.ObterPeca(peca.Id);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<PecaResponse>(okResult.Value);
+        Assert.Equal(peca.Id, response.Id);
+    }
+
+    [Fact]
+    public void AtualizarPeca_DeveRetornarOk_QuandoSucesso()
+    {
+        using var context = CreateContext();
+        var peca = new Peca { Codigo = "P001", Nome = "Peca 1", Categoria = CategoriaPeca.Motor, Preco = 100, Estoque = 10, Status = StatusCadastro.Ativo };
+        context.Pecas.Add(peca);
+        context.SaveChanges();
+        
+        var controller = new PecaApiController(new PecaService(context));
+        var request = new PecaUpdateRequest("P001", "Peca Alt", CategoriaPeca.Motor, 150, 5, StatusCadastro.Ativo);
+
+        var result = controller.AtualizarPeca(peca.Id, request);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<PecaResponse>(okResult.Value);
+        Assert.Equal("Peca Alt", response.Nome);
+        Assert.Equal(150, response.Preco);
+    }
+
+    [Fact]
+    public void AtualizarStatusPeca_DeveRetornarOk_QuandoSucesso()
+    {
+        using var context = CreateContext();
+        var peca = new Peca { Codigo = "P001", Nome = "Peca 1", Categoria = CategoriaPeca.Motor, Preco = 100, Estoque = 10, Status = StatusCadastro.Ativo };
+        context.Pecas.Add(peca);
+        context.SaveChanges();
+        
+        var controller = new PecaApiController(new PecaService(context));
+        var request = new PecaStatusRequest(StatusCadastro.Inativo);
+
+        var result = controller.AtualizarStatusPeca(peca.Id, request);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<PecaResponse>(okResult.Value);
+        Assert.Equal(nameof(StatusCadastro.Inativo), response.Status);
+    }
+
+    [Fact]
+    public void ObterPecas_DeveRetornarLista()
+    {
+        using var context = CreateContext();
+        context.Pecas.Add(new Peca { Codigo = "P001", Nome = "Peca 1", Categoria = CategoriaPeca.Motor, Preco = 100, Estoque = 10, Status = StatusCadastro.Ativo });
+        context.Pecas.Add(new Peca { Codigo = "P002", Nome = "Peca 2", Categoria = CategoriaPeca.Motor, Preco = 200, Estoque = 20, Status = StatusCadastro.Ativo });
+        context.SaveChanges();
+        
+        var controller = new PecaApiController(new PecaService(context));
+
+        var result = controller.ObterPecas(null);
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        var response = Assert.IsType<List<PecaResponse>>(okResult.Value);
+        Assert.Equal(2, response.Count);
     }
 }
