@@ -14,17 +14,19 @@ import {
   Switch,
   Table,
   Tag,
+  theme,
   Typography,
 } from 'antd';
 import { EditOutlined, ReloadOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
-import { getLocale, t } from '@/app/i18n';
+import { t } from '@/app/i18n';
 import { Servico } from '@/app/models/Servico';
 import { ServicoRequest } from '@/app/models/ServicoRequest';
 import { PATH_SEGMENTS } from '@/app/paths';
 import { servicoService } from '@/app/services/servicoService';
 import { handleApiError } from '@/app/utils/errorHandler';
+import { formatCurrency, getCurrencySymbol, getDecimalSeparator } from '@/app/utils/formatters';
 
 const { Title } = Typography;
 
@@ -69,24 +71,13 @@ function translateCategoria(categoria: string) {
   return option ? t(option.labelKey) : categoria;
 }
 
-function formatCurrency(value: number) {
-  return value.toLocaleString(getLocale(), {
-    style: 'currency',
-    currency: 'BRL',
-  });
-}
-
 function formatTempoEstimado(tempo: number) {
-  if (tempo < 60) return `${tempo} min`;
+  if (tempo < 60) return `${tempo} ${t('minutes')}`;
 
   const horas = Math.floor(tempo / 60);
   const minutos = tempo % 60;
 
-  return minutos > 0 ? `${horas}h ${minutos} min` : `${horas}h`;
-}
-
-function getDecimalSeparator() {
-  return getLocale() === 'pt-BR' ? ',' : '.';
+  return minutos > 0 ? `${horas}h ${minutos} ${t('minutes')}` : `${horas}h`;
 }
 
 function toUpdateRequest(values: ServicoFormValues): ServicoRequest {
@@ -117,7 +108,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
   } else if (dataIndex === 'custo') {
     inputNode = (
       <InputNumber
-        addonBefore="R$"
+        addonBefore={getCurrencySymbol()}
         decimalSeparator={getDecimalSeparator()}
         min={0}
         precision={2}
@@ -150,6 +141,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
 
 export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosProps) {
   const [form] = Form.useForm<ServicoFormValues>();
+  const { token } = theme.useToken();
   const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingKey, setSavingKey] = useState<number | null>(null);
@@ -499,9 +491,25 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
           <Select
             allowClear
             options={[
-              { value: 'ate100', label: t('serviceCatalog.price.upTo100') },
-              { value: '101a200', label: t('serviceCatalog.price.from101To200') },
-              { value: 'mais200', label: t('serviceCatalog.price.moreThan200') },
+              {
+                value: 'ate100',
+                label: t('serviceCatalog.price.upTo100', {
+                  value: formatCurrency(100, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+                }),
+              },
+              {
+                value: '101a200',
+                label: t('serviceCatalog.price.from101To200', {
+                  start: formatCurrency(101, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+                  end: formatCurrency(200, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+                }),
+              },
+              {
+                value: 'mais200',
+                label: t('serviceCatalog.price.moreThan200', {
+                  value: formatCurrency(200, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+                }),
+              },
             ]}
             placeholder={t('serviceCatalog.price')}
             style={{ width: 150 }}
@@ -518,7 +526,14 @@ export default function CatalogoServicos({ onNavigateToForm }: CatalogoServicosP
         </Flex>
       </Flex>
 
-      <div style={{ background: '#fff', padding: '24px', borderRadius: '8px' }}>
+      <div
+        style={{
+          background: token.colorBgContainer,
+          border: `1px solid ${token.colorBorderSecondary}`,
+          borderRadius: token.borderRadiusLG,
+          padding: token.paddingLG,
+        }}
+      >
         <Spin spinning={loading}>
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
             <Flex justify="space-between" align="center">
