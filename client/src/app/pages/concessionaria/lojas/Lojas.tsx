@@ -190,9 +190,9 @@ export default function Lojas({ onNavigateToForm, onNavigateToEdit }: LojasProps
       return (
         loja.nome.toLowerCase().includes(termo) ||
         loja.cnpj.includes(busca) ||
-        cnpjDigits.includes(digits) ||
+        (digits.length > 0 && cnpjDigits.includes(digits)) ||
         loja.telefone.includes(busca) ||
-        telefoneDigits.includes(digits) ||
+        (digits.length > 0 && telefoneDigits.includes(digits)) ||
         loja.logradouro.toLowerCase().includes(termo) ||
         loja.bairro.toLowerCase().includes(termo) ||
         loja.cidade.toLowerCase().includes(termo) ||

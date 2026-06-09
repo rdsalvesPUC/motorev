@@ -286,9 +286,11 @@ public class ConcessionariaService
             .FirstOrDefaultAsync(l => l.ConcessionariaId == concessionariaId && l.Tipo == "Matriz" && l.Id != lojaId);
         var isMatriz = request.IsMatriz || (loja.Tipo == "Matriz" && outraMatriz == null);
 
+        var cnpjEmUsoPorOutraConcessionaria = await _context.Concessionarias.AnyAsync(c =>
+            c.Cnpj == request.Cnpj && c.Id != concessionariaId);
         var cnpjEmUsoPorMatriz = !isMatriz && await _context.Concessionarias.AnyAsync(c => c.Cnpj == request.Cnpj);
         var cnpjEmUsoPorOutraLoja = await _context.Lojas.AnyAsync(l => l.Cnpj == request.Cnpj && l.Id != lojaId);
-        if (cnpjEmUsoPorMatriz || cnpjEmUsoPorOutraLoja)
+        if (cnpjEmUsoPorOutraConcessionaria || cnpjEmUsoPorMatriz || cnpjEmUsoPorOutraLoja)
         {
             throw new DuplicateDataException($"O CNPJ {request.Cnpj} ja esta em uso.");
         }

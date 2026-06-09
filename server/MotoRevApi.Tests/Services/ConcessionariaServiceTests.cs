@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Moq;
+using MotoRevApi.Authorization;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Exceptions;
@@ -131,7 +132,7 @@ public class ConcessionariaServiceTests
 
         _mockUserManager.Setup(x => x.FindByEmailAsync(registerRequest.Email)).ReturnsAsync((Usuario)null);
         _mockUserManager.Setup(x => x.CreateAsync(It.IsAny<Usuario>(), registerRequest.Password)).ReturnsAsync(IdentityResult.Success);
-        _mockUserManager.Setup(x => x.AddToRoleAsync(It.IsAny<Usuario>(), "Concessionaria")).ReturnsAsync(IdentityResult.Success);
+        _mockUserManager.Setup(x => x.AddToRoleAsync(It.IsAny<Usuario>(), Roles.Concessionaria)).ReturnsAsync(IdentityResult.Success);
 
         // Act
         var concessionaria = await service.RegisterAsync(registerRequest);
@@ -782,6 +783,48 @@ public class ConcessionariaServiceTests
         Assert.Equal("Matriz", result.Tipo);
         Assert.Equal("Filial", (await context.Lojas.SingleAsync(l => l.Id == 10)).Tipo);
         Assert.Single(await context.Lojas.ToListAsync(), l => l.Tipo == "Matriz");
+    }
+
+    [Fact]
+    public async Task UpdateLojaAsync_DeveLancarExcecao_QuandoMatrizUsaCnpjDeOutraConcessionaria()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Concessionarias.AddRange(
+            CreateConcessionaria(id: 1, usuarioId: "user-1", cnpj: "98.765.432/0001-10"),
+            CreateConcessionaria(id: 2, usuarioId: "user-2", cnpj: "22.333.444/0001-55"));
+        context.Lojas.Add(new Loja
+        {
+            Id = 10,
+            Nome = "Matriz",
+            Tipo = "Matriz",
+            Cnpj = "98.765.432/0001-10",
+            Telefone = "(11) 99999-9999",
+            Cep = "01001-000",
+            Logradouro = "Rua Teste",
+            Numero = "100",
+            Bairro = "Centro",
+            Cidade = "Sao Paulo",
+            Uf = "SP",
+            ConcessionariaId = 1
+        });
+        await context.SaveChangesAsync();
+
+        var service = new ConcessionariaService(context, _mockUserManager.Object);
+        var request = new LojaRequest(
+            "Matriz",
+            "22.333.444/0001-55",
+            "(11) 99999-9999",
+            "01001-000",
+            "Rua Teste",
+            "100",
+            "Centro",
+            "Sao Paulo",
+            "SP",
+            IsMatriz: true);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.UpdateLojaAsync(1, 10, request));
     }
 
     [Fact]
