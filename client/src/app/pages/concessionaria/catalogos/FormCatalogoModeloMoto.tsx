@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, Form, Input, InputNumber, Select, Button, Space, message, Card, Spin, AutoComplete } from 'antd';
+import { Typography, Form, Input, InputNumber, Select, Button, Flex, message, Spin, AutoComplete, theme } from 'antd';
 import { CarOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { linhaService } from '@/app/services/linhaService';
@@ -8,7 +8,7 @@ import { Linha } from '@/app/models/Linha';
 import { ModeloMotoRequest } from '@/app/models/ModeloMotoRequest';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { PATH_SEGMENTS } from '@/app/paths';
-import { t } from '@/app/i18n';
+import { getLocale, t } from '@/app/i18n';
 
 const { Title } = Typography;
 
@@ -21,6 +21,7 @@ const minModelYear = 1901;
 
 export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreateProps) {
   const [form] = Form.useForm<ModeloMotoRequest>();
+  const { token } = theme.useToken();
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [marcas, setMarcas] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,7 +38,7 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
         setLinhas(linhasData);
         setMarcas(modelosData.map((modelo) => modelo.marca));
       } catch (error) {
-        handleApiError(error, 'error.fetchLinhas');
+        handleApiError(error, 'error.modeloMotoOptionsLoad');
       } finally {
         setLoading(false);
       }
@@ -48,7 +49,7 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
 
   const marcaOptions = useMemo(() => {
     return Array.from(new Set(marcas.map((marca) => marca.trim()).filter(Boolean)))
-      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .sort((a, b) => a.localeCompare(b, getLocale()))
       .map((marca) => ({ value: marca, label: marca }));
   }, [marcas]);
 
@@ -60,7 +61,7 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
       form.resetFields();
       onBack();
     } catch (error) {
-      handleApiError(error);
+      handleApiError(error, 'error.createModeloMoto', { conflictKey: 'error.modeloMotoConflict' });
     } finally {
       setLoading(false);
     }
@@ -73,14 +74,17 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
 
   return (
     <Spin spinning={loading}>
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-        <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+      <Flex vertical gap="large" style={{ width: '100%' }}>
+        <Flex vertical gap="middle" style={{ width: '100%' }}>
           <DashboardBreadcrumb
             userType="concessionaria"
             items={[
               {
-                title: t('modeloMotoCatalog.title'),
+                title: t('dashboard.menu.catalogos'),
                 icon: <CarOutlined />,
+              },
+              {
+                title: t('modeloMotoCatalog.title'),
                 path: `/dashboard/concessionaria/${PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_MOTOS}`,
               },
               {
@@ -89,18 +93,33 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
             ]}
           />
 
-          <Space align="center">
-            <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
-              {t('back')}
-            </Button>
+          <Flex align="center" gap="middle">
+            <Button
+              type="default"
+              icon={<ArrowLeftOutlined />}
+              onClick={handleCancel}
+              aria-label={t('back')}
+            />
             <Title level={2} style={{ margin: 0 }}>
               {t('modeloMotoCatalog.registerNew')}
             </Title>
-          </Space>
-        </Space>
+          </Flex>
+        </Flex>
 
-        <Card>
-          <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <div
+          style={{
+            background: token.colorBgContainer,
+            border: `1px solid ${token.colorBorderSecondary}`,
+            borderRadius: token.borderRadiusLG,
+            padding: token.paddingLG,
+          }}
+        >
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleSubmit}
+            style={{ maxWidth: '800px' }}
+          >
             <Form.Item
               label={t('modeloMotoCatalog.brand')}
               name="marca"
@@ -123,7 +142,7 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
                 { max: 100, message: t('modeloMotoCatalog.modelLength') },
               ]}
             >
-              <Input placeholder="Ex: CG 160, MT-03, GSX-S750" />
+              <Input placeholder={t('modeloMotoCatalog.modelPlaceholder')} />
             </Form.Item>
 
             <Form.Item
@@ -143,6 +162,7 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
                 min={minModelYear}
                 max={currentYear}
                 precision={0}
+                style={{ width: '100%' }}
                 parser={(value) => value?.replace(/[^\d]/g, '') as any}
               />
             </Form.Item>
@@ -152,7 +172,7 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
               name="cilindrada"
               rules={[{ max: 50, message: t('modeloMotoCatalog.engineLength') }]}
             >
-              <Input placeholder="Ex: 160cc, 300cc, 750cc" />
+              <Input placeholder={t('modeloMotoCatalog.enginePlaceholder')} />
             </Form.Item>
 
             <Form.Item
@@ -167,18 +187,18 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
             </Form.Item>
 
             <Form.Item style={{ marginBottom: 0 }}>
-              <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-                <Button onClick={handleCancel}>
-                  {t('modeloMotoCatalog.cancel')}
-                </Button>
-                <Button type="primary" htmlType="submit" loading={loading}>
+              <Flex gap="middle">
+                <Button type="primary" htmlType="submit" size="large" loading={loading}>
                   {t('modeloMotoCatalog.save')}
                 </Button>
-              </Space>
+                <Button size="large" onClick={handleCancel}>
+                  {t('modeloMotoCatalog.cancel')}
+                </Button>
+              </Flex>
             </Form.Item>
           </Form>
-        </Card>
-      </Space>
+        </div>
+      </Flex>
     </Spin>
   );
 }

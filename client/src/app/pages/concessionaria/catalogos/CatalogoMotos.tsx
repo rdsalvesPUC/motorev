@@ -9,7 +9,7 @@ import { ModeloMoto } from '@/app/models/ModeloMoto';
 import { Linha } from '@/app/models/Linha';
 import { ModeloMotoRequest } from '@/app/models/ModeloMotoRequest';
 import { handleApiError } from '@/app/utils/errorHandler';
-import { t } from '@/app/i18n';
+import { getLocale, t } from '@/app/i18n';
 
 const { Title } = Typography;
 
@@ -43,6 +43,8 @@ interface SelectOption {
   label: string;
 }
 
+type StatusFilter = 'active' | 'inactive' | 'all';
+
 const currentYear = new Date().getFullYear();
 const minModelYear = 1901;
 
@@ -74,7 +76,7 @@ const EditableCell: React.FC<EditableCellProps> = ({
         parser={(value) => value?.replace(/[^\d]/g, '') as any}
       />
     ),
-    cilindrada: <Input placeholder="Ex: 160cc" />,
+    cilindrada: <Input placeholder={t('modeloMotoCatalog.engineShortPlaceholder')} />,
   };
 
   const inputNode = inputNodeMap[dataIndex] || <Input />;
@@ -112,7 +114,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
   const [marcaFilter, setMarcaFilter] = useState<string | undefined>();
   const [linhaFilter, setLinhaFilter] = useState<number | undefined>();
   const [anoFilter, setAnoFilter] = useState<number | undefined>();
-  const [statusFilter, setStatusFilter] = useState<'Ativo' | 'Inativo' | 'Todos'>('Ativo');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
 
   const linhaById = useMemo(() => {
     return new Map(linhas.map((linha) => [linha.id, linha.nome]));
@@ -124,7 +126,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
       .filter(Boolean);
 
     return Array.from(new Set(marcas))
-      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .sort((a, b) => a.localeCompare(b, getLocale()))
       .map((marca) => ({ value: marca, label: marca }));
   }, [data]);
 
@@ -161,9 +163,9 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
       const matchesMarca = !marcaFilter || item.marca === marcaFilter;
       const matchesLinha = !linhaFilter || item.linhaId === linhaFilter;
       const matchesAno = !anoFilter || item.ano === anoFilter;
-      const matchesStatus = statusFilter === 'Todos'
-        || (statusFilter === 'Ativo' && item.ativo)
-        || (statusFilter === 'Inativo' && !item.ativo);
+      const matchesStatus = statusFilter === 'all'
+        || (statusFilter === 'active' && item.ativo)
+        || (statusFilter === 'inactive' && !item.ativo);
 
       return matchesSearch && matchesMarca && matchesLinha && matchesAno && matchesStatus;
     });
@@ -200,7 +202,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
       await fetchModelos();
       message.success(t('modeloMotoUpdatedSuccess'));
     } catch (error) {
-      handleApiError(error);
+      handleApiError(error, 'error.updateModeloMoto', { conflictKey: 'error.modeloMotoConflict' });
     } finally {
       setLoading(false);
     }
@@ -213,7 +215,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
       await fetchModelos();
       message.success(t('modeloMotoStatusUpdatedSuccess'));
     } catch (error) {
-      handleApiError(error);
+      handleApiError(error, 'error.toggleModeloMotoStatus', { conflictKey: 'error.modeloMotoConflict' });
     } finally {
       setLoading(false);
     }
@@ -224,7 +226,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
     setMarcaFilter(undefined);
     setLinhaFilter(undefined);
     setAnoFilter(undefined);
-    setStatusFilter('Ativo');
+    setStatusFilter('active');
   };
 
   const columns: EditableColumn[] = [
@@ -419,9 +421,9 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
               value={statusFilter}
               onChange={setStatusFilter}
               options={[
-                { value: 'Ativo', label: t('status.active') },
-                { value: 'Inativo', label: t('status.inactive') },
-                { value: 'Todos', label: t('status.all') },
+                { value: 'active', label: t('status.active') },
+                { value: 'inactive', label: t('status.inactive') },
+                { value: 'all', label: t('status.all') },
               ]}
             />
 
