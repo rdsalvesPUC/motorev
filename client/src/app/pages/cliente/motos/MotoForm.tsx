@@ -105,7 +105,9 @@ export default function MotoForm() {
     const loadFormData = async () => {
       let modelsData: ModeloMoto[] = [];
       try {
-        modelsData = await modeloMotoService.getAll();
+        modelsData = isEdit
+          ? await modeloMotoService.getAll()
+          : await modeloMotoService.getDisponiveisCadastro();
         setModelos(modelsData);
       } catch (error) {
         handleApiError(error, 'error.fetchModelosMotos');

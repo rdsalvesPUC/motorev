@@ -89,6 +89,26 @@ public class ModeloMotoController : ControllerBase
     }
 
     /// <summary>
+    /// Lista os modelos de motos disponíveis para cadastro pelo cliente.
+    /// </summary>
+    /// <remarks>
+    /// Retorna apenas modelos ativos cuja linha possui pelo menos uma revisão padrão ativa.
+    /// </remarks>
+    /// <response code="200">Retorna a lista de modelos aptos para cadastro de moto.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem a role 'Cliente'.</response>
+    [HttpGet("disponiveis-cadastro")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(List<ModeloMotoResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public ActionResult<List<ModeloMotoResponse>> ObterModelosDisponiveisParaCadastro()
+    {
+        var response = _modeloMotoService.ListarModelosDisponiveisParaCadastro();
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Listar modelos de motos do catálogo administrativo.
     /// </summary>
     /// <param name="ativo">Filtro opcional por status ativo/inativo.</param>
