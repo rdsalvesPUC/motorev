@@ -32,12 +32,11 @@ public class RevisaoPadraoController : ControllerBase
     /// <param name="linhaId">ID opcional da linha para filtrar a listagem.</param>
     /// <response code="200">Retorna a lista de revisões (pode estar vazia).</response>
     /// <response code="401">Se o usuário não estiver autenticado.</response>
-    /// <response code="403">Se o usuário não for do tipo Admin.</response>
+    /// <response code="403">Se o usuário não for do tipo Concessionaria.</response>
     [HttpGet]
     [ProducesResponseType(typeof(List<RevisaoPadraoListResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [AllowAnonymous]
     public async Task<IActionResult> Get([FromQuery] int? modeloMotoId, [FromQuery] int? linhaId)
     {
         var revisoes = await _revisaoPadraoService.ListarRevisoesAsync(modeloMotoId, linhaId);
