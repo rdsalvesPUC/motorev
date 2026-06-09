@@ -38,6 +38,7 @@ import { ModeloMoto } from '@/app/models/ModeloMoto';
 import { Servico } from '@/app/models/Servico';
 import { RevisaoPadraoLinhaRequest, RevisaoPadraoPecaRequest } from '@/app/models/RevisaoPadraoRequest';
 import { RevisaoPadraoListResponse } from '@/app/models/RevisaoPadrao';
+import { formatCurrency } from '@/app/utils/formatters';
 
 const { Title, Text } = Typography;
 
@@ -64,9 +65,6 @@ const DEFAULT_REVISAO_VALUES = [
   { ordem: 6, nome: 'Sexta revisão', quilometragem: 25000, tempoMeses: 36 },
   { ordem: 7, nome: 'Sétima revisão', quilometragem: 30000, tempoMeses: 42 },
 ];
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const formatTempo = (minutos: number) => {
   if (minutos === 0) return '-';

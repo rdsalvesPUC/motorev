@@ -3,7 +3,8 @@ import { HomeOutlined, ToolOutlined, ArrowLeftOutlined } from '@ant-design/icons
 import { useNavigate } from 'react-router';
 import { CATEGORIAS_PECA, type CategoriaPeca, pecaService, type PecaRequest } from '@/app/services/pecaService';
 import { PATHS } from '@/app/paths';
-import { getLocale, t } from '@/app/i18n';
+import { t } from '@/app/i18n';
+import { getCurrencySymbol, getDecimalSeparator } from '@/app/utils/formatters';
 
 const { Title } = Typography;
 
@@ -20,10 +21,6 @@ function getCategoriaPecaOptions() {
     value,
     label: t(categoriaPecaKeys[value]),
   }));
-}
-
-function getDecimalSeparator() {
-  return getLocale() === 'pt-BR' ? ',' : '.';
 }
 
 export default function CatalogoPecasCreate() {
@@ -131,7 +128,7 @@ export default function CatalogoPecasCreate() {
           >
             <InputNumber
               placeholder={t('partsCatalog.price.placeholder')}
-              addonBefore="R$"
+              addonBefore={getCurrencySymbol()}
               min={0.01}
               precision={2}
               step={0.01}

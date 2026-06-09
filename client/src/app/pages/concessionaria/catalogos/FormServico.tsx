@@ -1,12 +1,17 @@
-import { Typography, Form, Input, InputNumber, Select, Button, Space, message, Card, Spin } from 'antd';
+import { Typography, Form, Input, InputNumber, Select, Button, Flex, message, Spin, theme } from 'antd';
 import { ToolOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { useForm, Controller } from 'react-hook-form';
 import { servicoService } from '@/app/services/servicoService';
 import { ServicoRequest } from '@/app/models/ServicoRequest';
-import { ApiError } from '@/app/services/http';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { t } from '@/app/i18n';
+import {
+  formatCurrencyInput,
+  getCurrencySymbol,
+  getDecimalSeparator,
+  parseCurrencyInput,
+} from '@/app/utils/formatters';
 import { useState } from 'react';
 import { PATH_SEGMENTS } from '@/app/paths';
 
@@ -17,6 +22,7 @@ interface FormServicoProps {
 }
 
 export default function FormServico({ onCancel }: FormServicoProps) {
+  const { token } = theme.useToken();
   const { control, handleSubmit, reset, formState: { errors } } = useForm<ServicoRequest>({
     defaultValues: {
       codigo: '',
@@ -35,9 +41,9 @@ export default function FormServico({ onCancel }: FormServicoProps) {
       await servicoService.create(data);
       message.success(t('serviceCreatedSuccess'));
       reset();
-      onCancel(); // Navigate back to the list
+      onCancel();
     } catch (error) {
-      handleApiError(error);
+      handleApiError(error, 'error.createService');
     } finally {
       setLoading(false);
     }
@@ -50,14 +56,17 @@ export default function FormServico({ onCancel }: FormServicoProps) {
 
   return (
     <Spin spinning={loading}>
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Flex vertical gap="large" style={{ width: '100%' }}>
+        <Flex vertical gap="middle" style={{ width: '100%' }}>
           <DashboardBreadcrumb
             userType="concessionaria"
             items={[
               {
-                title: t('serviceCatalog.title'),
+                title: t('dashboard.menu.catalogos'),
                 icon: <ToolOutlined />,
+              },
+              {
+                title: t('serviceCatalog.title'),
                 path: PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_SERVICOS,
               },
               {
@@ -66,18 +75,32 @@ export default function FormServico({ onCancel }: FormServicoProps) {
             ]}
           />
 
-          <Space align="center">
-            <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
-              {t('back')}
-            </Button>
+          <Flex align="center" gap="middle">
+            <Button
+              type="default"
+              icon={<ArrowLeftOutlined />}
+              onClick={handleCancel}
+              aria-label={t('back')}
+            />
             <Title level={2} style={{ margin: 0 }}>
               {t('serviceCatalog.registerNewService')}
             </Title>
-          </Space>
-        </Space>
+          </Flex>
+        </Flex>
 
-        <Card>
-          <Form layout="vertical" onFinish={handleSubmit(handleFormSubmit)}>
+        <div
+          style={{
+            background: token.colorBgContainer,
+            border: `1px solid ${token.colorBorderSecondary}`,
+            borderRadius: token.borderRadiusLG,
+            padding: token.paddingLG,
+          }}
+        >
+          <Form
+            layout="vertical"
+            onFinish={handleSubmit(handleFormSubmit)}
+            style={{ maxWidth: '800px' }}
+          >
             <Form.Item
               label={t('serviceCatalog.serviceCode')}
               validateStatus={errors.codigo ? 'error' : ''}
@@ -97,8 +120,7 @@ export default function FormServico({ onCancel }: FormServicoProps) {
                 render={({ field }) => (
                   <Input
                     {...field}
-                    placeholder="Ex: SERV001"
-                    size="large"
+                    placeholder={t('serviceCatalog.codePlaceholder')}
                     style={{ textTransform: 'uppercase' }}
                     onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                   />
@@ -121,7 +143,7 @@ export default function FormServico({ onCancel }: FormServicoProps) {
                   maxLength: { value: 100, message: t('serviceCatalog.nameLength') }
                 }}
                 render={({ field }) => (
-                  <Input {...field} placeholder="Ex: Troca de Óleo" size="large" />
+                  <Input {...field} placeholder={t('serviceCatalog.namePlaceholder')} />
                 )}
               />
             </Form.Item>
@@ -140,7 +162,6 @@ export default function FormServico({ onCancel }: FormServicoProps) {
                   <Select
                     {...field}
                     placeholder={t('serviceCatalog.category.placeholder')}
-                    size="large"
                     options={[
                       { value: 'Verificacao', label: t('serviceCatalog.category.verificacao') },
                       { value: 'Ajuste', label: t('serviceCatalog.category.ajuste') },
@@ -170,10 +191,9 @@ export default function FormServico({ onCancel }: FormServicoProps) {
                   <InputNumber
                     {...field}
                     style={{ width: '100%' }}
-                    placeholder="30"
+                    placeholder={t('serviceCatalog.estimatedTimePlaceholder')}
                     min={1}
                     max={480}
-                    size="large"
                     keyboard={true}
                     stringMode={false}
                     parser={(value) => value?.replace(/[^\d]/g, '') as any}
@@ -183,7 +203,7 @@ export default function FormServico({ onCancel }: FormServicoProps) {
             </Form.Item>
 
             <Form.Item
-              label={t('serviceCatalog.priceBRL')}
+              label={t('serviceCatalog.priceBRL', { currencySymbol: getCurrencySymbol() })}
               validateStatus={errors.custo ? 'error' : ''}
               help={errors.custo?.message}
               required
@@ -200,18 +220,15 @@ export default function FormServico({ onCancel }: FormServicoProps) {
                   <InputNumber
                     {...field}
                     style={{ width: '100%' }}
-                    placeholder="80.00"
+                    placeholder={t('serviceCatalog.pricePlaceholder')}
                     min={0}
                     max={100000}
                     step={1}
-                    prefix="R$"
+                    prefix={getCurrencySymbol()}
                     precision={2}
-                    size="large"
-                    decimalSeparator=","
-                    parser={(value) => value?.replace(/[^\d,]/g, '').replace(',', '.') as any}
-                    formatter={(value) =>
-                      value ? `${value}`.replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''
-                    }
+                    decimalSeparator={getDecimalSeparator()}
+                    parser={(value) => parseCurrencyInput(value) as any}
+                    formatter={formatCurrencyInput}
                   />
                 )}
               />
@@ -237,25 +254,24 @@ export default function FormServico({ onCancel }: FormServicoProps) {
                     placeholder={t('serviceCatalog.descriptionPlaceholder')}
                     maxLength={500}
                     showCount
-                    size="large"
                   />
                 )}
               />
             </Form.Item>
 
             <Form.Item style={{ marginBottom: 0 }}>
-              <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-                <Button size="large" onClick={handleCancel}>
-                  {t('serviceCatalog.cancel')}
-                </Button>
-                <Button type="primary" size="large" htmlType="submit" loading={loading}>
+              <Flex gap="middle">
+                <Button type="primary" htmlType="submit" loading={loading}>
                   {t('serviceCatalog.save')}
                 </Button>
-              </Space>
+                <Button onClick={handleCancel}>
+                  {t('serviceCatalog.cancel')}
+                </Button>
+              </Flex>
             </Form.Item>
           </Form>
-        </Card>
-      </Space>
+        </div>
+      </Flex>
     </Spin>
   );
 }
