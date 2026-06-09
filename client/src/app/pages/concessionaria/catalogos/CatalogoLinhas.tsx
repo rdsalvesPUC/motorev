@@ -1,352 +1,429 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Breadcrumb, Typography, Input, Button, Table, Space, Flex, Form, Switch, Tag, Spin, message, Popconfirm, Select } from 'antd';
-import { HomeOutlined, ToolOutlined, SearchOutlined, EditOutlined } from '@ant-design/icons';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Button,
+  Empty,
+  Flex,
+  Form,
+  Input,
+  message,
+  Modal,
+  Select,
+  Space,
+  Spin,
+  Switch,
+  Table,
+  Tag,
+  theme,
+  Typography,
+} from 'antd';
+import { EditOutlined, ReloadOutlined, SearchOutlined, ToolOutlined } from '@ant-design/icons';
 import type { ColumnType } from 'antd/es/table';
-import { linhaService } from '@/app/services/linhaService';
-import { modeloMotoService } from '@/app/services/modeloMotoService';
+import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { Linha } from '@/app/models/Linha';
 import { ModeloMoto } from '@/app/models/ModeloMoto';
+import { PATH_SEGMENTS } from '@/app/paths';
+import { linhaService } from '@/app/services/linhaService';
+import { modeloMotoService } from '@/app/services/modeloMotoService';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { t } from '@/app/i18n';
 
 const { Title } = Typography;
 
+type StatusFilter = 'active' | 'inactive' | 'all';
+
 interface LinhaData extends Linha {
-    key: string;
+  key: string;
 }
 
 interface CatalogoLinhasProps {
-    onNavigateToForm?: () => void;
+  onNavigateToForm?: () => void;
+}
+
+interface LinhaFormValues {
+  nome: string;
+  descricao?: string;
 }
 
 interface EditableColumn extends ColumnType<LinhaData> {
-    editable?: boolean;
+  editable?: boolean;
+  dataIndex?: keyof LinhaFormValues;
 }
 
 interface EditableCellProps {
-    editing: boolean;
-    dataIndex: string;
-    title: string;
-    children: React.ReactNode;
+  editing: boolean;
+  dataIndex: keyof LinhaFormValues;
+  title: string;
+  children: React.ReactNode;
 }
 
 const EditableCell: React.FC<EditableCellProps> = ({
-                                                       editing,
-                                                       dataIndex,
-                                                       children,
-                                                       ...restProps
-                                                   }) => {
-    const inputNode = <Input />;
+  editing,
+  dataIndex,
+  title,
+  children,
+  ...restProps
+}) => {
+  const inputNode = dataIndex === 'descricao' ? <Input.TextArea rows={2} /> : <Input />;
 
-    return (
-        <td {...restProps}>
-            {editing ? (
-                <Form.Item
-                    name={dataIndex}
-                    style={{ margin: 0 }}
-                    rules={[
-                        {
-                            required: true,
-                            message: `Campo obrigatório!`,
-                        },
-                    ]}
-                >
-                    {inputNode}
-                </Form.Item>
-            ) : (
-                children
-            )}
-        </td>
-    );
+  return (
+    <td {...restProps}>
+      {editing ? (
+        <Form.Item
+          name={dataIndex}
+          style={{ margin: 0 }}
+          rules={[
+            {
+              required: true,
+              message: t('lineCatalog.requiredField', { field: title }),
+            },
+          ]}
+        >
+          {inputNode}
+        </Form.Item>
+      ) : (
+        children
+      )}
+    </td>
+  );
 };
 
 export default function CatalogoLinhas({ onNavigateToForm }: CatalogoLinhasProps) {
-    const [form] = Form.useForm();
-    const [data, setData] = useState<LinhaData[]>([]);
-    const [modelos, setModelos] = useState<ModeloMoto[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [editingKey, setEditingKey] = useState('');
-    const [searchText, setSearchText] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'Ativo' | 'Inativo' | 'Todos'>('Ativo');
+  const [form] = Form.useForm<LinhaFormValues>();
+  const { token } = theme.useToken();
+  const [data, setData] = useState<LinhaData[]>([]);
+  const [modelos, setModelos] = useState<ModeloMoto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [editingKey, setEditingKey] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
 
-    const fetchLinhas = async () => {
-        try {
-            setLoading(true);
-            const apenasAtivos = statusFilter === 'Ativo';
-            const linhas = await linhaService.getAll(apenasAtivos);
-            const models = await modeloMotoService.getAll();
-            
-            const filteredLinhas = statusFilter === 'Inativo'
-                ? linhas.filter(l => !l.ativo)
-                : linhas;
+  const fetchLinhas = async () => {
+    try {
+      setLoading(true);
+      const apenasAtivos = statusFilter === 'active';
+      const [linhas, models] = await Promise.all([
+        linhaService.getAll(apenasAtivos),
+        modeloMotoService.getAll(),
+      ]);
+      const filteredLinhas = statusFilter === 'inactive'
+        ? linhas.filter((linha) => !linha.ativo)
+        : linhas;
 
-            setData(filteredLinhas.map(l => ({ ...l, key: l.id.toString() })));
-            setModelos(models);
-        } catch (error) {
-            handleApiError(error, 'error.fetchLinhas');
-        } finally {
-            setLoading(false);
-        }
-    };
+      setData(filteredLinhas.map((linha) => ({ ...linha, key: linha.id.toString() })));
+      setModelos(models);
+    } catch (error) {
+      handleApiError(error, 'error.fetchLinhas');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    useEffect(() => {
-        fetchLinhas();
-    }, [statusFilter]);
+  useEffect(() => {
+    fetchLinhas();
+  }, [statusFilter]);
 
-    const filteredData = useMemo(() => {
-        if (!searchText) return data;
-        const lowerSearch = searchText.toLowerCase();
-        return data.filter(item =>
-            item.nome.toLowerCase().includes(lowerSearch) ||
-            (item.descricao && item.descricao.toLowerCase().includes(lowerSearch))
-        );
-    }, [data, searchText]);
+  const filteredData = useMemo(() => {
+    const lowerSearch = searchText.trim().toLowerCase();
 
-    const isEditing = (record: LinhaData) => record.key === editingKey;
+    if (!lowerSearch) return data;
 
-    const edit = (record: LinhaData) => {
-        form.setFieldsValue({ ...record });
-        setEditingKey(record.key);
-    };
+    return data.filter((item) =>
+      item.nome.toLowerCase().includes(lowerSearch)
+      || (item.descricao ?? '').toLowerCase().includes(lowerSearch),
+    );
+  }, [data, searchText]);
 
-    const cancel = () => {
+  const isEditing = (record: LinhaData) => record.key === editingKey;
+
+  const countModelosVinculados = (linhaId: number) =>
+    modelos.filter((modelo) => modelo.linhaId === linhaId).length;
+
+  const edit = (record: LinhaData) => {
+    form.setFieldsValue({
+      nome: record.nome,
+      descricao: record.descricao,
+    });
+    setEditingKey(record.key);
+  };
+
+  const cancel = () => {
+    Modal.confirm({
+      title: t('lineCatalog.cancelEdit.title'),
+      content: t('lineCatalog.cancelEdit.content'),
+      okText: t('yes'),
+      cancelText: t('no'),
+      onOk() {
+        form.resetFields();
         setEditingKey('');
-    };
+      },
+    });
+  };
 
-    const save = async (key: string) => {
-        try {
-            const row = await form.validateFields();
-            const record = data.find(item => item.key === key);
-            if (!record) return;
+  const save = async (record: LinhaData) => {
+    try {
+      const row = await form.validateFields();
 
-            setLoading(true);
+      Modal.confirm({
+        title: t('lineCatalog.saveEdit.title'),
+        content: t('lineCatalog.saveEdit.content'),
+        okText: t('yes'),
+        cancelText: t('no'),
+        async onOk() {
+          setSavingKey(record.key);
+
+          try {
             await linhaService.update(record.id, {
-                nome: row.nome,
-                descricao: row.descricao
+              nome: row.nome,
+              descricao: row.descricao,
             });
+            form.resetFields();
             setEditingKey('');
             await fetchLinhas();
             message.success(t('linhaUpdatedSuccess'));
-        } catch (error) {
-            handleApiError(error);
-        } finally {
-            setLoading(false);
-        }
+          } catch (error) {
+            handleApiError(error, 'error.updateLinha');
+          } finally {
+            setSavingKey(null);
+          }
+        },
+      });
+    } catch {
+      message.error(t('lineCatalog.save.validationError'));
+    }
+  };
+
+  const toggleStatus = async (record: LinhaData) => {
+    if (record.ativo) {
+      const temModelosAtivos = modelos.some((modelo) => modelo.linhaId === record.id && modelo.ativo);
+      if (temModelosAtivos) {
+        message.error(t('lineCatalog.deactivate.blocked'));
+        return;
+      }
+
+      Modal.confirm({
+        title: t('lineCatalog.deactivate.title'),
+        content: t('lineCatalog.deactivate.content'),
+        okText: t('yes'),
+        cancelText: t('no'),
+        onOk: () => updateStatus(record),
+      });
+      return;
+    }
+
+    await updateStatus(record);
+  };
+
+  const updateStatus = async (record: LinhaData) => {
+    try {
+      setSavingKey(record.key);
+      await linhaService.alternarStatus(record.id);
+      await fetchLinhas();
+      message.success(t('linhaStatusUpdatedSuccess'));
+    } catch (error) {
+      handleApiError(error, 'error.toggleLinhaStatus');
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  const handleClearFilters = () => {
+    setSearchText('');
+    setStatusFilter('active');
+  };
+
+  const emptyText =
+    data.length === 0
+      ? t('lineCatalog.empty')
+      : t('lineCatalog.emptyFiltered');
+
+  const columns: EditableColumn[] = [
+    {
+      title: t('lineCatalog.name'),
+      dataIndex: 'nome',
+      key: 'nome',
+      editable: true,
+      sorter: (a, b) => a.nome.localeCompare(b.nome),
+    },
+    {
+      title: t('lineCatalog.description'),
+      dataIndex: 'descricao',
+      key: 'descricao',
+      editable: true,
+      render: (value?: string) => value || '-',
+    },
+    {
+      title: t('lineCatalog.linkedMotorcycles'),
+      key: 'motosVinculadas',
+      width: 170,
+      align: 'center',
+      render: (_: unknown, record: LinhaData) => countModelosVinculados(record.id),
+    },
+    {
+      title: t('lineCatalog.status'),
+      key: 'status',
+      width: 140,
+      align: 'center',
+      render: (_: unknown, record: LinhaData) => {
+        const editable = isEditing(record);
+        return editable ? (
+          <Tag color={record.ativo ? 'green' : 'red'}>
+            {record.ativo ? t('status.activeSingle') : t('status.inactiveSingle')}
+          </Tag>
+        ) : (
+          <Switch
+            checked={record.ativo}
+            checkedChildren={t('status.activeSingle')}
+            disabled={editingKey !== '' || savingKey === record.key}
+            loading={savingKey === record.key}
+            onChange={() => toggleStatus(record)}
+            unCheckedChildren={t('status.inactiveSingle')}
+          />
+        );
+      },
+    },
+    {
+      title: t('lineCatalog.actions'),
+      key: 'actions',
+      width: 150,
+      render: (_: unknown, record: LinhaData) => {
+        const editable = isEditing(record);
+        return editable ? (
+          <Space>
+            <Button type="link" loading={savingKey === record.key} onClick={() => save(record)}>
+              {t('lineCatalog.save')}
+            </Button>
+            <Button type="link" danger onClick={cancel}>
+              {t('lineCatalog.cancel')}
+            </Button>
+          </Space>
+        ) : (
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            disabled={editingKey !== ''}
+            onClick={() => edit(record)}
+          >
+            {t('lineCatalog.edit')}
+          </Button>
+        );
+      },
+    },
+  ];
+
+  const mergedColumns = columns.map((col) => {
+    if (!col.editable) {
+      return col;
+    }
+
+    return {
+      ...col,
+      onCell: (record: LinhaData) => ({
+        record,
+        dataIndex: col.dataIndex,
+        title: col.title as string,
+        editing: isEditing(record),
+      }),
     };
+  });
 
-    const handleStatusToggle = async (record: LinhaData) => {
-        if (record.ativo) {
-            const temModelos = modelos.some((m) => m.linhaId === record.id && m.ativo);
-            if (temModelos) {
-                message.error("Não é possível desativar uma linha com modelos de motos vinculados.");
-                return;
-            }
-        }
-
-        try {
-            setLoading(true);
-            await linhaService.alternarStatus(record.id);
-            await fetchLinhas();
-            message.success(t('linhaStatusUpdatedSuccess'));
-        } catch (error) {
-            handleApiError(error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const columns: EditableColumn[] = [
-        {
-            title: 'Nome da Linha',
-            dataIndex: 'nome',
-            key: 'nome',
-            editable: true,
-        },
-        {
-            title: 'Descrição',
-            dataIndex: 'descricao',
-            key: 'descricao',
-            editable: true,
-        },
-        {
-            title: 'Motos Vinculadas',
-            key: 'motosVinculadas',
-            width: 160,
-            align: 'center',
-            render: (_: any, record: LinhaData) =>
-                modelos.filter((m) => m.linhaId === record.id).length,
-        },
-        {
-            title: 'Status',
-            key: 'status',
-            width: 120,
-            align: 'center',
-            render: (_: any, record: LinhaData) => {
-                const editable = isEditing(record);
-                return editable ? (
-                    record.ativo ? <Tag color="green">Ativo</Tag> : <Tag color="red">Inativo</Tag>
-                ) : (
-                    <Popconfirm
-                        title="Desativar linha"
-                        description="Tem certeza que deseja desativar esta linha?"
-                        onConfirm={() => handleStatusToggle(record)}
-                        okText="Sim"
-                        cancelText="Não"
-                        disabled={!record.ativo}
-                    >
-                        <Switch
-                            checked={record.ativo}
-                            onChange={(checked) => {
-                                if (checked) {
-                                    handleStatusToggle(record);
-                                }
-                            }}
-                            checkedChildren="Ativo"
-                            unCheckedChildren="Inativo"
-                        />
-                    </Popconfirm>
-                );
+  return (
+    <Flex vertical gap="large" style={{ width: '100%' }}>
+      <Flex vertical gap="middle" style={{ width: '100%' }}>
+        <DashboardBreadcrumb
+          userType="concessionaria"
+          items={[
+            {
+              title: t('dashboard.menu.catalogos'),
+              icon: <ToolOutlined />,
             },
-        },
-        {
-            title: 'Ações',
-            key: 'actions',
-            width: 1,
-            render: (_: any, record: LinhaData) => {
-                const editable = isEditing(record);
-                return editable ? (
-                    <Space>
-                        <Popconfirm
-                            title="Salvar alterações"
-                            description="Tem certeza que deseja salvar as alterações?"
-                            onConfirm={() => save(record.key)}
-                            okText="Sim"
-                            cancelText="Não"
-                        >
-                            <Button key="save" type="link">
-                                Salvar
-                            </Button>
-                        </Popconfirm>
-                        <Popconfirm
-                            title="Cancelar edição"
-                            description="Tem certeza que deseja cancelar as alterações?"
-                            onConfirm={cancel}
-                            okText="Sim"
-                            cancelText="Não"
-                        >
-                            <Button key="cancel" type="link" danger>
-                                Cancelar
-                            </Button>
-                        </Popconfirm>
-                    </Space>
-                ) : (
-                    <Button
-                        key="edit"
-                        type="link"
-                        icon={<EditOutlined />}
-                        disabled={editingKey !== ''}
-                        onClick={() => edit(record)}
-                    >
-                        Editar
-                    </Button>
-                );
+            {
+              title: t('lineCatalog.title'),
             },
-        },
-    ];
+          ]}
+        />
 
-    const mergedColumns = columns.map((col) => {
-        if (!col.editable) {
-            return col;
-        }
-        return {
-            ...col,
-            onCell: (record: LinhaData) => ({
-                record,
-                dataIndex: col.dataIndex,
-                title: col.title as string,
-                editing: isEditing(record),
-            }),
-        };
-    });
+        <Title level={2} style={{ margin: 0 }}>
+          {t('lineCatalog.title')}
+        </Title>
 
-    return (
+        <Flex gap="middle" align="center" wrap="wrap">
+          <Input
+            allowClear
+            placeholder={t('lineCatalog.searchPlaceholder')}
+            prefix={<SearchOutlined />}
+            style={{ width: 300 }}
+            value={searchText}
+            onChange={(event) => setSearchText(event.target.value)}
+          />
+
+          <Select
+            options={[
+              { value: 'active', label: t('status.active') },
+              { value: 'inactive', label: t('status.inactive') },
+              { value: 'all', label: t('status.all') },
+            ]}
+            placeholder={t('status.placeholder')}
+            style={{ width: 140 }}
+            value={statusFilter}
+            onChange={setStatusFilter}
+          />
+
+          <Flex gap="small" style={{ marginLeft: 'auto' }}>
+            <Button onClick={handleClearFilters}>{t('lineCatalog.clear')}</Button>
+            <Button icon={<ReloadOutlined />} loading={loading} onClick={fetchLinhas}>
+              {t('lineCatalog.refresh')}
+            </Button>
+          </Flex>
+        </Flex>
+      </Flex>
+
+      <div
+        style={{
+          background: token.colorBgContainer,
+          border: `1px solid ${token.colorBorderSecondary}`,
+          borderRadius: token.borderRadiusLG,
+          padding: token.paddingLG,
+        }}
+      >
         <Spin spinning={loading}>
-            <Flex vertical gap="large" style={{ width: '100%' }}>
-                <Flex vertical gap="middle" style={{ width: '100%' }}>
-                    <Breadcrumb
-                        items={[
-                            {
-                                href: '',
-                                title: <HomeOutlined />,
-                            },
-                            {
-                                title: (
-                                    <>
-                                        <ToolOutlined />
-                                        <span>Catálogos</span>
-                                    </>
-                                ),
-                            },
-                            {
-                                title: 'Linhas de Motos',
-                            },
-                        ]}
-                    />
-
-                    <Title level={2} style={{ margin: 0 }}>
-                        Linhas de Motos
-                    </Title>
-
-                    <Flex gap="middle" align="center" wrap="wrap">
-                        <Input
-                            placeholder="Buscar linhas..."
-                            prefix={<SearchOutlined />}
-                            style={{ width: 300 }}
-                            value={searchText}
-                            onChange={(e) => setSearchText(e.target.value)}
-                        />
-
-                        <Select
-                            options={[
-                                { value: 'Ativo', label: t('status.active') },
-                                { value: 'Inativo', label: t('status.inactive') },
-                                { value: 'Todos', label: t('status.all') },
-                            ]}
-                            placeholder={t('status.placeholder')}
-                            style={{ width: 140 }}
-                            value={statusFilter}
-                            onChange={setStatusFilter}
-                        />
-
-                        <Flex gap="small" style={{ marginLeft: 'auto' }}>
-                            <Button onClick={() => { setSearchText(''); setStatusFilter('Ativo'); }}>Limpar</Button>
-                        </Flex>
-                    </Flex>
-                </Flex>
-
-                <div style={{ background: '#fff', padding: '24px', borderRadius: '8px' }}>
-                    <Flex vertical gap="middle" style={{ width: '100%' }}>
-                        <Flex justify="space-between" align="center">
-                            <span>Total: {filteredData.length} linhas</span>
-                            <Button type="primary" onClick={onNavigateToForm}>Adicionar Linha</Button>
-                        </Flex>
-
-                        <Form form={form} component={false}>
-                            <Table
-                                components={{
-                                    body: {
-                                        cell: EditableCell,
-                                    },
-                                }}
-                                bordered
-                                dataSource={filteredData}
-                                columns={mergedColumns}
-                                rowClassName="editable-row"
-                            />
-                        </Form>
-                    </Flex>
-                </div>
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Flex justify="space-between" align="center">
+              <span>{t('lineCatalog.total', { count: filteredData.length })}</span>
+              <Button type="primary" onClick={onNavigateToForm}>
+                {t('lineCatalog.add')}
+              </Button>
             </Flex>
+
+            <Form form={form} component={false}>
+              <Table
+                bordered
+                components={{
+                  body: {
+                    cell: EditableCell,
+                  },
+                }}
+                columns={mergedColumns}
+                dataSource={filteredData}
+                locale={{
+                  emptyText: (
+                    <Empty
+                      image={Empty.PRESENTED_IMAGE_SIMPLE}
+                      description={emptyText}
+                    />
+                  ),
+                }}
+                pagination={{
+                  onChange: () => setEditingKey(''),
+                  pageSize: 10,
+                }}
+                rowClassName="editable-row"
+                rowKey="id"
+              />
+            </Form>
+          </Space>
         </Spin>
-    );
+      </div>
+    </Flex>
+  );
 }
