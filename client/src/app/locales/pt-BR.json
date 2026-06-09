@@ -501,5 +501,20 @@
   "status.all": "Todas",
   "status.activeSingle": "Ativo",
   "status.inactiveSingle": "Inativo",
-  "status.placeholder": "Status"
+  "status.placeholder": "Status",
+  "alertas.titulo.RevisaoProxima": "Revisão Próxima",
+  "alertas.titulo.RevisaoAtrasada": "Revisão Atrasada",
+  "alertas.titulo.AgendamentoCriado": "Novo Agendamento",
+  "alertas.titulo.AgendamentoAlterado": "Agendamento Alterado",
+  "alertas.titulo.RevisaoConcluida": "Revisão Concluída",
+  "alertas.mensagem.RevisaoProxima": "Sua moto está próxima da revisão de {{km}} km.",
+  "alertas.mensagem.RevisaoAtrasada": "A revisão de {{km}} km da sua moto está atrasada.",
+  "alertas.mensagem.AgendamentoCriado": "Um novo agendamento foi criado.",
+  "alertas.mensagem.AgendamentoAlterado": "Seu agendamento sofreu alterações.",
+  "alertas.mensagem.RevisaoConcluida": "A revisão da sua moto foi concluída com sucesso.",
+  "alertas.drawer.title": "Notificações",
+  "alertas.drawer.empty": "Nenhuma notificação por enquanto.",
+  "alertas.drawer.markAllAsRead": "Marcar todas como lidas",
+  "alertas.drawer.unread": "Não lidas",
+  "alertas.drawer.viewDetails": "Ver detalhes"
 }

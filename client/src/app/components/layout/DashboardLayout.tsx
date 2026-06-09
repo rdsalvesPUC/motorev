@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Layout, Menu, Button, Typography, Dropdown, Avatar, message } from 'antd';
+import { useState, useEffect, useCallback } from 'react';
+import { Layout, Menu, Button, Typography, Dropdown, Avatar, message, FloatButton, Badge as AntdBadge } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -16,6 +16,7 @@ import {
   BulbOutlined,
   BulbFilled,
   GlobalOutlined,
+  BellOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useNavigate, useLocation } from 'react-router';
@@ -23,6 +24,11 @@ import { PATHS } from '@/app/paths';
 import { authService } from '@/app/services/authService';
 import { t } from '@/app/i18n';
 import { useConfiguracoes } from '@/app/contexts/ConfiguracoesContext';
+import { AlertaResponse as Alerta } from '@/app/models/Alerta';
+import { alertaService } from '@/app/services/alertaService';
+import { signalRService } from '@/app/services/signalrService';
+import NotificationsDrawer from '../NotificationsDrawer';
+import { handleApiError } from '@/app/utils/errorHandler';
 
 const { Sider, Content } = Layout;
 const { Text } = Typography;
@@ -51,9 +57,62 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ userType, userName, children }: DashboardLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [notificacoes, setNotificacoes] = useState<Alerta[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
   const { configuracoes, setIdioma, toggleTema } = useConfiguracoes();
+
+  const fetchAlertas = useCallback(async () => {
+    try {
+      const [lista, total] = await Promise.all([
+        alertaService.listar(),
+        alertaService.contarNaoLidos()
+      ]);
+      setNotificacoes(Array.isArray(lista) ? lista : []);
+      setUnreadCount(typeof total === 'number' ? total : 0);
+    } catch (error) {
+      console.error('Erro ao buscar notificações:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAlertas();
+    
+    // Configurar SignalR
+    signalRService.onAlertaRecebido((novoAlerta) => {
+      setNotificacoes((prev) => [novoAlerta, ...prev]);
+      setUnreadCount((prev) => prev + 1);
+    });
+
+    signalRService.startConnection();
+
+    return () => {
+      signalRService.stopConnection();
+    };
+  }, [fetchAlertas]);
+
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await alertaService.marcarComoLido(id);
+      setNotificacoes(prev => prev.map(n => n.id === id ? { ...n, lido: true } : n));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await alertaService.marcarTodosComoLidos();
+      setNotificacoes(prev => prev.map(n => ({ ...n, lido: true })));
+      setUnreadCount(0);
+    } catch (error) {
+      handleApiError(error);
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -251,6 +310,22 @@ export default function DashboardLayout({ userType, userName, children }: Dashbo
           {children}
         </Content>
       </Layout>
+
+      <FloatButton
+        icon={<BellOutlined />}
+        badge={{ count: unreadCount }}
+        onClick={() => setDrawerOpen(true)}
+        style={{ right: 24, bottom: 24 }}
+      />
+
+      <NotificationsDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        notificacoes={notificacoes}
+        unreadCount={unreadCount}
+        onMarkAsRead={handleMarkAsRead}
+        onMarkAllAsRead={handleMarkAllAsRead}
+      />
     </Layout>
   );
 }

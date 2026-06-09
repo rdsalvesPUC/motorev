@@ -501,5 +501,20 @@
   "status.all": "All",
   "status.activeSingle": "Active",
   "status.inactiveSingle": "Inactive",
-  "status.placeholder": "Status"
+  "status.placeholder": "Status",
+  "alertas.titulo.RevisaoProxima": "Upcoming Maintenance",
+  "alertas.titulo.RevisaoAtrasada": "Overdue Maintenance",
+  "alertas.titulo.AgendamentoCriado": "New Appointment",
+  "alertas.titulo.AgendamentoAlterado": "Appointment Updated",
+  "alertas.titulo.RevisaoConcluida": "Maintenance Completed",
+  "alertas.mensagem.RevisaoProxima": "Your motorcycle is close to its {{km}} km maintenance.",
+  "alertas.mensagem.RevisaoAtrasada": "The {{km}} km maintenance for your motorcycle is overdue.",
+  "alertas.mensagem.AgendamentoCriado": "A new appointment has been created.",
+  "alertas.mensagem.AgendamentoAlterado": "Your appointment has been updated.",
+  "alertas.mensagem.RevisaoConcluida": "The maintenance on your motorcycle was completed successfully.",
+  "alertas.drawer.title": "Notifications",
+  "alertas.drawer.empty": "No notifications yet.",
+  "alertas.drawer.markAllAsRead": "Mark all as read",
+  "alertas.drawer.unread": "Unread",
+  "alertas.drawer.viewDetails": "View details"
 }
