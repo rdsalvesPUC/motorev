@@ -4,6 +4,7 @@ using MotoRevApi.Dto.Request;
 using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
+using MotoRevApi.Profiles;
 using MotoRevApi.Services;
 using Xunit;
 
@@ -19,6 +20,8 @@ public class RevisaoPadraoServiceTests
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
+        
+        MapsterConfig.RegisterMapsterConfiguration();
     }
 
     private AppDbContext CreateContext() => new AppDbContext(_dbContextOptions);
@@ -281,5 +284,178 @@ public class RevisaoPadraoServiceTests
         Assert.Equal("Oleo", updatedRev.Servicos.First().Nome);
         Assert.Single(updatedRev.Pecas);
         Assert.Equal(2, updatedRev.Pecas.First().Quantidade);
+    }
+
+    [Fact]
+    public async Task CadastrarRevisoesPorLinhaAsync_DeveLancarExcecao_QuandoOrdemJaExisteNoBanco()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Linhas.Add(new Linha { Id = 1, Nome = "Street" });
+        context.RevisoesPadrao.Add(new RevisaoPadrao { Id = 1, Nome = "Existente", Ordem = 1, LinhaId = 1 });
+        context.Servicos.Add(new Servico { Id = 1, Codigo = "S1", Nome = "S", Descricao = "D", Categoria = CategoriaServico.Verificacao, Ativo = true });
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoLinhaRequest("Plano", 1, new List<RevisaoPadraoLinhaItemRequest> 
+        { 
+            new("Nova", 1, 1000, 6, new List<int> { 1 }) 
+        });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.CadastrarRevisoesPorLinhaAsync(request));
+    }
+
+    [Fact]
+    public async Task CadastrarRevisoesPorLinhaAsync_DeveLancarExcecao_QuandoServicoNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Linhas.Add(new Linha { Id = 1, Nome = "Street" });
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoLinhaRequest("Plano", 1, new List<RevisaoPadraoLinhaItemRequest> 
+        { 
+            new("Nova", 1, 1000, 6, new List<int> { 999 }) 
+        });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => service.CadastrarRevisoesPorLinhaAsync(request));
+    }
+
+    [Fact]
+    public async Task CadastrarRevisoesPorLinhaAsync_DeveLancarExcecao_QuandoServicoInativo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Linhas.Add(new Linha { Id = 1, Nome = "Street" });
+        context.Servicos.Add(new Servico { Id = 1, Codigo = "S1", Nome = "S", Descricao = "D", Categoria = CategoriaServico.Verificacao, Ativo = false });
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoLinhaRequest("Plano", 1, new List<RevisaoPadraoLinhaItemRequest> 
+        { 
+            new("Nova", 1, 1000, 6, new List<int> { 1 }) 
+        });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => service.CadastrarRevisoesPorLinhaAsync(request));
+    }
+
+    [Fact]
+    public async Task CadastrarRevisoesPorLinhaAsync_DeveLancarExcecao_QuandoNaoInformaServico()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Linhas.Add(new Linha { Id = 1, Nome = "Street" });
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoLinhaRequest("Plano", 1, new List<RevisaoPadraoLinhaItemRequest> 
+        { 
+            new("Nova", 1, 1000, 6, new List<int>()) 
+        });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<System.ComponentModel.DataAnnotations.ValidationException>(() => service.CadastrarRevisoesPorLinhaAsync(request));
+    }
+
+    [Fact]
+    public async Task CadastrarRevisoesPorLinhaAsync_DeveLancarExcecao_QuandoPecaNaoExiste()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Linhas.Add(new Linha { Id = 1, Nome = "Street" });
+        context.Servicos.Add(new Servico { Id = 1, Codigo = "S1", Nome = "S", Descricao = "D", Categoria = CategoriaServico.Verificacao, Ativo = true });
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoLinhaRequest("Plano", 1, new List<RevisaoPadraoLinhaItemRequest> 
+        { 
+            new("Nova", 1, 1000, 6, new List<int> { 1 }, new List<RevisaoPadraoPecaRequest> { new(999, 1) }) 
+        });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => service.CadastrarRevisoesPorLinhaAsync(request));
+    }
+
+    [Fact]
+    public async Task CadastrarRevisoesPorLinhaAsync_DeveLancarExcecao_QuandoPecaInativa()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Linhas.Add(new Linha { Id = 1, Nome = "Street" });
+        context.Servicos.Add(new Servico { Id = 1, Codigo = "S1", Nome = "S", Descricao = "D", Categoria = CategoriaServico.Verificacao, Ativo = true });
+        context.Pecas.Add(new Peca { Id = 1, Codigo = "P1", Nome = "P", Status = StatusCadastro.Inativo });
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoLinhaRequest("Plano", 1, new List<RevisaoPadraoLinhaItemRequest> 
+        { 
+            new("Nova", 1, 1000, 6, new List<int> { 1 }, new List<RevisaoPadraoPecaRequest> { new(1, 1) }) 
+        });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<NotFoundException>(() => service.CadastrarRevisoesPorLinhaAsync(request));
+    }
+
+    [Fact]
+    public async Task CadastrarRevisoesPorLinhaAsync_DeveLancarExcecao_QuandoPecaComQuantidadeInvalida()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Linhas.Add(new Linha { Id = 1, Nome = "Street" });
+        context.Servicos.Add(new Servico { Id = 1, Codigo = "S1", Nome = "S", Descricao = "D", Categoria = CategoriaServico.Verificacao, Ativo = true });
+        context.Pecas.Add(new Peca { Id = 1, Codigo = "P1", Nome = "P", Status = StatusCadastro.Ativo });
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoLinhaRequest("Plano", 1, new List<RevisaoPadraoLinhaItemRequest> 
+        { 
+            new("Nova", 1, 1000, 6, new List<int> { 1 }, new List<RevisaoPadraoPecaRequest> { new(1, 0) }) 
+        });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<System.ComponentModel.DataAnnotations.ValidationException>(() => service.CadastrarRevisoesPorLinhaAsync(request));
+    }
+
+    [Fact]
+    public async Task CadastrarRevisoesPorLinhaAsync_DeveLancarExcecao_QuandoHaServicosDuplicados()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Linhas.Add(new Linha { Id = 1, Nome = "Street" });
+        context.Servicos.Add(new Servico { Id = 1, Codigo = "S1", Nome = "S", Descricao = "D", Categoria = CategoriaServico.Verificacao, Ativo = true });
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoLinhaRequest("Plano", 1, new List<RevisaoPadraoLinhaItemRequest> 
+        { 
+            new("Nova", 1, 1000, 6, new List<int> { 1, 1 }) 
+        });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.CadastrarRevisoesPorLinhaAsync(request));
+    }
+
+    [Fact]
+    public async Task CadastrarRevisoesPorLinhaAsync_DeveLancarExcecao_QuandoHaPecasDuplicadas()
+    {
+        // Arrange
+        using var context = CreateContext();
+        context.Linhas.Add(new Linha { Id = 1, Nome = "Street" });
+        context.Servicos.Add(new Servico { Id = 1, Codigo = "S1", Nome = "S", Descricao = "D", Categoria = CategoriaServico.Verificacao, Ativo = true });
+        context.Pecas.Add(new Peca { Id = 1, Codigo = "P1", Nome = "P", Status = StatusCadastro.Ativo });
+        await context.SaveChangesAsync();
+
+        var service = new RevisaoPadraoService(context);
+        var request = new RevisaoPadraoLinhaRequest("Plano", 1, new List<RevisaoPadraoLinhaItemRequest> 
+        { 
+            new("Nova", 1, 1000, 6, new List<int> { 1 }, new List<RevisaoPadraoPecaRequest> { new(1, 1), new(1, 1) }) 
+        });
+
+        // Act & Assert
+        await Assert.ThrowsAsync<DuplicateDataException>(() => service.CadastrarRevisoesPorLinhaAsync(request));
     }
 }
