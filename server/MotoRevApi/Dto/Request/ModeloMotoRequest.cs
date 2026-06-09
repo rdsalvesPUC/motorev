@@ -7,7 +7,6 @@ public record ModeloMotoRequest(
     string NomeModelo,
     [Required(ErrorMessage = "A marca é obrigatória.")]
     string Marca,
-    string? Categoria,
     [Required(ErrorMessage = "A linha é obrigatória.")]
     [Range(1, int.MaxValue, ErrorMessage = "Código da linha inválido.")]
     int LinhaId,

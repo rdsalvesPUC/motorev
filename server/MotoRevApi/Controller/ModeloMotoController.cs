@@ -13,7 +13,7 @@ namespace MotoRevApi.Controller;
 /// API controller para gerenciamento de modelos de motos.
 /// </summary>
 /// <remarks>
-/// Todos os endpoints deste controller requerem a role 'Concessionaria'.
+/// Endpoints de escrita e catálogo administrativo requerem a role 'Concessionaria'.
 /// </remarks>
 [Route("api/[controller]")]
 [ApiController]
@@ -73,7 +73,7 @@ public class ModeloMotoController : ControllerBase
     }
 
     /// <summary>
-    /// Listar todos os modelos de motos cadastrados no sistema.
+    /// Listar os modelos de motos ativos cadastrados no sistema.
     /// </summary>
     /// <response code="200">Retorna a lista de modelos de motos.</response>
     /// <response code="401">Usuário não autenticado.</response>
@@ -85,6 +85,24 @@ public class ModeloMotoController : ControllerBase
     public ActionResult<List<ModeloMotoResponse>> ObterModelosMotos()
     {
         var response = _modeloMotoService.ListarModelosMotos();
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Listar modelos de motos do catálogo administrativo.
+    /// </summary>
+    /// <param name="ativo">Filtro opcional por status ativo/inativo.</param>
+    /// <response code="200">Retorna a lista de modelos de motos do catálogo.</response>
+    /// <response code="401">Usuário não autenticado.</response>
+    /// <response code="403">Usuário não tem permissão para listar o catálogo administrativo.</response>
+    [HttpGet("catalogo")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    [ProducesResponseType(typeof(List<ModeloMotoResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public ActionResult<List<ModeloMotoResponse>> ObterCatalogoModelosMotos([FromQuery] bool? ativo)
+    {
+        var response = _modeloMotoService.ListarCatalogoModelosMotos(ativo);
         return Ok(response);
     }
 

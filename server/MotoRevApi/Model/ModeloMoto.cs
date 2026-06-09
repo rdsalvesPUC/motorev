@@ -5,7 +5,6 @@ public class ModeloMoto
     public int Id { get; set; }
     public required string NomeModelo { get; set; }
     public required string Marca { get; set; }
-    public string? Categoria { get; set; }
     public int LinhaId { get; set; }
     public Linha Linha { get; set; } = null!;
     public string? Cilindrada { get; set; }
