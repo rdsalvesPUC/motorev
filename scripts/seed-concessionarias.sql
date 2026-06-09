@@ -46,8 +46,8 @@ BEGIN TRY
         ([UserId], [Nome], [Cnpj], [Telefone], [Email])
     VALUES
         (N'SEED-CON-001', N'MotoRev Centro Sul', N'11222333000181', N'4133301001', N'centro.sul.seed@motorev.local'),
-        (N'SEED-CON-002', N'MotoRev Paulista', N'22333444000172', N'1133302002', N'paulista.seed@motorev.local'),
-        (N'SEED-CON-003', N'MotoRev Litoral Norte', N'33444555000163', N'2133303003', N'litoral.norte.seed@motorev.local');
+        (N'SEED-CON-002', N'MotoRev Paulista', N'22333444000181', N'1133302002', N'paulista.seed@motorev.local'),
+        (N'SEED-CON-003', N'MotoRev Litoral Norte', N'33444555000181', N'2133303003', N'litoral.norte.seed@motorev.local');
 
     INSERT INTO @Lojas
         ([UserId], [Nome], [Tipo], [Cnpj], [Telefone], [Cep], [Logradouro], [Numero], [Bairro], [Cidade], [Uf], [Foto])
@@ -58,17 +58,17 @@ BEGIN TRY
         (N'SEED-CON-001', N'MotoRev Centro Sul Portao', N'Filial', N'11222333000424', N'4133301004', N'81070-000', N'Rua Itacolomi', N'310', N'Portao', N'Curitiba', N'PR', NULL),
         (N'SEED-CON-001', N'MotoRev Centro Sul Pinhais', N'Filial', N'11222333000505', N'4133301005', N'83323-400', N'Avenida Irai', N'1450', N'Weissopolis', N'Pinhais', N'PR', NULL),
 
-        (N'SEED-CON-002', N'MotoRev Paulista Matriz', N'Matriz', N'22333444000172', N'1133302002', N'01311-000', N'Avenida Paulista', N'1578', N'Bela Vista', N'Sao Paulo', N'SP', NULL),
-        (N'SEED-CON-002', N'MotoRev Paulista Pinheiros', N'Filial', N'22333444000253', N'1133302003', N'05422-000', N'Rua dos Pinheiros', N'920', N'Pinheiros', N'Sao Paulo', N'SP', NULL),
-        (N'SEED-CON-002', N'MotoRev Paulista Moema', N'Filial', N'22333444000334', N'1133302004', N'04077-020', N'Avenida Ibirapuera', N'2100', N'Moema', N'Sao Paulo', N'SP', NULL),
-        (N'SEED-CON-002', N'MotoRev Paulista Tatuape', N'Filial', N'22333444000415', N'1133302005', N'03311-000', N'Rua Tuiuti', N'640', N'Tatuape', N'Sao Paulo', N'SP', NULL),
-        (N'SEED-CON-002', N'MotoRev Paulista Osasco', N'Filial', N'22333444000596', N'1133302006', N'06020-010', N'Avenida dos Autonomistas', N'1800', N'Centro', N'Osasco', N'SP', NULL),
+        (N'SEED-CON-002', N'MotoRev Paulista Matriz', N'Matriz', N'22333444000181', N'1133302002', N'01311-000', N'Avenida Paulista', N'1578', N'Bela Vista', N'Sao Paulo', N'SP', NULL),
+        (N'SEED-CON-002', N'MotoRev Paulista Pinheiros', N'Filial', N'22333444000262', N'1133302003', N'05422-000', N'Rua dos Pinheiros', N'920', N'Pinheiros', N'Sao Paulo', N'SP', NULL),
+        (N'SEED-CON-002', N'MotoRev Paulista Moema', N'Filial', N'22333444000343', N'1133302004', N'04077-020', N'Avenida Ibirapuera', N'2100', N'Moema', N'Sao Paulo', N'SP', NULL),
+        (N'SEED-CON-002', N'MotoRev Paulista Tatuape', N'Filial', N'22333444000424', N'1133302005', N'03311-000', N'Rua Tuiuti', N'640', N'Tatuape', N'Sao Paulo', N'SP', NULL),
+        (N'SEED-CON-002', N'MotoRev Paulista Osasco', N'Filial', N'22333444000505', N'1133302006', N'06020-010', N'Avenida dos Autonomistas', N'1800', N'Centro', N'Osasco', N'SP', NULL),
 
-        (N'SEED-CON-003', N'MotoRev Litoral Norte Matriz', N'Matriz', N'33444555000163', N'2133303003', N'20040-002', N'Rua da Assembleia', N'90', N'Centro', N'Rio de Janeiro', N'RJ', NULL),
-        (N'SEED-CON-003', N'MotoRev Litoral Norte Niteroi', N'Filial', N'33444555000244', N'2133303004', N'24020-125', N'Rua Sao Pedro', N'160', N'Centro', N'Niteroi', N'RJ', NULL),
-        (N'SEED-CON-003', N'MotoRev Litoral Norte Barra', N'Filial', N'33444555000325', N'2133303005', N'22640-102', N'Avenida das Americas', N'5000', N'Barra da Tijuca', N'Rio de Janeiro', N'RJ', NULL),
-        (N'SEED-CON-003', N'MotoRev Litoral Norte Cabo Frio', N'Filial', N'33444555000406', N'2233303006', N'28907-000', N'Avenida Teixeira e Souza', N'950', N'Braga', N'Cabo Frio', N'RJ', NULL),
-        (N'SEED-CON-003', N'MotoRev Litoral Norte Petropolis', N'Filial', N'33444555000587', N'2433303007', N'25620-031', N'Rua do Imperador', N'420', N'Centro', N'Petropolis', N'RJ', NULL);
+        (N'SEED-CON-003', N'MotoRev Litoral Norte Matriz', N'Matriz', N'33444555000181', N'2133303003', N'20040-002', N'Rua da Assembleia', N'90', N'Centro', N'Rio de Janeiro', N'RJ', NULL),
+        (N'SEED-CON-003', N'MotoRev Litoral Norte Niteroi', N'Filial', N'33444555000262', N'2133303004', N'24020-125', N'Rua Sao Pedro', N'160', N'Centro', N'Niteroi', N'RJ', NULL),
+        (N'SEED-CON-003', N'MotoRev Litoral Norte Barra', N'Filial', N'33444555000343', N'2133303005', N'22640-102', N'Avenida das Americas', N'5000', N'Barra da Tijuca', N'Rio de Janeiro', N'RJ', NULL),
+        (N'SEED-CON-003', N'MotoRev Litoral Norte Cabo Frio', N'Filial', N'33444555000424', N'2233303006', N'28907-000', N'Avenida Teixeira e Souza', N'950', N'Braga', N'Cabo Frio', N'RJ', NULL),
+        (N'SEED-CON-003', N'MotoRev Litoral Norte Petropolis', N'Filial', N'33444555000505', N'2433303007', N'25620-031', N'Rua do Imperador', N'420', N'Centro', N'Petropolis', N'RJ', NULL);
 
     IF EXISTS
     (

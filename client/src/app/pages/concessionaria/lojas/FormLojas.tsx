@@ -56,9 +56,9 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
           setFotoUrl(loja.foto);
           form.setFieldsValue({
             nome: loja.nome,
-            cnpj: loja.cnpj,
-            telefone: loja.telefone,
-            cep: loja.cep,
+            cnpj: formatCNPJ(loja.cnpj),
+            telefone: formatPhone(loja.telefone),
+            cep: formatCEP(loja.cep),
             logradouro: loja.logradouro,
             numero: loja.numero,
             bairro: loja.bairro,
