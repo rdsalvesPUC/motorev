@@ -15,10 +15,11 @@ $apiProject = Join-Path $repoRoot "server\MotoRevApi\MotoRevApi.csproj"
 $startupProject = Join-Path $repoRoot "server\MotoRevApi\MotoRevApi.csproj"
 
 $seedScripts = @(
+    "seed-pecas-servicos.sql",
     "seed-linhas.sql",
     "seed-modelos-motos.sql",
     "seed-clientes-motos.sql",
-    "seed-pecas-servicos.sql"
+    "seed-concessionarias.sql"
 )
 
 function Invoke-SqlScript {

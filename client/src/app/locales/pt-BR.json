@@ -259,6 +259,18 @@
   "lojas.form.submit.create": "Adicionar Loja",
   "lojas.form.submit.edit": "Salvar Alterações",
 
+  "clienteConcessionarias.title": "Concessionárias",
+  "clienteConcessionarias.search.placeholder": "Buscar por nome, cidade, bairro, CNPJ ou telefone...",
+  "clienteConcessionarias.city.placeholder": "Filtrar por cidade",
+  "clienteConcessionarias.near.button": "Perto de mim",
+  "clienteConcessionarias.nearRibbon": "Perto de você",
+  "clienteConcessionarias.near.tooltip.active": "Filtrando por: {{city}}",
+  "clienteConcessionarias.near.tooltip.disabled": "Cadastre seu endereço no Perfil para usar este filtro",
+  "clienteConcessionarias.found": "{{count}} concessionária(s) encontrada(s)",
+  "clienteConcessionarias.found.near": "- próximas a {{city}}",
+  "clienteConcessionarias.empty": "Nenhuma concessionária encontrada",
+  "clienteConcessionarias.load.error": "Falha ao buscar lojas ativas",
+
   "error.apiError": "Ocorreu um erro no servidor. Tente novamente mais tarde.",
   "error.unexpected": "Ocorreu um erro inesperado. Tente novamente.",
   "error.fetchServices": "Erro ao buscar a lista de serviços.",

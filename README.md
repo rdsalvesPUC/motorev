@@ -329,11 +329,20 @@ Para aplicar migrations e executar as cargas em ordem:
 Ordem executada:
 
 ```text
+seed-pecas-servicos.sql
 seed-linhas.sql
 seed-modelos-motos.sql
 seed-clientes-motos.sql
-seed-pecas-servicos.sql
+seed-concessionarias.sql
 ```
+
+As concessionarias criadas por `seed-concessionarias.sql` usam a senha padrao:
+
+```text
+Concessionaria@123
+```
+
+Cada concessionaria seed possui 5 lojas: 1 matriz e 4 filiais.
 
 Os clientes criados por `seed-clientes-motos.sql` usam a senha padrao:
 
