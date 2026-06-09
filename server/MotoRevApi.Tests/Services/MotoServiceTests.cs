@@ -58,9 +58,7 @@ public class MotoServiceTests
             1, 
             "Vermelha", 
             1500, 
-            DateTime.Now.AddMonths(-6), 
-            null, 
-            null
+            DateTime.Now.AddMonths(-6)
         );
 
         // Act
@@ -79,6 +77,105 @@ public class MotoServiceTests
     }
 
     [Fact]
+    public async Task CadastrarMotoAsync_DeveInstanciarRevisoesPlanejadasDaLinhaDoModelo()
+    {
+        // Arrange
+        using var context = CreateContext();
+
+        var linha = new Linha { Id = 10, Nome = "Linha City", Ativo = true };
+        var modelo = new ModeloMoto
+        {
+            Id = 1,
+            NomeModelo = "City 160",
+            Marca = "Honda",
+            Ativo = true,
+            LinhaId = linha.Id,
+            Linha = linha,
+            Cilindrada = "160cc",
+            Ano = 2024
+        };
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        var dataVenda = new DateTime(2026, 1, 15);
+
+        context.Linhas.Add(linha);
+        context.ModelosMotos.Add(modelo);
+        context.Clientes.Add(cliente);
+        context.RevisoesPadrao.AddRange(
+            new RevisaoPadrao
+            {
+                Id = 100,
+                LinhaId = linha.Id,
+                Nome = "Primeira revisão",
+                Ordem = 1,
+                Quilometragem = 1000,
+                TempoMeses = 6,
+                Ativo = true
+            },
+            new RevisaoPadrao
+            {
+                Id = 101,
+                LinhaId = linha.Id,
+                Nome = "Segunda revisão",
+                Ordem = 2,
+                Quilometragem = 5000,
+                TempoMeses = 12,
+                Ativo = true
+            },
+            new RevisaoPadrao
+            {
+                Id = 102,
+                LinhaId = linha.Id,
+                Nome = "Revisão inativa",
+                Ordem = 3,
+                Quilometragem = 10000,
+                TempoMeses = 18,
+                Ativo = false
+            }
+        );
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+        var request = new MotoRequest(
+            "ABC-1234",
+            "CHASSI12345678901",
+            modelo.Id,
+            "Vermelha",
+            1500,
+            dataVenda
+        );
+
+        // Act
+        var response = await service.CadastrarMotoAsync(request, "user123");
+
+        // Assert
+        Assert.Equal(2, response.RevisoesPlanejadas.Count);
+        Assert.Collection(response.RevisoesPlanejadas,
+            revisao =>
+            {
+                Assert.Equal("Primeira revisão", revisao.Nome);
+                Assert.Equal(1, revisao.Ordem);
+                Assert.Equal(1000, revisao.Quilometragem);
+                Assert.Equal(dataVenda.AddMonths(6), revisao.DataPrevista);
+                Assert.Equal("Planejada", revisao.Status);
+            },
+            revisao =>
+            {
+                Assert.Equal("Segunda revisão", revisao.Nome);
+                Assert.Equal(2, revisao.Ordem);
+                Assert.Equal(5000, revisao.Quilometragem);
+                Assert.Equal(dataVenda.AddMonths(12), revisao.DataPrevista);
+                Assert.Equal("Planejada", revisao.Status);
+            });
+
+        var revisoesDb = context.RevisoesMotos
+            .Where(revisao => revisao.MotoId == response.Id)
+            .OrderBy(revisao => revisao.Ordem)
+            .ToList();
+        Assert.Equal(2, revisoesDb.Count);
+        Assert.All(revisoesDb, revisao => Assert.Equal("Planejada", revisao.Status));
+    }
+
+    [Fact]
     public async Task CadastrarMotoAsync_DeveLancarDuplicateDataException_QuandoPlacaOuChassiDuplicados()
     {
         // Arrange
@@ -92,9 +189,9 @@ public class MotoServiceTests
         await context.SaveChangesAsync();
 
         var service = new MotoService(context);
-        var request1 = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now, null, null);
-        var request2 = new MotoRequest("ABC1234", "CHASSI99999999999", 1, "Preta", 0, DateTime.Now, null, null); // Placa duplicada (sem hífen)
-        var request3 = new MotoRequest("XYZ-9999", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now, null, null); // Chassi duplicado
+        var request1 = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now);
+        var request2 = new MotoRequest("ABC1234", "CHASSI99999999999", 1, "Preta", 0, DateTime.Now); // Placa duplicada (sem hífen)
+        var request3 = new MotoRequest("XYZ-9999", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now); // Chassi duplicado
 
         await service.CadastrarMotoAsync(request1, "user123");
 
@@ -116,7 +213,7 @@ public class MotoServiceTests
         await context.SaveChangesAsync();
 
         var service = new MotoService(context);
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 999, "Preta", 0, DateTime.Now, null, null); // Modelo inexistente
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 999, "Preta", 0, DateTime.Now); // Modelo inexistente
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
@@ -133,7 +230,7 @@ public class MotoServiceTests
         await context.SaveChangesAsync();
 
         var service = new MotoService(context);
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now, null, null);
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now);
 
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(

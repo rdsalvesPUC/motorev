@@ -18,8 +18,6 @@ public record MotoRequest
     [Range(1, int.MaxValue, ErrorMessage = "Código do modelo inválido.")]
     public int ModeloMotoId { get; init; }
 
-    public int? ConcessionariaId { get; init; }
-
     public string? Foto { get; init; }
 
     [Required(ErrorMessage = "A cor é obrigatória.")]
@@ -34,7 +32,7 @@ public record MotoRequest
 
     public MotoRequest() { }
 
-    public MotoRequest(string placa, string chassi, int modeloMotoId, string cor, int kilometragemAtual, DateTime dataVenda, int? concessionariaId = null, string? foto = null)
+    public MotoRequest(string placa, string chassi, int modeloMotoId, string cor, int kilometragemAtual, DateTime dataVenda, string? foto = null)
     {
         Placa = placa;
         Chassi = chassi;
@@ -42,7 +40,6 @@ public record MotoRequest
         Cor = cor;
         KilometragemAtual = kilometragemAtual;
         DataVenda = dataVenda;
-        ConcessionariaId = concessionariaId;
         Foto = foto;
     }
 }
