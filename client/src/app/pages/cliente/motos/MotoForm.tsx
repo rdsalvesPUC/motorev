@@ -6,15 +6,12 @@ import {
   Input,
   Select,
   Button,
-  Space,
   Card,
   message,
   Spin,
   Upload,
   InputNumber,
   DatePicker,
-  Row,
-  Col,
   Flex,
   Descriptions,
   Tag,
@@ -30,20 +27,18 @@ import {
 import { useNavigate, useParams } from 'react-router';
 import { PATHS, PATH_SEGMENTS } from '@/app/paths';
 import dayjs from 'dayjs';
-import { BASE_URL } from '@/app/services/http';
 import { modeloMotoService } from '@/app/services/modeloMotoService';
-import { concessionariaService } from '@/app/services/concessionariaService';
 import { motoService } from '@/app/services/motoService';
 import { linhaService } from '@/app/services/linhaService';
 import { ModeloMoto } from '@/app/models/ModeloMoto';
-import { Concessionaria } from '@/app/models/Concessionaria';
 import { Linha } from '@/app/models/Linha';
 import { MotoRequest } from '@/app/models/MotoRequest';
 import { MotoUpdateRequest } from '@/app/models/MotoUpdateRequest';
 import { handleApiError } from '@/app/utils/errorHandler';
-import { t } from '@/app/i18n';
+import { getLocale, t } from '@/app/i18n';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { getImageUrl } from '@/app/utils/imageUtils';
+import { formatIntegerInput, parseIntegerInput } from '@/app/utils/formatters';
 
 const { Title, Text } = Typography;
 
@@ -54,10 +49,8 @@ export default function MotoForm() {
   const [form] = Form.useForm();
 
   const [modelos, setModelos] = useState<ModeloMoto[]>([]);
-  const [concessionarias, setConcessionarias] = useState<Concessionaria[]>([]);
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [loadingModelos, setLoadingModelos] = useState<boolean>(true);
-  const [loadingConcessionarias, setLoadingConcessionarias] = useState<boolean>(true);
   const [loadingMoto, setLoadingMoto] = useState<boolean>(isEdit);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [fotoUrl, setFotoUrl] = useState<string | undefined>(undefined);
@@ -65,6 +58,21 @@ export default function MotoForm() {
 
   const [modeloSelecionado, setModeloSelecionado] = useState<ModeloMoto | null>(null);
   const [originalKm, setOriginalKm] = useState<number>(0);
+  const locale = getLocale();
+  const dateFormat = locale === 'pt-BR' ? 'DD/MM/YYYY' : 'MM/DD/YYYY';
+  const colorOptions = [
+    ['Preta', 'motoForm.color.black'],
+    ['Branca', 'motoForm.color.white'],
+    ['Vermelha', 'motoForm.color.red'],
+    ['Azul', 'motoForm.color.blue'],
+    ['Cinza', 'motoForm.color.gray'],
+    ['Prata', 'motoForm.color.silver'],
+    ['Verde', 'motoForm.color.green'],
+    ['Amarela', 'motoForm.color.yellow'],
+    ['Laranja', 'motoForm.color.orange'],
+    ['Rosa', 'motoForm.color.pink'],
+    ['Outra', 'motoForm.color.other'],
+  ].map(([value, labelKey]) => ({ value, label: t(labelKey) }));
 
   const customUpload = async (options: any) => {
     const { onSuccess, onError, file } = options;
@@ -110,15 +118,6 @@ export default function MotoForm() {
         setLinhas(linesData);
       } catch (error) {
         handleApiError(error, 'error.fetchLinhas');
-      }
-
-      try {
-        const concessionariasData = await concessionariaService.getAll();
-        setConcessionarias(concessionariasData);
-      } catch (error) {
-        handleApiError(error, 'Falha ao buscar concessionárias');
-      } finally {
-        setLoadingConcessionarias(false);
       }
 
       if (isEdit) {
@@ -189,7 +188,6 @@ export default function MotoForm() {
           placa: values.placa,
           chassi: values.chassi,
           modeloMotoId: values.modeloMotoId,
-          concessionariaId: values.concessionariaId,
           foto: fotoUrl,
           cor: values.cor,
           kilometragemAtual: values.kilometragemAtual,
@@ -231,7 +229,7 @@ export default function MotoForm() {
         </Title>
       </Flex>
 
-      {(loadingModelos || loadingConcessionarias || loadingMoto) ? (
+      {(loadingModelos || loadingMoto) ? (
         <Card>
           <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
             <Spin size="large" />
@@ -375,10 +373,7 @@ export default function MotoForm() {
               >
                 <Select
                   placeholder={t('motoForm.cor.placeholder')}
-                  options={[
-                    'Preta', 'Branca', 'Vermelha', 'Azul', 'Cinza',
-                    'Prata', 'Verde', 'Amarela', 'Laranja', 'Rosa', 'Outra',
-                  ].map((c) => ({ value: c, label: c }))}
+                  options={colorOptions}
                 />
               </Form.Item>
 
@@ -389,27 +384,10 @@ export default function MotoForm() {
                 style={{ flex: '1 1 180px' }}
               >
                 <DatePicker
-                  format="DD/MM/YYYY"
-                  placeholder="DD/MM/AAAA"
+                  format={dateFormat}
+                  placeholder={t('motoForm.dataVenda.placeholder')}
                   style={{ width: '100%' }}
                   disabledDate={(d) => d.isAfter(dayjs())}
-                  disabled={isEdit}
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="concessionariaId"
-                label={t('motoForm.concessionaria.label')}
-                style={{ flex: '1 1 250px' }}
-              >
-                <Select
-                  placeholder={t('motoForm.concessionaria.placeholder')}
-                  allowClear
-                  options={concessionarias.map((c) => ({
-                    value: c.id,
-                    label: c.nome,
-                  }))}
-                  notFoundContent={t('motoForm.emptyConcessionarias')}
                   disabled={isEdit}
                 />
               </Form.Item>
@@ -456,8 +434,8 @@ export default function MotoForm() {
                   style={{ width: '100%' }}
                   min={isEdit ? originalKm : 0}
                   addonAfter="km"
-                  formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-                  parser={(v) => Number(v?.replace(/\./g, '') ?? 0)}
+                  formatter={formatIntegerInput}
+                  parser={parseIntegerInput}
                 />
               </Form.Item>
 

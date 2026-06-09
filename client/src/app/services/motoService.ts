@@ -51,6 +51,6 @@ export const motoService = {
       method: 'POST',
       body: formData,
     });
-    return handleResponse(response, 'Falha ao fazer upload da imagem');
+    return handleResponse(response, t('motoForm.foto.error'));
   },
 };

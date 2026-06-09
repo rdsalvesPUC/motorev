@@ -21,4 +21,6 @@ public class Moto
     public string Cor { get; set; } = null!;
     public int KilometragemAtual { get; set; }
     public DateTime DataVenda { get; set; }
+
+    public virtual ICollection<RevisaoMoto> RevisoesPlanejadas { get; set; } = new List<RevisaoMoto>();
 }

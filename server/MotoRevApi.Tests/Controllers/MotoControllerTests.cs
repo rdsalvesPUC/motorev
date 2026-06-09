@@ -27,8 +27,8 @@ public class MotoControllerTests
     public async Task AdicionarMoto_DeveRetornarCreated_QuandoDadosValidos()
     {
         // Arrange
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Vermelha", 0, DateTime.Now, null, null);
-        var response = new MotoResponse(1, "ABC1234", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Vermelha", 0, DateTime.Now, "Linha", "100cc");
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Vermelha", 0, DateTime.Now);
+        var response = new MotoResponse(1, "ABC1234", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Vermelha", 0, DateTime.Now, "Linha", "100cc", new List<RevisaoMotoResponse>());
         
         var userId = "user-id-123";
         var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
@@ -57,7 +57,7 @@ public class MotoControllerTests
     public async Task AdicionarMoto_DeveRetornarUnauthorized_QuandoSemUserId()
     {
         // Arrange
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Vermelha", 0, DateTime.Now, null, null);
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Vermelha", 0, DateTime.Now);
         var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity()); // Sem NameIdentifier Claim
 
         _controller.ControllerContext = new ControllerContext
@@ -89,8 +89,8 @@ public class MotoControllerTests
 
         var motos = new List<MotoResponse>
         {
-            new MotoResponse(1, "ABC1234", "CHASSI1", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Vermelha", 0, DateTime.Now, "Linha", "100cc"),
-            new MotoResponse(2, "XYZ9999", "CHASSI2", 1, "CG 160", "Honda", 1, null, null, null, 2022, "Azul", 5000, DateTime.Now.AddYears(-1), "Linha", "160cc")
+            new MotoResponse(1, "ABC1234", "CHASSI1", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Vermelha", 0, DateTime.Now, "Linha", "100cc", new List<RevisaoMotoResponse>()),
+            new MotoResponse(2, "XYZ9999", "CHASSI2", 1, "CG 160", "Honda", 1, null, null, null, 2022, "Azul", 5000, DateTime.Now.AddYears(-1), "Linha", "160cc", new List<RevisaoMotoResponse>())
         };
 
         _motoServiceMock.Setup(s => s.ListarMotosClienteAsync(userId))
@@ -110,7 +110,7 @@ public class MotoControllerTests
     {
         // Arrange
         var request = new MotoUpdateRequest("XYZ-9999", "Azul", 0);
-        var response = new MotoResponse(1, "XYZ9999", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Azul", 0, DateTime.Now, "Linha", "100cc");
+        var response = new MotoResponse(1, "XYZ9999", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Azul", 0, DateTime.Now, "Linha", "100cc", new List<RevisaoMotoResponse>());
 
         var userId = "user-id-123";
         var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
@@ -158,7 +158,7 @@ public class MotoControllerTests
     public async Task ObterMoto_DeveRetornarOk_QuandoMotoExisteEPertenceAoCliente()
     {
         // Arrange
-        var response = new MotoResponse(1, "ABC1234", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Vermelha", 0, DateTime.Now, "Linha", "100cc");
+        var response = new MotoResponse(1, "ABC1234", "CHASSI12345678901", 1, "CB 500F", "Honda", 1, null, null, null, 2023, "Vermelha", 0, DateTime.Now, "Linha", "100cc", new List<RevisaoMotoResponse>());
         var userId = "user-id-123";
         var userPrincipal = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
@@ -332,7 +332,7 @@ public class MotoControllerTests
     public async Task AdicionarMoto_DeveRetornarBadRequest_QuandoModeloEstadoForInvalido()
     {
         // Arrange
-        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Vermelha", 0, DateTime.Now, null, null);
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Vermelha", 0, DateTime.Now);
         _controller.ModelState.AddModelError("Placa", "A placa é obrigatória.");
 
         // Act

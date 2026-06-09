@@ -14,6 +14,7 @@ import {
   Skeleton,
   message,
   Popconfirm,
+  theme,
 } from 'antd';
 import {
   CarOutlined,
@@ -27,7 +28,7 @@ import {
 } from '@ant-design/icons';
 import {motoService} from "@/app/services/motoService";
 import {Moto} from "@/app/models/Moto";
-import { t } from '@/app/i18n';
+import { getLocale, t } from '@/app/i18n';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { PATHS } from '@/app/paths';
 import { getImageUrl } from '@/app/utils/imageUtils';
@@ -51,6 +52,20 @@ const CORES_TAG: Record<string, string> = {
   'Prata': 'default',
 };
 
+const COR_LABEL_KEY: Record<string, string> = {
+  'Preta': 'motoForm.color.black',
+  'Branca': 'motoForm.color.white',
+  'Vermelha': 'motoForm.color.red',
+  'Azul': 'motoForm.color.blue',
+  'Cinza': 'motoForm.color.gray',
+  'Prata': 'motoForm.color.silver',
+  'Verde': 'motoForm.color.green',
+  'Amarela': 'motoForm.color.yellow',
+  'Laranja': 'motoForm.color.orange',
+  'Rosa': 'motoForm.color.pink',
+  'Outra': 'motoForm.color.other',
+};
+
 function MotoCard({
                     moto,
                     onViewDetails,
@@ -62,7 +77,9 @@ function MotoCard({
   onEdit: () => void;
   onDelete: () => void;
 }) {
-  const dataVendaFormatada = new Date(moto.dataVenda).toLocaleDateString('pt-BR');
+  const { token } = theme.useToken();
+  const dataVendaFormatada = new Date(moto.dataVenda).toLocaleDateString(getLocale());
+  const corLabel = COR_LABEL_KEY[moto.cor] ? t(COR_LABEL_KEY[moto.cor]) : moto.cor;
 
   return (
       <Card
@@ -73,7 +90,7 @@ function MotoCard({
             <Flex
                 justify="center"
                 align="center"
-                style={{ height: 160, background: '#f0f2f5', position: 'relative', overflow: 'hidden' }}
+                style={{ height: 160, background: token.colorFillSecondary, position: 'relative', overflow: 'hidden' }}
             >
               {moto.foto ? (
                   <img
@@ -82,10 +99,10 @@ function MotoCard({
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
               ) : (
-                  <CarOutlined style={{ fontSize: 48, color: '#bfbfbf' }} />
+                  <CarOutlined style={{ fontSize: 48, color: token.colorTextQuaternary }} />
               )}
               <span style={{ position: 'absolute', top: 10, right: 10 }}>
-                <Tag color={CORES_TAG[moto.cor] ?? 'default'}>{moto.cor}</Tag>
+                <Tag color={CORES_TAG[moto.cor] ?? 'default'}>{corLabel}</Tag>
               </span>
             </Flex>
           }
@@ -146,19 +163,19 @@ function MotoCard({
             <Flex vertical gap={2} align="flex-end">
               <Text type="secondary" style={{ fontSize: 11 }}>{t('minhasMotos.card.hodometro')}</Text>
               <Flex align="center" gap={4}>
-                <DashboardOutlined style={{ color: '#8c8c8c', fontSize: 12 }} />
+                <DashboardOutlined style={{ color: token.colorTextTertiary, fontSize: 12 }} />
                 <Text strong style={{ fontSize: 14 }}>
-                  {moto.kilometragemAtual.toLocaleString('pt-BR')} km
+                  {moto.kilometragemAtual.toLocaleString(getLocale())} km
                 </Text>
               </Flex>
             </Flex>
           </Flex>
           <Flex align="center" gap={6}>
-            <CalendarOutlined style={{ color: '#8c8c8c', fontSize: 12 }} />
+            <CalendarOutlined style={{ color: token.colorTextTertiary, fontSize: 12 }} />
             <Text type="secondary" style={{ fontSize: 12 }}>{t('minhasMotos.card.purchased', { date: dataVendaFormatada })}</Text>
           </Flex>
           <Flex align="center" gap={6}>
-            <TagOutlined style={{ color: '#8c8c8c', fontSize: 12 }} />
+            <TagOutlined style={{ color: token.colorTextTertiary, fontSize: 12 }} />
             <Text type="secondary" style={{ fontSize: 12 }}>{t('minhasMotos.card.chassi', { chassi: moto.chassi })}</Text>
           </Flex>
         </Flex>
@@ -270,7 +287,7 @@ export default function MinhasMotos({ }: MinhasMotosProps) {
               <Card size="small" style={{ minWidth: 180 }}>
                 <Statistic
                     title={t('minhasMotos.totalKm')}
-                    value={motos.reduce((acc, m) => acc + m.kilometragemAtual, 0).toLocaleString('pt-BR')}
+                    value={motos.reduce((acc, m) => acc + m.kilometragemAtual, 0).toLocaleString(getLocale())}
                     suffix={t('minhasMotos.totalKm.suffix')}
                     valueStyle={{ fontSize: 20 }}
                 />

@@ -22,7 +22,22 @@ public static class MapsterConfig
             .Map(dest => dest.NomeConcessionaria, src => src.Concessionaria != null ? src.Concessionaria.Nome : null)
             .Map(dest => dest.Linha, src => src.ModeloMoto.Linha != null ? src.ModeloMoto.Linha.Nome : string.Empty)
             .Map(dest => dest.Cilindrada, src => src.ModeloMoto.Cilindrada ?? string.Empty)
-            .Map(dest => dest.Ano, src => src.ModeloMoto.Ano ?? 0);
+            .Map(dest => dest.Ano, src => src.ModeloMoto.Ano ?? 0)
+            .Map(dest => dest.RevisoesPlanejadas, src => src.RevisoesPlanejadas.OrderBy(r => r.Ordem));
+
+        TypeAdapterConfig<RevisaoMoto, RevisaoMotoResponse>
+            .NewConfig()
+            .Map(dest => dest.Servicos, src => src.RevisaoPadrao.Servicos.Select(s => s.Servico))
+            .Map(dest => dest.Pecas, src => src.RevisaoPadrao.Pecas.Select(p => new RevisaoPadraoPecaResponse(
+                p.Peca.Id,
+                p.Peca.Codigo,
+                p.Peca.Nome,
+                p.Peca.Categoria.ToString(),
+                p.Peca.Preco,
+                p.Peca.Estoque,
+                p.Peca.Status.ToString(),
+                p.Quantidade
+            )));
 
         TypeAdapterConfig<RevisaoPadrao, RevisaoPadraoResponse>
             .NewConfig()
