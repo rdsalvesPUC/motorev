@@ -113,7 +113,6 @@ BEGIN TRY
         SELECT
             modelo.[Marca],
             modelo.[NomeModelo],
-            CAST(NULL AS nvarchar(50)) AS [Categoria],
             linha.[Id] AS [LinhaId],
             modelo.[Cilindrada],
             modelo.[Ano],
@@ -126,14 +125,13 @@ BEGIN TRY
     WHEN MATCHED THEN
         UPDATE SET
             destino.[Marca] = origem.[Marca],
-            destino.[Categoria] = origem.[Categoria],
             destino.[LinhaId] = origem.[LinhaId],
             destino.[Cilindrada] = origem.[Cilindrada],
             destino.[Ano] = origem.[Ano],
             destino.[Ativo] = origem.[Ativo]
     WHEN NOT MATCHED BY TARGET THEN
-        INSERT ([NomeModelo], [Marca], [Categoria], [LinhaId], [Cilindrada], [Ano], [Ativo])
-        VALUES (origem.[NomeModelo], origem.[Marca], origem.[Categoria], origem.[LinhaId], origem.[Cilindrada], origem.[Ano], origem.[Ativo]);
+        INSERT ([NomeModelo], [Marca], [LinhaId], [Cilindrada], [Ano], [Ativo])
+        VALUES (origem.[NomeModelo], origem.[Marca], origem.[LinhaId], origem.[Cilindrada], origem.[Ano], origem.[Ativo]);
 
     COMMIT TRANSACTION;
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Typography, Input, InputNumber, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, Card, Empty, Switch } from 'antd';
+import { Typography, Input, InputNumber, Select, Button, Table, Space, Flex, Form, Popconfirm, message, Spin, Tag, Card, Empty, Switch, AutoComplete } from 'antd';
 import { CarOutlined, SearchOutlined, EditOutlined, SaveOutlined, CloseOutlined, ReloadOutlined } from '@ant-design/icons';
 import type { ColumnType } from 'antd/es/table';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
@@ -35,18 +35,13 @@ interface EditableCellProps {
   rules?: any[];
   children: React.ReactNode;
   linhas: Linha[];
+  marcaOptions: SelectOption[];
 }
 
-const marcaOptions = [
-  { value: 'Honda', label: 'Honda' },
-  { value: 'Yamaha', label: 'Yamaha' },
-  { value: 'Suzuki', label: 'Suzuki' },
-  { value: 'Kawasaki', label: 'Kawasaki' },
-  { value: 'BMW', label: 'BMW' },
-  { value: 'Harley-Davidson', label: 'Harley-Davidson' },
-  { value: 'Triumph', label: 'Triumph' },
-  { value: 'Ducati', label: 'Ducati' },
-];
+interface SelectOption {
+  value: string;
+  label: string;
+}
 
 const currentYear = new Date().getFullYear();
 const minModelYear = 1901;
@@ -59,10 +54,18 @@ const EditableCell: React.FC<EditableCellProps> = ({
   rules,
   children,
   linhas = [],
+  marcaOptions = [],
   ...restProps
 }) => {
   const inputNodeMap: Record<string, React.ReactNode> = {
-    marca: <Select options={marcaOptions} />,
+    marca: (
+      <AutoComplete
+        options={marcaOptions}
+        filterOption={(inputValue, option) =>
+          String(option?.value ?? '').toLowerCase().includes(inputValue.toLowerCase())
+        }
+      />
+    ),
     linhaId: <Select options={linhas.map((linha) => ({ value: linha.id, label: linha.nome }))} />,
     ano: (
       <InputNumber
@@ -114,6 +117,16 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
   const linhaById = useMemo(() => {
     return new Map(linhas.map((linha) => [linha.id, linha.nome]));
   }, [linhas]);
+
+  const marcaOptions = useMemo<SelectOption[]>(() => {
+    const marcas = data
+      .map((modelo) => modelo.marca.trim())
+      .filter(Boolean);
+
+    return Array.from(new Set(marcas))
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map((marca) => ({ value: marca, label: marca }));
+  }, [data]);
 
   const fetchModelos = async () => {
     try {
@@ -338,6 +351,7 @@ export default function CatalogoMotos({ onNavigateToForm }: CatalogoMotosProps) 
         rules: col.rules,
         editing: isEditing(record),
         linhas,
+        marcaOptions,
       }),
     };
   });

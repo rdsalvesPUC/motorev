@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Typography, Form, Input, InputNumber, Select, Button, Space, message, Card, Spin } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
+import { Typography, Form, Input, InputNumber, Select, Button, Space, message, Card, Spin, AutoComplete } from 'antd';
 import { CarOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { linhaService } from '@/app/services/linhaService';
@@ -16,31 +16,26 @@ interface CatalogoMotosCreateProps {
   onBack: () => void;
 }
 
-const marcaOptions = [
-  { value: 'Honda', label: 'Honda' },
-  { value: 'Yamaha', label: 'Yamaha' },
-  { value: 'Suzuki', label: 'Suzuki' },
-  { value: 'Kawasaki', label: 'Kawasaki' },
-  { value: 'BMW', label: 'BMW' },
-  { value: 'Harley-Davidson', label: 'Harley-Davidson' },
-  { value: 'Triumph', label: 'Triumph' },
-  { value: 'Ducati', label: 'Ducati' },
-];
-
 const currentYear = new Date().getFullYear();
 const minModelYear = 1901;
 
 export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreateProps) {
   const [form] = Form.useForm<ModeloMotoRequest>();
   const [linhas, setLinhas] = useState<Linha[]>([]);
+  const [marcas, setMarcas] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const fetchLinhas = async () => {
+    const fetchOptions = async () => {
       try {
         setLoading(true);
-        const linhasData = await linhaService.getAll(true);
+        const [linhasData, modelosData] = await Promise.all([
+          linhaService.getAll(true),
+          modeloMotoService.getCatalogo(),
+        ]);
+
         setLinhas(linhasData);
+        setMarcas(modelosData.map((modelo) => modelo.marca));
       } catch (error) {
         handleApiError(error, 'error.fetchLinhas');
       } finally {
@@ -48,8 +43,14 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
       }
     };
 
-    fetchLinhas();
+    fetchOptions();
   }, []);
+
+  const marcaOptions = useMemo(() => {
+    return Array.from(new Set(marcas.map((marca) => marca.trim()).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      .map((marca) => ({ value: marca, label: marca }));
+  }, [marcas]);
 
   const handleSubmit = async (values: ModeloMotoRequest) => {
     try {
@@ -105,9 +106,12 @@ export default function FormCatalogoModeloMoto({ onBack }: CatalogoMotosCreatePr
               name="marca"
               rules={[{ required: true, message: t('modeloMotoCatalog.brandRequired') }]}
             >
-              <Select
+              <AutoComplete
                 placeholder={t('modeloMotoCatalog.brandPlaceholder')}
                 options={marcaOptions}
+                filterOption={(inputValue, option) =>
+                  String(option?.value ?? '').toLowerCase().includes(inputValue.toLowerCase())
+                }
               />
             </Form.Item>
 
