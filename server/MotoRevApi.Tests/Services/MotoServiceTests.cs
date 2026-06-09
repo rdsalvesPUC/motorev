@@ -26,6 +26,20 @@ public class MotoServiceTests
 
     private AppDbContext CreateContext() => new AppDbContext(_dbContextOptions);
 
+    private static void SeedRevisaoPadrao(AppDbContext context, ModeloMoto modelo)
+    {
+        context.RevisoesPadrao.Add(new RevisaoPadrao
+        {
+            Nome = "Primeira revisão",
+            Ordem = 1,
+            Quilometragem = 1000,
+            TempoMeses = 6,
+            LinhaId = modelo.LinhaId,
+            Ativo = true
+        });
+        context.SaveChanges();
+    }
+
     [Fact]
     public async Task CadastrarMotoAsync_DeveCriarMotoComSucesso()
     {
@@ -50,6 +64,7 @@ public class MotoServiceTests
         context.Clientes.Add(cliente);
         
         await context.SaveChangesAsync();
+        SeedRevisaoPadrao(context, modelo);
 
         var service = new MotoService(context);
         var request = new MotoRequest(
@@ -187,6 +202,7 @@ public class MotoServiceTests
         var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
         context.Clientes.Add(cliente);
         await context.SaveChangesAsync();
+        SeedRevisaoPadrao(context, modelo);
 
         var service = new MotoService(context);
         var request1 = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now);
@@ -228,6 +244,7 @@ public class MotoServiceTests
         var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "Linha" }, Cilindrada = "100cc" };
         context.ModelosMotos.Add(modelo);
         await context.SaveChangesAsync();
+        SeedRevisaoPadrao(context, modelo);
 
         var service = new MotoService(context);
         var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now);
@@ -235,6 +252,24 @@ public class MotoServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<NotFoundException>(
             () => service.CadastrarMotoAsync(request, "invalid-user"));
+    }
+
+    [Fact]
+    public async Task CadastrarMotoAsync_DeveLancarBusinessRuleException_QuandoModeloNaoPossuiRevisaoPadraoAtiva()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, Linha = new Linha { Nome = "Linha" }, Cilindrada = "100cc" };
+        context.ModelosMotos.Add(modelo);
+        context.Clientes.Add(new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" });
+        await context.SaveChangesAsync();
+
+        var service = new MotoService(context);
+        var request = new MotoRequest("ABC-1234", "CHASSI12345678901", 1, "Preta", 0, DateTime.Now);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BusinessRuleException>(
+            () => service.CadastrarMotoAsync(request, "user123"));
     }
 
     [Fact]

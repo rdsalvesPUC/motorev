@@ -56,6 +56,22 @@ public class ModeloMotoEndpointsTests : IDisposable
         return modelos.Select(modelo => modelo.Id).ToList();
     }
 
+    private void SeedRevisaoPadrao(int linhaId, bool ativo = true)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        context.RevisoesPadrao.Add(new RevisaoPadrao
+        {
+            Nome = "Primeira revisão",
+            Ordem = 1,
+            Quilometragem = 1000,
+            TempoMeses = 6,
+            LinhaId = linhaId,
+            Ativo = ativo
+        });
+        context.SaveChanges();
+    }
+
     [Fact]
     public async Task GetListar_DeveRetornarApenasModelosAtivos_QuandoUsuarioForCliente()
     {
@@ -103,6 +119,48 @@ public class ModeloMotoEndpointsTests : IDisposable
         var response = await client.GetAsync("/api/ModeloMoto/listar");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetDisponiveisCadastro_DeveRetornarSomenteModelosAtivosComRevisaoPadraoAtiva_QuandoUsuarioForCliente()
+    {
+        var linhaComRevisao = SeedLinha();
+        var linhaSemRevisao = new Linha { Nome = "Linha Sem Revisao", Ativo = true };
+        var linhaRevisaoInativa = new Linha { Nome = "Linha Revisao Inativa", Ativo = true };
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            context.Linhas.AddRange(linhaSemRevisao, linhaRevisaoInativa);
+            context.SaveChanges();
+        }
+
+        SeedModelos(
+            new ModeloMoto { NomeModelo = "Apto", Marca = "Honda", LinhaId = linhaComRevisao.Id, Cilindrada = "160cc", Ano = 2024, Ativo = true },
+            new ModeloMoto { NomeModelo = "Sem Plano", Marca = "Yamaha", LinhaId = linhaSemRevisao.Id, Cilindrada = "150cc", Ano = 2024, Ativo = true },
+            new ModeloMoto { NomeModelo = "Inativo", Marca = "Honda", LinhaId = linhaComRevisao.Id, Cilindrada = "300cc", Ano = 2023, Ativo = false },
+            new ModeloMoto { NomeModelo = "Plano Inativo", Marca = "BMW", LinhaId = linhaRevisaoInativa.Id, Cilindrada = "400cc", Ano = 2024, Ativo = true }
+        );
+        SeedRevisaoPadrao(linhaComRevisao.Id);
+        SeedRevisaoPadrao(linhaRevisaoInativa.Id, ativo: false);
+        var client = CreateClient(Roles.Cliente);
+
+        var response = await client.GetAsync("/api/ModeloMoto/disponiveis-cadastro");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var modelos = await response.Content.ReadFromJsonAsync<List<ModeloMotoResponse>>(JsonOptions);
+        Assert.NotNull(modelos);
+        var modelo = Assert.Single(modelos);
+        Assert.Equal("Apto", modelo.NomeModelo);
+    }
+
+    [Fact]
+    public async Task GetDisponiveisCadastro_DeveRetornarForbidden_QuandoUsuarioForConcessionaria()
+    {
+        var client = CreateClient(Roles.Concessionaria);
+
+        var response = await client.GetAsync("/api/ModeloMoto/disponiveis-cadastro");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]

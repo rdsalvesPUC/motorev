@@ -69,6 +69,20 @@ public class ModeloMotoService
             .Adapt<List<ModeloMotoResponse>>();
     }
 
+    public virtual List<ModeloMotoResponse> ListarModelosDisponiveisParaCadastro()
+    {
+        return _context.ModelosMotos
+            .AsNoTracking()
+            .Where(modelo => modelo.Ativo)
+            .Where(modelo => _context.RevisoesPadrao.Any(revisao =>
+                revisao.LinhaId == modelo.LinhaId &&
+                revisao.Ativo))
+            .OrderBy(modelo => modelo.Marca)
+            .ThenBy(modelo => modelo.NomeModelo)
+            .ToList()
+            .Adapt<List<ModeloMotoResponse>>();
+    }
+
     public virtual List<ModeloMotoResponse> ListarCatalogoModelosMotos(bool? ativo = null)
     {
         var query = _context.ModelosMotos.AsNoTracking();

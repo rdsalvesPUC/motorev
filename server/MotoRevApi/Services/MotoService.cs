@@ -78,6 +78,12 @@ public class MotoService
             .OrderBy(rp => rp.Ordem)
             .ToListAsync();
 
+        if (revisoesPadrao.Count == 0)
+        {
+            throw new BusinessRuleException(
+                "Este modelo de moto ainda não possui um modelo de revisão ativo vinculado à sua linha.");
+        }
+
         // Buscar o cliente a partir do User ID
         var cliente = await _context.Clientes
             .FirstOrDefaultAsync(c => c.UsuarioId == userId);
