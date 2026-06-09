@@ -47,6 +47,7 @@ import { formatCurrency } from '@/app/utils/formatters';
 const { Title, Text } = Typography;
 
 type RevisionStatus = 'concluida' | 'em_execucao' | 'agendada' | 'atrasada' | 'planejada';
+type ThemeToken = ReturnType<typeof theme.useToken>['token'];
 
 const normalizeStatus = (status: string) =>
   status
@@ -97,9 +98,7 @@ const formatDuration = (minutes: number) => {
 };
 
 const getRevisionTitle = (revisao: RevisaoMotoResponse) =>
-  getLocale() === 'pt-BR'
-    ? t('motoDetalhes.revisions.order', { order: revisao.ordem })
-    : t('motoDetalhes.revisions.order', { order: revisao.ordem });
+  t('motoDetalhes.revisions.order', { order: revisao.ordem });
 
 const getDaysUntilRevision = (revisao: RevisaoMotoResponse) => {
   const today = new Date();
@@ -107,37 +106,37 @@ const getDaysUntilRevision = (revisao: RevisaoMotoResponse) => {
   return Math.ceil((parseLocalDate(revisao.dataPrevista).getTime() - today.getTime()) / 86400000);
 };
 
-const getStatusConfig = (status: RevisionStatus) => {
+const getStatusConfig = (status: RevisionStatus, token: ThemeToken) => {
   const configs = {
     concluida: {
       label: t('motoDetalhes.status.concluida'),
       badgeStatus: 'success' as const,
       tagColor: 'success',
-      icon: <CheckCircleFilled style={{ color: '#52c41a' }} />,
+      icon: <CheckCircleFilled style={{ color: token.colorSuccess }} />,
     },
     em_execucao: {
       label: t('motoDetalhes.status.emExecucao'),
       badgeStatus: 'processing' as const,
       tagColor: 'processing',
-      icon: <ClockCircleFilled style={{ color: '#1677ff' }} />,
+      icon: <ClockCircleFilled style={{ color: token.colorInfo }} />,
     },
     agendada: {
       label: t('motoDetalhes.status.agendada'),
       badgeStatus: 'processing' as const,
       tagColor: 'blue',
-      icon: <CalendarOutlined style={{ color: '#1677ff' }} />,
+      icon: <CalendarOutlined style={{ color: token.colorInfo }} />,
     },
     atrasada: {
       label: t('motoDetalhes.status.atrasada'),
       badgeStatus: 'error' as const,
       tagColor: 'error',
-      icon: <CloseCircleFilled style={{ color: '#ff4d4f' }} />,
+      icon: <CloseCircleFilled style={{ color: token.colorError }} />,
     },
     planejada: {
       label: t('motoDetalhes.status.planejada'),
       badgeStatus: 'default' as const,
       tagColor: 'default',
-      icon: <HourglassOutlined style={{ color: '#8c8c8c' }} />,
+      icon: <HourglassOutlined style={{ color: token.colorTextTertiary }} />,
     },
   };
 
@@ -147,7 +146,7 @@ const getStatusConfig = (status: RevisionStatus) => {
 function RevisaoPlanejadaCard({ revisao, onClick }: { revisao: RevisaoMotoResponse; onClick: () => void }) {
   const { token } = theme.useToken();
   const status = getRevisionStatus(revisao);
-  const statusConfig = getStatusConfig(status);
+  const statusConfig = getStatusConfig(status, token);
   const estimate = getRevisionEstimate(revisao);
 
   return (
@@ -211,7 +210,7 @@ function RevisaoDetalhes({
 }) {
   const { token } = theme.useToken();
   const status = getRevisionStatus(revisao);
-  const statusConfig = getStatusConfig(status);
+  const statusConfig = getStatusConfig(status, token);
   const daysUntilRevision = getDaysUntilRevision(revisao);
   const totalPecas = getRevisionPartsEstimate(revisao);
   const totalServicos = getRevisionServicesEstimate(revisao);
@@ -538,7 +537,7 @@ export default function MotoDetalhes() {
   const dataVendaFormatada = formatDate(moto.dataVenda);
 
   const timelineItems = revisionsWithStatus.map(({ revisao, status }) => ({
-    dot: getStatusConfig(status).icon,
+    dot: getStatusConfig(status, token).icon,
     children: (
       <RevisaoPlanejadaCard
         revisao={revisao}

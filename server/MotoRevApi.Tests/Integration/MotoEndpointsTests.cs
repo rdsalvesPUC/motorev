@@ -1,11 +1,14 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using MotoRevApi.Authorization;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Enums;
 using MotoRevApi.Model;
 using Xunit;
 
@@ -14,6 +17,11 @@ namespace MotoRevApi.Tests.Integration;
 public class MotoEndpointsTests : IDisposable
 {
     private readonly CustomWebApplicationFactory _factory = new();
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     public void Dispose()
     {
@@ -126,29 +134,65 @@ public class MotoEndpointsTests : IDisposable
         using (var seedScope = _factory.Services.CreateScope())
         {
             var seedContext = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
-            seedContext.RevisoesPadrao.AddRange(
-                new RevisaoPadrao
-                {
-                    LinhaId = modelo.LinhaId,
-                    Nome = "Primeira revisão",
-                    Ordem = 1,
-                    Quilometragem = 1000,
-                    TempoMeses = 6,
-                    Ativo = true
-                },
-                new RevisaoPadrao
-                {
-                    LinhaId = modelo.LinhaId,
-                    Nome = "Segunda revisão",
-                    Ordem = 2,
-                    Quilometragem = 5000,
-                    TempoMeses = 12,
-                    Ativo = true
-                }
-            );
+
+            var servico = new Servico
+            {
+                Codigo = "SERV-REV-001",
+                Nome = "Troca de óleo",
+                Descricao = "Troca completa do óleo do motor",
+                Categoria = CategoriaServico.Troca,
+                TempoEstimado = 30,
+                Custo = 80m,
+                Ativo = true
+            };
+            var peca = new Peca
+            {
+                Codigo = "PECA-REV-001",
+                Nome = "Filtro de óleo",
+                Categoria = CategoriaPeca.Filtros,
+                Preco = 45m,
+                Estoque = 20,
+                Status = StatusCadastro.Ativo
+            };
+            var primeiraRevisao = new RevisaoPadrao
+            {
+                LinhaId = modelo.LinhaId,
+                Nome = "Primeira revisão",
+                Ordem = 1,
+                Quilometragem = 1000,
+                TempoMeses = 6,
+                Ativo = true
+            };
+            var segundaRevisao = new RevisaoPadrao
+            {
+                LinhaId = modelo.LinhaId,
+                Nome = "Segunda revisão",
+                Ordem = 2,
+                Quilometragem = 5000,
+                TempoMeses = 12,
+                Ativo = true
+            };
+
+            seedContext.Servicos.Add(servico);
+            seedContext.Pecas.Add(peca);
+            seedContext.RevisoesPadrao.AddRange(primeiraRevisao, segundaRevisao);
+            seedContext.SaveChanges();
+
+            seedContext.RevisaoPadraoServicos.Add(new RevisaoPadraoServico
+            {
+                RevisaoPadraoId = primeiraRevisao.Id,
+                ServicoId = servico.Id
+            });
+            seedContext.RevisaoPadraoPecas.Add(new RevisaoPadraoPeca
+            {
+                RevisaoPadraoId = primeiraRevisao.Id,
+                PecaId = peca.Id,
+                Quantidade = 2
+            });
             seedContext.SaveChanges();
         }
 
+        var dataVenda = DateTime.UtcNow.AddMonths(-6);
         var client = CreateClient(Roles.Cliente, userId);
         var request = new MotoRequest(
             placa: "XYZ-9876",
@@ -156,7 +200,7 @@ public class MotoEndpointsTests : IDisposable
             modeloMotoId: modelo.Id,
             cor: "Vermelho",
             kilometragemAtual: 1000,
-            dataVenda: DateTime.UtcNow.AddMonths(-6)
+            dataVenda: dataVenda
         );
 
         // Act
@@ -164,13 +208,44 @@ public class MotoEndpointsTests : IDisposable
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var motoResponse = await response.Content.ReadFromJsonAsync<MotoResponse>();
+        var motoResponse = await response.Content.ReadFromJsonAsync<MotoResponse>(JsonOptions);
         Assert.NotNull(motoResponse);
         Assert.True(motoResponse.Id > 0);
         Assert.Equal("XYZ9876", motoResponse.Placa);
         Assert.Equal("Vermelho", motoResponse.Cor);
         Assert.Equal(2, motoResponse.RevisoesPlanejadas.Count);
         Assert.All(motoResponse.RevisoesPlanejadas, revisao => Assert.Equal("Planejada", revisao.Status));
+        Assert.Collection(motoResponse.RevisoesPlanejadas,
+            revisao =>
+            {
+                Assert.Equal("Primeira revisão", revisao.Nome);
+                Assert.Equal(1, revisao.Ordem);
+                Assert.Equal(1000, revisao.Quilometragem);
+                Assert.Equal(6, revisao.TempoMeses);
+                Assert.Equal(dataVenda.Date.AddMonths(6), revisao.DataPrevista.Date);
+
+                var servico = Assert.Single(revisao.Servicos);
+                Assert.Equal("SERV-REV-001", servico.Codigo);
+                Assert.Equal("Troca de óleo", servico.Nome);
+                Assert.Equal(30, servico.TempoEstimado);
+                Assert.Equal(80m, servico.Custo);
+
+                var peca = Assert.Single(revisao.Pecas);
+                Assert.Equal("PECA-REV-001", peca.Codigo);
+                Assert.Equal("Filtro de óleo", peca.Nome);
+                Assert.Equal(45m, peca.Preco);
+                Assert.Equal(2, peca.Quantidade);
+            },
+            revisao =>
+            {
+                Assert.Equal("Segunda revisão", revisao.Nome);
+                Assert.Equal(2, revisao.Ordem);
+                Assert.Equal(5000, revisao.Quilometragem);
+                Assert.Equal(12, revisao.TempoMeses);
+                Assert.Equal(dataVenda.Date.AddMonths(12), revisao.DataPrevista.Date);
+                Assert.Empty(revisao.Servicos);
+                Assert.Empty(revisao.Pecas);
+            });
 
         // Verificar DB
         using var scope = _factory.Services.CreateScope();
