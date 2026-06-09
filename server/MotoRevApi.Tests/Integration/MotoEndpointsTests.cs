@@ -191,7 +191,7 @@ public class MotoEndpointsTests : IDisposable
                 Quilometragem = revisaoPadrao.Quilometragem,
                 TempoMeses = revisaoPadrao.TempoMeses,
                 DataPrevista = moto.DataVenda.AddMonths(revisaoPadrao.TempoMeses),
-                Status = "Planejada"
+                Status = StatusRevisaoMoto.Planejada
             });
             seedContext.SaveChanges();
         }

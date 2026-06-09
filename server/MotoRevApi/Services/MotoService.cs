@@ -5,8 +5,10 @@ using System.Threading.Tasks;
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
+using MotoRevApi.Domain.Revisoes;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
 
@@ -36,6 +38,8 @@ public class MotoService
             .Include(m => m.ModeloMoto)
                 .ThenInclude(mm => mm.Linha)
             .Include(m => m.Concessionaria)
+            .Include(m => m.RevisoesPlanejadas)
+                .ThenInclude(rm => rm.Loja)
             .Include(m => m.RevisoesPlanejadas)
                 .ThenInclude(rm => rm.RevisaoPadrao)
                     .ThenInclude(rp => rp.Servicos)
@@ -111,7 +115,7 @@ public class MotoService
                     Quilometragem = revisaoPadrao.Quilometragem,
                     TempoMeses = revisaoPadrao.TempoMeses,
                     DataPrevista = moto.DataVenda.AddMonths(revisaoPadrao.TempoMeses),
-                    Status = "Planejada",
+                    Status = StatusRevisaoMoto.Planejada,
                 });
             }
 
@@ -124,6 +128,8 @@ public class MotoService
                 .Include(m => m.ModeloMoto)
                     .ThenInclude(mm => mm.Linha)
                 .Include(m => m.Concessionaria)
+                .Include(m => m.RevisoesPlanejadas)
+                    .ThenInclude(rm => rm.Loja)
                 .Include(m => m.RevisoesPlanejadas)
                     .ThenInclude(rm => rm.RevisaoPadrao)
                         .ThenInclude(rp => rp.Servicos)
@@ -156,6 +162,8 @@ public class MotoService
             .Include(m => m.ModeloMoto)
                 .ThenInclude(mm => mm.Linha)
             .Include(m => m.Concessionaria)
+            .Include(m => m.RevisoesPlanejadas)
+                .ThenInclude(rm => rm.Loja)
             .Include(m => m.RevisoesPlanejadas)
                 .ThenInclude(rm => rm.RevisaoPadrao)
                     .ThenInclude(rp => rp.Servicos)
@@ -227,6 +235,8 @@ public class MotoService
                     .ThenInclude(mm => mm.Linha)
                 .Include(m => m.Concessionaria)
                 .Include(m => m.RevisoesPlanejadas)
+                    .ThenInclude(rm => rm.Loja)
+                .Include(m => m.RevisoesPlanejadas)
                     .ThenInclude(rm => rm.RevisaoPadrao)
                         .ThenInclude(rp => rp.Servicos)
                             .ThenInclude(rps => rps.Servico)
@@ -246,11 +256,165 @@ public class MotoService
         }
     }
 
+    public virtual async Task<RevisaoMotoResponse> SolicitarAgendamentoRevisaoAsync(
+        int revisaoMotoId,
+        AgendamentoRevisaoRequest request,
+        string userId)
+    {
+        var revisao = await ObterRevisaoMotoDoClienteAsync(revisaoMotoId, userId);
+        var statusAtual = RevisaoMotoStatusPolicy.ObterStatusEfetivo(
+            revisao.Status,
+            revisao.DataPrevista,
+            revisao.DataAgendamento,
+            DateTime.Today);
+
+        if (!RevisaoMotoStatusPolicy.PodeSolicitarAgendamento(statusAtual))
+        {
+            throw new BusinessRuleException("Esta revisão não está disponível para agendamento.");
+        }
+
+        await ValidarLojaEJanelaAgendamentoAsync(revisao, request);
+
+        revisao.LojaId = request.LojaId;
+        revisao.DataAgendamento = request.DataAgendamento.Date;
+        revisao.Status = StatusRevisaoMoto.AguardandoConfirmacao;
+
+        await _context.SaveChangesAsync();
+        return await ObterRevisaoMotoResponseAsync(revisaoMotoId);
+    }
+
+    public virtual async Task<RevisaoMotoResponse> RemarcarAgendamentoRevisaoAsync(
+        int revisaoMotoId,
+        AgendamentoRevisaoRequest request,
+        string userId)
+    {
+        var revisao = await ObterRevisaoMotoDoClienteAsync(revisaoMotoId, userId);
+        var statusAtual = RevisaoMotoStatusPolicy.ObterStatusEfetivo(
+            revisao.Status,
+            revisao.DataPrevista,
+            revisao.DataAgendamento,
+            DateTime.Today);
+
+        if (!RevisaoMotoStatusPolicy.PodeRemarcar(statusAtual))
+        {
+            throw new BusinessRuleException("Apenas revisões agendadas podem ser remarcadas.");
+        }
+
+        await ValidarLojaEJanelaAgendamentoAsync(revisao, request);
+
+        revisao.LojaId = request.LojaId;
+        revisao.DataAgendamento = request.DataAgendamento.Date;
+        revisao.Status = StatusRevisaoMoto.AguardandoConfirmacao;
+
+        await _context.SaveChangesAsync();
+        return await ObterRevisaoMotoResponseAsync(revisaoMotoId);
+    }
+
+    public virtual async Task<RevisaoMotoResponse> CancelarAgendamentoRevisaoAsync(int revisaoMotoId, string userId)
+    {
+        var revisao = await ObterRevisaoMotoDoClienteAsync(revisaoMotoId, userId);
+        var statusAtual = RevisaoMotoStatusPolicy.ObterStatusEfetivo(
+            revisao.Status,
+            revisao.DataPrevista,
+            revisao.DataAgendamento,
+            DateTime.Today);
+
+        if (!RevisaoMotoStatusPolicy.PodeCancelar(statusAtual))
+        {
+            throw new BusinessRuleException("Esta revisão não possui agendamento cancelável.");
+        }
+
+        revisao.LojaId = null;
+        revisao.DataAgendamento = null;
+        revisao.Status = DateTime.Today > revisao.DataPrevista.Date.AddDays(15)
+            ? StatusRevisaoMoto.Perdida
+            : StatusRevisaoMoto.AguardandoAgendamento;
+
+        await _context.SaveChangesAsync();
+        return await ObterRevisaoMotoResponseAsync(revisaoMotoId);
+    }
+
     public virtual Task<bool> TemAgendamentosPendentesAsync(int motoId)
     {
-        // Como o fluxo de agendamentos ainda não foi implementado,
-        // retorna false por padrão.
-        return Task.FromResult(false);
+        return _context.RevisoesMotos.AnyAsync(rm =>
+            rm.MotoId == motoId &&
+            (rm.Status == StatusRevisaoMoto.AguardandoConfirmacao ||
+             rm.Status == StatusRevisaoMoto.Agendada ||
+             rm.Status == StatusRevisaoMoto.EmExecucao));
+    }
+
+    private async Task<RevisaoMoto> ObterRevisaoMotoDoClienteAsync(int revisaoMotoId, string userId)
+    {
+        var cliente = await _context.Clientes
+            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+        if (cliente == null)
+        {
+            throw new NotFoundException("Cliente não encontrado.");
+        }
+
+        var revisao = await _context.RevisoesMotos
+            .Include(rm => rm.Moto)
+            .Include(rm => rm.Loja)
+            .FirstOrDefaultAsync(rm =>
+                rm.Id == revisaoMotoId &&
+                rm.Moto.ClienteId == cliente.Id &&
+                rm.Moto.Ativo);
+
+        if (revisao == null)
+        {
+            throw new NotFoundException("Revisão da moto não encontrada.");
+        }
+
+        return revisao;
+    }
+
+    private async Task<RevisaoMotoResponse> ObterRevisaoMotoResponseAsync(int revisaoMotoId)
+    {
+        var revisao = await _context.RevisoesMotos
+            .Include(rm => rm.Loja)
+            .Include(rm => rm.RevisaoPadrao)
+                .ThenInclude(rp => rp.Servicos)
+                    .ThenInclude(rps => rps.Servico)
+            .Include(rm => rm.RevisaoPadrao)
+                .ThenInclude(rp => rp.Pecas)
+                    .ThenInclude(rpp => rpp.Peca)
+            .AsSplitQuery()
+            .FirstAsync(rm => rm.Id == revisaoMotoId);
+
+        return revisao.Adapt<RevisaoMotoResponse>();
+    }
+
+    private async Task ValidarLojaEJanelaAgendamentoAsync(
+        RevisaoMoto revisao,
+        AgendamentoRevisaoRequest request)
+    {
+        var lojaExiste = await _context.Lojas.AnyAsync(l => l.Id == request.LojaId && l.Ativo);
+        if (!lojaExiste)
+        {
+            throw new NotFoundException("Loja não encontrada.");
+        }
+
+        var hoje = DateTime.Today;
+        var dataAgendamento = request.DataAgendamento.Date;
+        var dataMinima = revisao.DataPrevista.Date.AddDays(-15);
+        var dataLimite = revisao.DataPrevista.Date.AddDays(15);
+
+        if (hoje < dataMinima || hoje > dataLimite)
+        {
+            throw new BusinessRuleException(
+                $"Esta revisão só pode ser agendada entre {dataMinima:dd/MM/yyyy} e {dataLimite:dd/MM/yyyy}.");
+        }
+
+        if (dataAgendamento < hoje)
+        {
+            throw new BusinessRuleException("A data do agendamento não pode estar no passado.");
+        }
+
+        if (dataAgendamento < dataMinima || dataAgendamento > dataLimite)
+        {
+            throw new BusinessRuleException(
+                $"A data do agendamento deve estar entre {dataMinima:dd/MM/yyyy} e {dataLimite:dd/MM/yyyy}.");
+        }
     }
 
     public virtual async Task InativarMotoAsync(int id, string userId)

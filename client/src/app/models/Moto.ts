@@ -12,6 +12,11 @@ export interface RevisaoMotoResponse {
   status: string;
   servicos: Servico[];
   pecas: RevisaoPadraoPecaResponse[];
+  dataAgendamento?: string;
+  lojaId?: number;
+  nomeLoja?: string;
+  cidadeLoja?: string;
+  ufLoja?: string;
 }
 
 export interface Moto {

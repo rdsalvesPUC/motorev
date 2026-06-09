@@ -1,10 +1,15 @@
 import { apiFetch, handleResponse, BASE_URL } from '@/app/services/http';
-import { Moto } from '@/app/models/Moto';
+import { Moto, RevisaoMotoResponse } from '@/app/models/Moto';
 import { MotoRequest } from '@/app/models/MotoRequest';
 import { MotoUpdateRequest } from '@/app/models/MotoUpdateRequest';
 import { t } from '@/app/i18n';
 
 const MOTO_URL = `${BASE_URL}/Moto`;
+
+export interface AgendamentoRevisaoRequest {
+  lojaId: number;
+  dataAgendamento: string;
+}
 
 export const motoService = {
   getAll: async (): Promise<Moto[]> => {
@@ -42,6 +47,35 @@ export const motoService = {
       method: 'DELETE',
     });
     return handleResponse(response, t('error.deleteMoto'));
+  },
+
+  solicitarAgendamento: async (
+    revisaoMotoId: number,
+    request: AgendamentoRevisaoRequest,
+  ): Promise<RevisaoMotoResponse> => {
+    const response = await apiFetch(`${MOTO_URL}/revisoes/${revisaoMotoId}/agendamento`, {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+    return handleResponse(response, 'Falha ao solicitar agendamento');
+  },
+
+  remarcarAgendamento: async (
+    revisaoMotoId: number,
+    request: AgendamentoRevisaoRequest,
+  ): Promise<RevisaoMotoResponse> => {
+    const response = await apiFetch(`${MOTO_URL}/revisoes/${revisaoMotoId}/agendamento`, {
+      method: 'PUT',
+      body: JSON.stringify(request),
+    });
+    return handleResponse(response, 'Falha ao remarcar agendamento');
+  },
+
+  cancelarAgendamento: async (revisaoMotoId: number): Promise<RevisaoMotoResponse> => {
+    const response = await apiFetch(`${MOTO_URL}/revisoes/${revisaoMotoId}/agendamento`, {
+      method: 'DELETE',
+    });
+    return handleResponse(response, 'Falha ao cancelar agendamento');
   },
 
   uploadImage: async (file: File): Promise<{ url: string }> => {

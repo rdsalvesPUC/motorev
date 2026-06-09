@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
+using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
 using MotoRevApi.Services;
@@ -38,6 +39,46 @@ public class MotoServiceTests
             Ativo = true
         });
         context.SaveChanges();
+    }
+
+    private static Loja SeedLoja(AppDbContext context)
+    {
+        var usuario = new Usuario
+        {
+            Id = $"concessionaria-{Guid.NewGuid()}",
+            UserName = "concessionaria@test.com",
+            NormalizedUserName = "CONCESSIONARIA@TEST.COM",
+            Email = "concessionaria@test.com",
+            NormalizedEmail = "CONCESSIONARIA@TEST.COM"
+        };
+        var concessionaria = new Concessionaria
+        {
+            Nome = "Moto Center",
+            Cnpj = "12345678000199",
+            Telefone = "11999999999",
+            UsuarioId = usuario.Id,
+            Usuario = usuario
+        };
+        var loja = new Loja
+        {
+            Nome = "Moto Center Matriz",
+            Cnpj = "12345678000199",
+            Telefone = "11999999999",
+            Cep = "01001000",
+            Logradouro = "Rua Teste",
+            Numero = "100",
+            Bairro = "Centro",
+            Cidade = "São Paulo",
+            Uf = "SP",
+            Concessionaria = concessionaria,
+            Ativo = true
+        };
+
+        context.Users.Add(usuario);
+        context.Concessionarias.Add(concessionaria);
+        context.Lojas.Add(loja);
+        context.SaveChanges();
+        return loja;
     }
 
     [Fact]
@@ -187,7 +228,7 @@ public class MotoServiceTests
             .OrderBy(revisao => revisao.Ordem)
             .ToList();
         Assert.Equal(2, revisoesDb.Count);
-        Assert.All(revisoesDb, revisao => Assert.Equal("Planejada", revisao.Status));
+        Assert.All(revisoesDb, revisao => Assert.Equal(StatusRevisaoMoto.Planejada, revisao.Status));
     }
 
     [Fact]
@@ -269,6 +310,126 @@ public class MotoServiceTests
         // Act & Assert
         await Assert.ThrowsAsync<BusinessRuleException>(
             () => service.CadastrarMotoAsync(request, "user123"));
+    }
+
+    [Fact]
+    public async Task SolicitarAgendamentoRevisaoAsync_DeveAtualizarStatusDataELoja_QuandoDentroDaJanela()
+    {
+        using var context = CreateContext();
+        var linha = new Linha { Id = 10, Nome = "Linha", Ativo = true };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, LinhaId = linha.Id, Linha = linha, Cilindrada = "100cc" };
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        var moto = new Moto
+        {
+            Id = 1,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ModeloMoto = modelo,
+            Cliente = cliente,
+            Cor = "Preta",
+            DataVenda = DateTime.Today.AddMonths(-6),
+            Ativo = true
+        };
+        var revisaoPadrao = new RevisaoPadrao
+        {
+            Id = 100,
+            Nome = "Primeira revisão",
+            Linha = linha,
+            Ordem = 1,
+            Quilometragem = 1000,
+            TempoMeses = 6,
+            Ativo = true
+        };
+        var revisaoMoto = new RevisaoMoto
+        {
+            Id = 200,
+            Moto = moto,
+            RevisaoPadrao = revisaoPadrao,
+            Nome = revisaoPadrao.Nome,
+            Ordem = revisaoPadrao.Ordem,
+            Quilometragem = revisaoPadrao.Quilometragem,
+            TempoMeses = revisaoPadrao.TempoMeses,
+            DataPrevista = DateTime.Today,
+            Status = StatusRevisaoMoto.Planejada
+        };
+        context.Linhas.Add(linha);
+        context.ModelosMotos.Add(modelo);
+        context.Clientes.Add(cliente);
+        context.Motos.Add(moto);
+        context.RevisoesPadrao.Add(revisaoPadrao);
+        context.RevisoesMotos.Add(revisaoMoto);
+        await context.SaveChangesAsync();
+        var loja = SeedLoja(context);
+
+        var service = new MotoService(context);
+
+        var response = await service.SolicitarAgendamentoRevisaoAsync(
+            revisaoMoto.Id,
+            new AgendamentoRevisaoRequest(loja.Id, DateTime.Today),
+            "user123");
+
+        Assert.Equal("Aguardando Confirmação", response.Status);
+        Assert.Equal(DateTime.Today, response.DataAgendamento?.Date);
+        Assert.Equal(loja.Id, response.LojaId);
+        Assert.Equal(loja.Nome, response.NomeLoja);
+    }
+
+    [Fact]
+    public async Task SolicitarAgendamentoRevisaoAsync_DeveLancarBusinessRuleException_QuandoRevisaoForaDaJanela()
+    {
+        using var context = CreateContext();
+        var linha = new Linha { Id = 10, Nome = "Linha", Ativo = true };
+        var modelo = new ModeloMoto { Id = 1, NomeModelo = "CB 500F", Marca = "Honda", Ativo = true, LinhaId = linha.Id, Linha = linha, Cilindrada = "100cc" };
+        var cliente = new Cliente { Id = 1, Nome = "Cliente Teste", UsuarioId = "user123" };
+        var moto = new Moto
+        {
+            Id = 1,
+            Placa = "ABC1234",
+            Chassi = "CHASSI12345678901",
+            ModeloMoto = modelo,
+            Cliente = cliente,
+            Cor = "Preta",
+            DataVenda = DateTime.Today,
+            Ativo = true
+        };
+        var revisaoPadrao = new RevisaoPadrao
+        {
+            Id = 100,
+            Nome = "Primeira revisão",
+            Linha = linha,
+            Ordem = 1,
+            Quilometragem = 1000,
+            TempoMeses = 6,
+            Ativo = true
+        };
+        var revisaoMoto = new RevisaoMoto
+        {
+            Id = 200,
+            Moto = moto,
+            RevisaoPadrao = revisaoPadrao,
+            Nome = revisaoPadrao.Nome,
+            Ordem = revisaoPadrao.Ordem,
+            Quilometragem = revisaoPadrao.Quilometragem,
+            TempoMeses = revisaoPadrao.TempoMeses,
+            DataPrevista = DateTime.Today.AddMonths(2),
+            Status = StatusRevisaoMoto.Planejada
+        };
+        context.Linhas.Add(linha);
+        context.ModelosMotos.Add(modelo);
+        context.Clientes.Add(cliente);
+        context.Motos.Add(moto);
+        context.RevisoesPadrao.Add(revisaoPadrao);
+        context.RevisoesMotos.Add(revisaoMoto);
+        await context.SaveChangesAsync();
+        var loja = SeedLoja(context);
+
+        var service = new MotoService(context);
+
+        await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.SolicitarAgendamentoRevisaoAsync(
+                revisaoMoto.Id,
+                new AgendamentoRevisaoRequest(loja.Id, DateTime.Today.AddMonths(2)),
+                "user123"));
     }
 
     [Fact]

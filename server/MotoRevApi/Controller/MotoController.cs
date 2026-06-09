@@ -164,6 +164,85 @@ public class MotoController : ControllerBase
     }
 
     /// <summary>
+    /// Solicita o agendamento de uma revisão dentro da janela de tolerância.
+    /// </summary>
+    [HttpPost("revisoes/{revisaoMotoId:int}/agendamento")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(RevisaoMotoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> SolicitarAgendamentoRevisao(
+        int revisaoMotoId,
+        [FromBody] AgendamentoRevisaoRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var response = await _motoService.SolicitarAgendamentoRevisaoAsync(revisaoMotoId, request, userId);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Solicita a remarcação de uma revisão agendada.
+    /// </summary>
+    [HttpPut("revisoes/{revisaoMotoId:int}/agendamento")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(RevisaoMotoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> RemarcarAgendamentoRevisao(
+        int revisaoMotoId,
+        [FromBody] AgendamentoRevisaoRequest request)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var response = await _motoService.RemarcarAgendamentoRevisaoAsync(revisaoMotoId, request, userId);
+        return Ok(response);
+    }
+
+    /// <summary>
+    /// Cancela uma solicitação ou agendamento de revisão do cliente autenticado.
+    /// </summary>
+    [HttpDelete("revisoes/{revisaoMotoId:int}/agendamento")]
+    [Authorize(Roles = Roles.Cliente)]
+    [ProducesResponseType(typeof(RevisaoMotoResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> CancelarAgendamentoRevisao(int revisaoMotoId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var response = await _motoService.CancelarAgendamentoRevisaoAsync(revisaoMotoId, userId);
+        return Ok(response);
+    }
+
+    /// <summary>
     /// Inativa uma moto do cliente autenticado (Soft Delete).
     /// </summary>
     /// <remarks>

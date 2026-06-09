@@ -1,3 +1,5 @@
+using MotoRevApi.Enums;
+
 namespace MotoRevApi.Model;
 
 public class RevisaoMoto
@@ -15,5 +17,10 @@ public class RevisaoMoto
     public int Quilometragem { get; set; }
     public int TempoMeses { get; set; }
     public DateTime DataPrevista { get; set; }
-    public string Status { get; set; } = "Planejada";
+    public StatusRevisaoMoto Status { get; set; } = StatusRevisaoMoto.Planejada;
+
+    public DateTime? DataAgendamento { get; set; }
+
+    public int? LojaId { get; set; }
+    public virtual Loja? Loja { get; set; }
 }

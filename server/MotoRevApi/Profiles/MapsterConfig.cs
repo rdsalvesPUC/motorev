@@ -1,4 +1,5 @@
 using Mapster;
+using MotoRevApi.Domain.Revisoes;
 using MotoRevApi.Dto.Response;
 using MotoRevApi.Model;
 
@@ -27,6 +28,10 @@ public static class MapsterConfig
 
         TypeAdapterConfig<RevisaoMoto, RevisaoMotoResponse>
             .NewConfig()
+            .Map(dest => dest.Status, src => RevisaoMotoStatusPolicy.ToDisplay(src.Status))
+            .Map(dest => dest.NomeLoja, src => src.Loja != null ? src.Loja.Nome : null)
+            .Map(dest => dest.CidadeLoja, src => src.Loja != null ? src.Loja.Cidade : null)
+            .Map(dest => dest.UfLoja, src => src.Loja != null ? src.Loja.Uf : null)
             .Map(dest => dest.Servicos, src => src.RevisaoPadrao.Servicos.Select(s => s.Servico))
             .Map(dest => dest.Pecas, src => src.RevisaoPadrao.Pecas.Select(p => new RevisaoPadraoPecaResponse(
                 p.Peca.Id,

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using MotoRevApi.Domain.Revisoes;
 using MotoRevApi.Model;
 
 namespace MotoRevApi.Data.Configurations;
@@ -16,6 +17,9 @@ public class RevisaoMotoConfiguration : IEntityTypeConfiguration<RevisaoMoto>
 
         builder.Property(rm => rm.Status)
             .IsRequired()
+            .HasConversion(
+                status => RevisaoMotoStatusPolicy.ToDisplay(status),
+                value => RevisaoMotoStatusPolicy.FromDatabaseValue(value))
             .HasMaxLength(40);
 
         builder.HasIndex(rm => rm.MotoId);
@@ -29,6 +33,11 @@ public class RevisaoMotoConfiguration : IEntityTypeConfiguration<RevisaoMoto>
         builder.HasOne(rm => rm.RevisaoPadrao)
             .WithMany()
             .HasForeignKey(rm => rm.RevisaoPadraoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(rm => rm.Loja)
+            .WithMany()
+            .HasForeignKey(rm => rm.LojaId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
