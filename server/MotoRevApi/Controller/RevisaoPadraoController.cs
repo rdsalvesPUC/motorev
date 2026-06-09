@@ -12,7 +12,7 @@ namespace MotoRevApi.Controller;
 [ApiController]
 [Route("api/revisao-padrao")]
 [Tags("Revisões Padrão")]
-[Authorize(Roles = Roles.Concessionaria)]
+[Authorize]
 public class RevisaoPadraoController : ControllerBase
 {
     private readonly RevisaoPadraoService _revisaoPadraoService;
@@ -27,17 +27,15 @@ public class RevisaoPadraoController : ControllerBase
     /// </summary>
     /// <remarks>
     /// Opcionalmente, os resultados podem ser filtrados por um modelo de moto ou linha específica.
+    /// Acessível por qualquer usuário autenticado.
     /// </remarks>
     /// <param name="modeloMotoId">ID opcional do modelo de moto para filtrar a listagem.</param>
     /// <param name="linhaId">ID opcional da linha para filtrar a listagem.</param>
     /// <response code="200">Retorna a lista de revisões (pode estar vazia).</response>
     /// <response code="401">Se o usuário não estiver autenticado.</response>
-    /// <response code="403">Se o usuário não for do tipo Admin.</response>
     [HttpGet]
     [ProducesResponseType(typeof(List<RevisaoPadraoListResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [AllowAnonymous]
     public async Task<IActionResult> Get([FromQuery] int? modeloMotoId, [FromQuery] int? linhaId)
     {
         var revisoes = await _revisaoPadraoService.ListarRevisoesAsync(modeloMotoId, linhaId);
@@ -47,6 +45,9 @@ public class RevisaoPadraoController : ControllerBase
     /// <summary>
     /// Obtém os detalhes de uma revisão padrão específica pelo ID.
     /// </summary>
+    /// <remarks>
+    /// Acessível por qualquer usuário autenticado.
+    /// </remarks>
     /// <param name="id">O ID da revisão padrão a ser detalhada.</param>
     /// <response code="200">Retorna os detalhes da revisão.</response>
     /// <response code="401">Se o usuário não estiver autenticado.</response>
@@ -55,7 +56,6 @@ public class RevisaoPadraoController : ControllerBase
     [ProducesResponseType(typeof(RevisaoPadraoResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [AllowAnonymous]
     public async Task<IActionResult> GetById(int id)
     {
         var revisao = await _revisaoPadraoService.GetByIdAsync(id);
@@ -73,6 +73,7 @@ public class RevisaoPadraoController : ControllerBase
     /// <response code="404">Linha, serviço ou peça não encontrado.</response>
     /// <response code="409">Já existe revisão com alguma ordem informada.</response>
     [HttpPost("por-linha")]
+    [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(List<RevisaoPadraoResponse>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -96,6 +97,7 @@ public class RevisaoPadraoController : ControllerBase
     /// <response code="403">Usuário não tem permissão.</response>
     /// <response code="404">Linha, serviço ou peça não encontrado.</response>
     [HttpPut("por-linha/{linhaId}")]
+    [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(List<RevisaoPadraoResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -116,6 +118,7 @@ public class RevisaoPadraoController : ControllerBase
     /// <response code="403">Usuário não tem permissão.</response>
     /// <response code="404">Nenhuma revisão encontrada para a linha.</response>
     [HttpPatch("linha/{linhaId}/alternar-status")]
+    [Authorize(Roles = Roles.Concessionaria)]
     [ProducesResponseType(typeof(List<RevisaoPadraoListResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]

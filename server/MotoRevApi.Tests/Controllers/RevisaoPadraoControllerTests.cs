@@ -74,14 +74,30 @@ public class RevisaoPadraoControllerTests
     }
 
     [Fact]
-    public void Atributos_Classe_DeveTerRoleConcessionaria()
+    public void Atributos_Classe_DeveTerAuthorize()
     {
         var attribute = typeof(RevisaoPadraoController).GetCustomAttributes(typeof(AuthorizeAttribute), true)
             .Cast<AuthorizeAttribute>()
             .FirstOrDefault();
 
         Assert.NotNull(attribute);
-        Assert.Equal("Concessionaria", attribute.Roles);
+        Assert.Null(attribute.Roles);
+    }
+
+    [Fact]
+    public void Atributos_Escrita_DeveTerRoleConcessionaria()
+    {
+        var methods = new[] { "PostPorLinha", "PutPorLinha", "AlternarStatusPorLinha" };
+        foreach (var methodName in methods)
+        {
+            var attribute = typeof(RevisaoPadraoController).GetMethod(methodName)
+                .GetCustomAttributes(typeof(AuthorizeAttribute), true)
+                .Cast<AuthorizeAttribute>()
+                .FirstOrDefault();
+
+            Assert.NotNull(attribute);
+            Assert.Equal("Concessionaria", attribute.Roles);
+        }
     }
 
     [Fact]
