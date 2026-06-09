@@ -3,10 +3,10 @@ export interface ConcessionariaPerfilRequest {
   email: string;
   cnpj: string;
   telefone: string;
-  cep: string;
-  logradouro: string;
-  numero: string;
-  bairro: string;
-  cidade: string;
-  uf: string;
+  cep?: string;
+  logradouro?: string;
+  numero?: string;
+  bairro?: string;
+  cidade?: string;
+  uf?: string;
 }

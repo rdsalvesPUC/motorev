@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
-import { Typography, Form, Input, Button, Space, message, Card, Spin, Tag } from 'antd';
-import { ShopOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { Alert, Button, Card, Flex, Form, Input, message, Spin, Switch, Typography, Upload } from 'antd';
+import { ArrowLeftOutlined, EnvironmentOutlined, IdcardOutlined, PlusOutlined, ShopOutlined } from '@ant-design/icons';
+import type { UploadFile } from 'antd/es/upload/interface';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { concessionariaService } from '@/app/services/concessionariaService';
 import { viaCepService } from '@/app/services/viaCepService';
@@ -9,12 +10,20 @@ import { LojaRequest } from '@/app/models/LojaRequest';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { formatCEP, formatCNPJ, formatPhone } from '@/app/utils/formatters';
 import { CEP_REGEX, CNPJ_REGEX, PHONE_REGEX, UF_REGEX, validateCNPJ } from '@/app/utils/validators';
+import { getImageUrl } from '@/app/utils/imageUtils';
 import { PATH_SEGMENTS } from '@/app/paths';
+import { t } from '@/app/i18n';
 
 const { Title, Text } = Typography;
 
 interface LojasCreateProps {
   onBack: () => void;
+}
+
+const isMatrizTipo = (tipo?: string) => tipo?.toLowerCase() === 'matriz';
+
+function normalizeText(value?: string | null) {
+  return value?.trim() || '';
 }
 
 export default function FormLojas({ onBack }: LojasCreateProps) {
@@ -27,18 +36,24 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
   const [enderecoBloqueado, setEnderecoBloqueado] = useState(false);
   const [hasMatriz, setHasMatriz] = useState(true);
   const [lojaTipo, setLojaTipo] = useState('Filial');
+  const [fotoUrl, setFotoUrl] = useState<string | undefined>(undefined);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+
+  const isEditingMatriz = isEditing && isMatrizTipo(lojaTipo);
+  const matrizLocked = isEditingMatriz || (!isEditing && !hasMatriz);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         const minhasLojas = await concessionariaService.getMinhasLojas();
-        const existsMatriz = minhasLojas.some(l => l.tipo === 'Matriz');
+        const existsMatriz = minhasLojas.some((loja) => isMatrizTipo(loja.tipo));
         setHasMatriz(existsMatriz);
 
         if (isEditing && lojaId) {
           const loja = await concessionariaService.getMinhaLojaById(lojaId);
           setLojaTipo(loja.tipo);
+          setFotoUrl(loja.foto);
           form.setFieldsValue({
             nome: loja.nome,
             cnpj: loja.cnpj,
@@ -49,7 +64,22 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
             bairro: loja.bairro,
             cidade: loja.cidade,
             uf: loja.uf,
+            isMatriz: isMatrizTipo(loja.tipo),
+            foto: loja.foto,
           });
+
+          if (loja.foto) {
+            setFileList([
+              {
+                uid: '-1',
+                name: 'loja.png',
+                status: 'done',
+                url: getImageUrl(loja.foto),
+              },
+            ]);
+          }
+        } else {
+          form.setFieldsValue({ isMatriz: !existsMatriz });
         }
       } catch (error) {
         handleApiError(error);
@@ -61,25 +91,58 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
     fetchData();
   }, [form, isEditing, lojaId]);
 
-  const handleSubmit = async (values: LojaRequest) => {
-    const payload = {
-      ...values,
-      uf: values.uf.toUpperCase(),
-    };
+  const customUpload = async (options: any) => {
+    const { onSuccess, onError, file } = options;
+    try {
+      const res = await concessionariaService.uploadImage(file as File);
+      setFotoUrl(res.url);
+      file.status = 'done';
+      file.url = getImageUrl(res.url);
+      onSuccess(res, file);
+      message.success(t('lojas.form.foto.success'));
+    } catch (error) {
+      file.status = 'error';
+      onError(error);
+      handleApiError(error, t('lojas.form.foto.error'));
+    }
+  };
 
+  const handleUploadChange = ({ fileList: newFileList }: { fileList: UploadFile[] }) => {
+    if (newFileList.length === 0) {
+      setFotoUrl(undefined);
+    }
+    setFileList(newFileList);
+  };
+
+  const buildPayload = (values: LojaRequest): LojaRequest => ({
+    nome: normalizeText(values.nome),
+    cnpj: normalizeText(values.cnpj),
+    telefone: normalizeText(values.telefone),
+    cep: normalizeText(values.cep),
+    logradouro: normalizeText(values.logradouro),
+    numero: normalizeText(values.numero),
+    bairro: normalizeText(values.bairro),
+    cidade: normalizeText(values.cidade),
+    uf: normalizeText(values.uf).toUpperCase(),
+    isMatriz: matrizLocked ? true : Boolean(values.isMatriz),
+    foto: fotoUrl,
+  });
+
+  const handleSubmit = async (values: LojaRequest) => {
     try {
       setLoading(true);
+      const payload = buildPayload(values);
       if (isEditing && lojaId) {
         await concessionariaService.updateMinhaLoja(lojaId, payload);
-        message.success('Loja atualizada com sucesso!');
+        message.success(t('lojas.form.update.success'));
       } else {
         await concessionariaService.createMinhaLoja(payload);
-        message.success('Loja criada com sucesso!');
+        message.success(t('lojas.form.create.success'));
       }
       form.resetFields();
       onBack();
     } catch (error) {
-      handleApiError(error);
+      handleApiError(error, isEditing ? t('lojas.form.update.error') : t('lojas.form.create.error'));
     } finally {
       setLoading(false);
     }
@@ -101,7 +164,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
     if (digits.length === 0) return;
     if (digits.length !== 8) {
       setEnderecoBloqueado(false);
-      message.warning('Informe um CEP com 8 digitos');
+      message.warning(t('lojas.form.cep.invalidLength'));
       return;
     }
 
@@ -109,7 +172,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
       setBuscandoCep(true);
       const endereco = await viaCepService.buscarEnderecoPorCep(cep);
       if (!endereco) {
-        throw new Error('CEP não encontrado');
+        throw new Error(t('lojas.form.cep.notFound'));
       }
       form.setFieldsValue({
         cep: formatCEP(endereco.cep),
@@ -121,7 +184,7 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
       setEnderecoBloqueado(true);
     } catch (error: any) {
       setEnderecoBloqueado(false);
-      message.warning(error.message || 'CEP nao encontrado');
+      message.warning(error.message || t('lojas.form.cep.notFound'));
     } finally {
       setBuscandoCep(false);
     }
@@ -129,158 +192,225 @@ export default function FormLojas({ onBack }: LojasCreateProps) {
 
   return (
     <Spin spinning={loading}>
-      <Space orientation="vertical" size="large" style={{ width: '100%' }}>
-        <Space orientation="vertical" size="middle" style={{ width: '100%' }}>
+      <Flex vertical gap="large" style={{ width: '100%' }}>
+        <Flex vertical gap="middle">
           <DashboardBreadcrumb
             userType="concessionaria"
             items={[
               {
-                title: 'Lojas',
+                title: t('lojas.title'),
                 icon: <ShopOutlined />,
                 path: PATH_SEGMENTS.CONCESSIONARIA_LOJAS,
               },
               {
-                title: isEditing ? 'Editar Loja' : 'Adicionar Loja',
+                title: isEditing ? t('lojas.form.title.edit') : t('lojas.form.title.create'),
               },
             ]}
           />
 
-          <Space align="center">
-            <Button icon={<ArrowLeftOutlined />} onClick={handleCancel}>
-              Voltar
-            </Button>
+          <Flex align="center" gap="middle">
+            <Button icon={<ArrowLeftOutlined />} onClick={handleCancel} />
             <Title level={2} style={{ margin: 0 }}>
-              {isEditing ? 'Editar Loja' : 'Adicionar Loja'}
+              {isEditing ? t('lojas.form.title.edit') : t('lojas.form.title.create')}
             </Title>
-          </Space>
-        </Space>
+          </Flex>
+        </Flex>
 
-        <Card>
-          <Form form={form} layout="vertical" onFinish={handleSubmit}>
-            <Form.Item label="Tipo">
-              {isEditing ? (
-                <Tag color={lojaTipo === 'Matriz' ? 'gold' : 'blue'}>
-                  {lojaTipo === 'Matriz' ? 'Matriz' : 'Filial'}
-                </Tag>
-              ) : !hasMatriz ? (
-                <Tag color="gold">Matriz</Tag>
-              ) : (
-                <Tag color="blue">Filial</Tag>
-              )}
-            </Form.Item>
-
-            <Form.Item
-              label="Nome da Loja"
-              name="nome"
-              rules={[{ required: true, message: 'Informe o nome da loja' }]}
-            >
-              <Input placeholder="Ex: Moto Center - Unidade Sul" />
-            </Form.Item>
-
-            <Form.Item
-              label="CNPJ"
-              name="cnpj"
-              normalize={formatCNPJ}
-              rules={[
-                { required: true, message: 'Informe o CNPJ' },
-                {
-                  validator: (_, value) => {
-                    if (!value || (CNPJ_REGEX.test(value) && validateCNPJ(value))) {
-                      return Promise.resolve();
-                    }
-                    return Promise.reject(new Error('CNPJ invalido'));
-                  },
-                },
-              ]}
-            >
-              <Input placeholder="Ex: 12.345.678/0001-00" />
-            </Form.Item>
-
-            <Form.Item
-              label="Telefone"
-              name="telefone"
-              normalize={formatPhone}
-              rules={[
-                { required: true, message: 'Informe o telefone' },
-                { pattern: PHONE_REGEX, message: 'Telefone invalido' },
-              ]}
-            >
-              <Input placeholder="Ex: (11) 3000-0000" />
-            </Form.Item>
-
-            <Title level={5}>Endereco</Title>
-
-            <Form.Item
-              label="CEP"
-              name="cep"
-              normalize={formatCEP}
-              rules={[
-                { required: true, message: 'Informe o CEP' },
-                { pattern: CEP_REGEX, message: 'CEP invalido' },
-              ]}
-            >
-              <Input placeholder="Ex: 01310-100" onChange={handleCepChange} onBlur={handleBuscarCep} />
-            </Form.Item>
-
-            <Form.Item
-              label="Rua / Avenida"
-              name="logradouro"
-              rules={[{ required: true, message: 'Informe o logradouro' }]}
-            >
-              <Input placeholder="Ex: Av. Paulista" disabled={buscandoCep || enderecoBloqueado} />
-            </Form.Item>
-
-            <Form.Item
-              label="Numero"
-              name="numero"
-              rules={[{ required: true, message: 'Informe o numero' }]}
-            >
-              <Input placeholder="Ex: 1000" />
-            </Form.Item>
-
-            <Form.Item
-              label="Bairro"
-              name="bairro"
-              rules={[{ required: true, message: 'Informe o bairro' }]}
-            >
-              <Input placeholder="Ex: Bela Vista" disabled={buscandoCep || enderecoBloqueado} />
-            </Form.Item>
-
-            <Form.Item
-              label="Cidade"
-              name="cidade"
-              rules={[{ required: true, message: 'Informe a cidade' }]}
-            >
-              <Input placeholder="Ex: Sao Paulo" disabled={buscandoCep || enderecoBloqueado} />
-            </Form.Item>
-
-            <Form.Item
-              label="UF"
-              name="uf"
-              rules={[
-                { required: true, message: 'Informe a UF' },
-                { pattern: UF_REGEX, message: 'UF deve conter 2 letras' },
-              ]}
-            >
-              <Input
-                placeholder="Ex: SP"
-                maxLength={2}
-                disabled={buscandoCep || enderecoBloqueado}
-                onChange={(event) => form.setFieldValue('uf', event.target.value.toUpperCase())}
+        <Form form={form} layout="vertical" onFinish={handleSubmit} style={{ width: '100%', maxWidth: 920 }}>
+          <Card
+            title={
+              <Flex align="center" gap={8}>
+                <ShopOutlined />
+                <span>{t('lojas.form.section.store')}</span>
+              </Flex>
+            }
+            style={{ marginBottom: 24 }}
+          >
+            {matrizLocked && (
+              <Alert
+                type="info"
+                showIcon
+                message={isEditingMatriz ? t('lojas.form.matriz.editLocked') : t('lojas.form.matriz.firstStore')}
+                style={{ marginBottom: 16 }}
               />
-            </Form.Item>
+            )}
 
-            <Form.Item style={{ marginBottom: 0 }}>
-              <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-                <Button onClick={handleCancel}>Cancelar</Button>
-                <Button type="primary" htmlType="submit" loading={loading}>
-                  {isEditing ? 'Salvar Alteracoes' : 'Adicionar Loja'}
-                </Button>
-              </Space>
+            <Flex gap="large" wrap="wrap">
+              <Form.Item
+                label={t('lojas.form.nome.label')}
+                name="nome"
+                rules={[{ required: true, whitespace: true, message: t('lojas.form.nome.required') }]}
+                style={{ flex: '1 1 360px' }}
+              >
+                <Input placeholder={t('lojas.form.nome.placeholder')} />
+              </Form.Item>
+
+              <Form.Item
+                label={t('lojas.form.matriz.label')}
+                name="isMatriz"
+                valuePropName="checked"
+                style={{ flex: '0 0 180px' }}
+              >
+                <Switch
+                  disabled={matrizLocked}
+                  checkedChildren={t('lojas.type.matriz')}
+                  unCheckedChildren={t('lojas.type.filial')}
+                />
+              </Form.Item>
+            </Flex>
+
+            <Flex gap="large" wrap="wrap">
+              <Form.Item
+                label={t('lojas.form.cnpj.label')}
+                name="cnpj"
+                normalize={formatCNPJ}
+                rules={[
+                  { required: true, message: t('lojas.form.cnpj.required') },
+                  {
+                    validator: (_, value) => {
+                      if (!value || (CNPJ_REGEX.test(value) && validateCNPJ(value))) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(new Error(t('lojas.form.cnpj.invalid')));
+                    },
+                  },
+                ]}
+                style={{ flex: '1 1 280px' }}
+              >
+                <Input prefix={<IdcardOutlined />} placeholder={t('lojas.form.cnpj.placeholder')} />
+              </Form.Item>
+
+              <Form.Item
+                label={t('lojas.form.telefone.label')}
+                name="telefone"
+                normalize={formatPhone}
+                rules={[
+                  { required: true, message: t('lojas.form.telefone.required') },
+                  { pattern: PHONE_REGEX, message: t('lojas.form.telefone.invalid') },
+                ]}
+                style={{ flex: '1 1 260px' }}
+              >
+                <Input placeholder={t('lojas.form.telefone.placeholder')} />
+              </Form.Item>
+            </Flex>
+          </Card>
+
+          <Card
+            title={
+              <Flex align="center" gap={8}>
+                <EnvironmentOutlined />
+                <span>{t('lojas.form.section.address')}</span>
+              </Flex>
+            }
+            style={{ marginBottom: 24 }}
+          >
+            <Flex gap="large" wrap="wrap">
+              <Form.Item
+                label={t('lojas.form.cep.label')}
+                name="cep"
+                normalize={formatCEP}
+                rules={[
+                  { required: true, message: t('lojas.form.cep.required') },
+                  { pattern: CEP_REGEX, message: t('lojas.form.cep.invalid') },
+                ]}
+                style={{ flex: '0 0 160px' }}
+              >
+                <Input placeholder={t('lojas.form.cep.placeholder')} onChange={handleCepChange} onBlur={handleBuscarCep} />
+              </Form.Item>
+
+              <Form.Item
+                label={t('lojas.form.logradouro.label')}
+                name="logradouro"
+                rules={[{ required: true, whitespace: true, message: t('lojas.form.logradouro.required') }]}
+                style={{ flex: '1 1 360px' }}
+              >
+                <Input placeholder={t('lojas.form.logradouro.placeholder')} disabled={buscandoCep || enderecoBloqueado} />
+              </Form.Item>
+
+              <Form.Item
+                label={t('lojas.form.numero.label')}
+                name="numero"
+                rules={[{ required: true, whitespace: true, message: t('lojas.form.numero.required') }]}
+                style={{ flex: '0 0 140px' }}
+              >
+                <Input placeholder={t('lojas.form.numero.placeholder')} />
+              </Form.Item>
+            </Flex>
+
+            <Flex gap="large" wrap="wrap">
+              <Form.Item
+                label={t('lojas.form.bairro.label')}
+                name="bairro"
+                rules={[{ required: true, whitespace: true, message: t('lojas.form.bairro.required') }]}
+                style={{ flex: '1 1 260px' }}
+              >
+                <Input placeholder={t('lojas.form.bairro.placeholder')} disabled={buscandoCep || enderecoBloqueado} />
+              </Form.Item>
+
+              <Form.Item
+                label={t('lojas.form.cidade.label')}
+                name="cidade"
+                rules={[{ required: true, whitespace: true, message: t('lojas.form.cidade.required') }]}
+                style={{ flex: '1 1 260px' }}
+              >
+                <Input placeholder={t('lojas.form.cidade.placeholder')} disabled={buscandoCep || enderecoBloqueado} />
+              </Form.Item>
+
+              <Form.Item
+                label={t('lojas.form.uf.label')}
+                name="uf"
+                rules={[
+                  { required: true, message: t('lojas.form.uf.required') },
+                  { pattern: UF_REGEX, message: t('lojas.form.uf.invalid') },
+                ]}
+                style={{ flex: '0 0 120px' }}
+              >
+                <Input
+                  placeholder={t('lojas.form.uf.placeholder')}
+                  maxLength={2}
+                  disabled={buscandoCep || enderecoBloqueado}
+                  onChange={(event) => form.setFieldValue('uf', event.target.value.toUpperCase())}
+                />
+              </Form.Item>
+            </Flex>
+          </Card>
+
+          <Card title={t('lojas.form.section.photo')} style={{ marginBottom: 24 }}>
+            <Form.Item label={t('lojas.form.foto.label')} extra={t('lojas.form.foto.hint')}>
+              <Upload
+                listType="picture-card"
+                fileList={fileList}
+                customRequest={customUpload}
+                onChange={handleUploadChange}
+                maxCount={1}
+                beforeUpload={(file) => {
+                  const isImage = file.type.startsWith('image/');
+                  if (!isImage) {
+                    message.error(t('lojas.form.foto.invalidType'));
+                    return Upload.LIST_IGNORE;
+                  }
+                  return true;
+                }}
+              >
+                {fileList.length < 1 && (
+                  <div>
+                    <PlusOutlined />
+                    <div style={{ marginTop: 8 }}>{t('lojas.form.foto.upload')}</div>
+                  </div>
+                )}
+              </Upload>
             </Form.Item>
-          </Form>
-        </Card>
-      </Space>
+            <Text type="secondary">{t('lojas.form.foto.description')}</Text>
+          </Card>
+
+          <Flex gap="middle" wrap="wrap">
+            <Button onClick={handleCancel}>{t('lojas.form.cancel')}</Button>
+            <Button type="primary" htmlType="submit" loading={loading}>
+              {isEditing ? t('lojas.form.submit.edit') : t('lojas.form.submit.create')}
+            </Button>
+          </Flex>
+        </Form>
+      </Flex>
     </Spin>
   );
 }

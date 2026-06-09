@@ -7,10 +7,10 @@ public record ConcessionariaPerfilRequest(
     [Required, EmailAddress] string Email,
     [Required] string Cnpj,
     [Required] string Telefone,
-    [Required] string Cep,
-    [Required] string Logradouro,
-    [Required] string Numero,
-    [Required] string Bairro,
-    [Required] string Cidade,
-    [Required, StringLength(2, MinimumLength = 2)] string Uf
+    string? Cep = null,
+    string? Logradouro = null,
+    string? Numero = null,
+    string? Bairro = null,
+    string? Cidade = null,
+    [StringLength(2, MinimumLength = 2)] string? Uf = null
 );
