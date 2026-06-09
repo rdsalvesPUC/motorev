@@ -15,12 +15,6 @@ public class ConcessionariaConfiguration : IEntityTypeConfiguration<Concessionar
         builder.Property(c => c.Telefone).IsRequired().HasMaxLength(20);
         builder.Property(c => c.Tipo).IsRequired().HasMaxLength(20).HasDefaultValue("Matriz");
 
-        // Relacionamento 1:1 com Usuario
-        builder.HasOne(c => c.Usuario)
-            .WithOne(u => u.Concessionaria)
-            .HasForeignKey<Concessionaria>(c => c.UsuarioId)
-            .IsRequired();
-
         builder.HasMany(c => c.Lojas)
             .WithOne(l => l.Concessionaria)
             .HasForeignKey(l => l.ConcessionariaId)

@@ -42,15 +42,6 @@ export const revisaoPadraoService = {
     return handleResponse(response, 'Erro ao carregar detalhes da revisão padrão.');
   },
 
-  atualizar: async (id: number, payload: any): Promise<RevisaoPadraoResponse> => {
-    const response = await apiFetch(`${REVISAO_PADRAO_URL}/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
-
-    return handleResponse(response, 'Erro ao atualizar revisão padrão.');
-  },
-
   atualizarPorLinha: async (linhaId: number, payload: RevisaoPadraoLinhaRequest): Promise<RevisaoPadraoResponse[]> => {
     const response = await apiFetch(`${REVISAO_PADRAO_URL}/por-linha/${linhaId}`, {
       method: 'PUT',
