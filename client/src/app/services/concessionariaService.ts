@@ -53,7 +53,7 @@ export const concessionariaService = {
 
   async getLojasAtivas(): Promise<Loja[]> {
     const response = await apiFetch(`${BASE_URL}/Concessionaria/lojas/ativas`);
-    return handleResponse(response, 'Falha ao buscar lojas ativas');
+    return handleResponse(response, t('clienteConcessionarias.load.error'));
   },
 
   async getLojaById(concessionariaId: number, lojaId: number): Promise<Loja> {

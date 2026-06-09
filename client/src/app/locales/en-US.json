@@ -259,6 +259,18 @@
   "lojas.form.submit.create": "Add Store",
   "lojas.form.submit.edit": "Save Changes",
 
+  "clienteConcessionarias.title": "Dealerships",
+  "clienteConcessionarias.search.placeholder": "Search by name, city, district, EIN, or phone...",
+  "clienteConcessionarias.city.placeholder": "Filter by city",
+  "clienteConcessionarias.near.button": "Near me",
+  "clienteConcessionarias.nearRibbon": "Near you",
+  "clienteConcessionarias.near.tooltip.active": "Filtering by: {{city}}",
+  "clienteConcessionarias.near.tooltip.disabled": "Register your address in Profile to use this filter",
+  "clienteConcessionarias.found": "{{count}} dealership(s) found",
+  "clienteConcessionarias.found.near": "- near {{city}}",
+  "clienteConcessionarias.empty": "No dealerships found",
+  "clienteConcessionarias.load.error": "Failed to fetch active stores",
+
   "error.apiError": "An error occurred on the server. Please try again later.",
   "error.unexpected": "An unexpected error occurred. Please try again.",
   "error.fetchServices": "Error fetching the list of services.",

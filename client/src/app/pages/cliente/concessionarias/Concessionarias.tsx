@@ -13,6 +13,7 @@ import {
   Badge,
   Tooltip,
   Spin,
+  theme,
 } from 'antd';
 import {
   HomeOutlined,
@@ -27,19 +28,18 @@ import { concessionariaService } from '@/app/services/concessionariaService';
 import { clienteService } from '@/app/services/clienteService';
 import { Loja } from '@/app/models/Loja';
 import { handleApiError } from '@/app/utils/errorHandler';
+import { formatCEP, formatCNPJ, formatPhone } from '@/app/utils/formatters';
+import { t } from '@/app/i18n';
+import {
+  cidadeUf,
+  isLojaPertoCliente,
+  ordenarLojasPorProximidade,
+} from '@/app/pages/cliente/concessionarias/Concessionarias.utils';
 
 const { Title, Text } = Typography;
 
 interface LojaDisponivel extends Loja {
   key: string;
-}
-
-function normalizarCidade(cidade: string): string {
-  return cidade.split(' - ')[0].trim().toLowerCase();
-}
-
-function cidadeUf(loja: Loja): string {
-  return `${loja.cidade} - ${loja.uf}`;
 }
 
 function ConcessionariaCard({
@@ -49,6 +49,7 @@ function ConcessionariaCard({
   item: LojaDisponivel;
   perto: boolean;
 }) {
+  const { token } = theme.useToken();
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
     `${item.logradouro}, ${item.numero}, ${item.bairro}, ${item.cidade}, ${item.uf}, CEP ${item.cep}`
   )}`;
@@ -56,7 +57,7 @@ function ConcessionariaCard({
 
   return (
     <Badge.Ribbon
-      text="Perto de você"
+      text={t('clienteConcessionarias.nearRibbon')}
       color="green"
       style={{ display: perto ? 'block' : 'none' }}
     >
@@ -71,37 +72,39 @@ function ConcessionariaCard({
             href={mapsUrl}
             target="_blank"
           >
-            Ir Para
+            {t('lojas.actions.directions')}
           </Button>,
         ]}
       >
         <Flex vertical gap="small">
           <Flex align="flex-start" gap={8} wrap="wrap">
             <Flex vertical gap={4} style={{ flex: 1, minWidth: 0 }}>
+              <Text strong style={{ fontSize: 15, width: '100%' }} ellipsis={{ tooltip: item.nome }}>
+                {item.nome}
+              </Text>
               <Flex align="center" gap={8} wrap="wrap">
-                <Text strong style={{ fontSize: 15 }}>{item.nome}</Text>
                 <Tag color={isMatriz ? 'gold' : 'blue'}>
-                  {isMatriz ? 'Matriz' : 'Filial'}
+                  {isMatriz ? t('lojas.type.matriz') : t('lojas.type.filial')}
                 </Tag>
               </Flex>
-              <Text type="secondary" style={{ fontSize: 12 }}>{item.cnpj}</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{formatCNPJ(item.cnpj)}</Text>
             </Flex>
           </Flex>
 
           <Divider style={{ margin: '6px 0' }} />
 
           <Flex align="flex-start" gap={6}>
-            <EnvironmentOutlined style={{ color: '#8c8c8c', marginTop: 2, flexShrink: 0 }} />
+            <EnvironmentOutlined style={{ color: token.colorTextTertiary, marginTop: 2, flexShrink: 0 }} />
             <Flex vertical gap={2}>
               <Text style={{ fontSize: 13 }}>{item.logradouro}, {item.numero}</Text>
               <Text type="secondary" style={{ fontSize: 12 }}>{item.bairro} - {cidadeUf(item)}</Text>
-              <Text type="secondary" style={{ fontSize: 12 }}>CEP {item.cep}</Text>
+              <Text type="secondary" style={{ fontSize: 12 }}>{t('lojas.card.cep', { cep: formatCEP(item.cep) })}</Text>
             </Flex>
           </Flex>
 
           <Flex align="center" gap={6} style={{ marginTop: 2 }}>
-            <PhoneOutlined style={{ color: '#8c8c8c', fontSize: 12 }} />
-            <Text style={{ fontSize: 13 }}>{item.telefone}</Text>
+            <PhoneOutlined style={{ color: token.colorTextTertiary, fontSize: 12 }} />
+            <Text style={{ fontSize: 13 }}>{formatPhone(item.telefone)}</Text>
           </Flex>
         </Flex>
       </Card>
@@ -129,7 +132,7 @@ export default function ConcessionariasCliente() {
           const perfil = await clienteService.getPerfil();
           const cidade = perfil.endereco?.cidade;
           if (cidade) {
-            setClienteCidade(normalizarCidade(cidade));
+            setClienteCidade(cidade);
             setClienteCidadeLabel(cidade);
           }
         } catch {
@@ -152,19 +155,23 @@ export default function ConcessionariasCliente() {
   }, [lojas]);
 
   const isProxima = (item: LojaDisponivel) =>
-    clienteCidade !== null &&
-    normalizarCidade(item.cidade) === clienteCidade;
+    isLojaPertoCliente(item, clienteCidade);
 
   const filtradas = useMemo(() => {
     const termo = busca.toLowerCase();
+    const digits = busca.replace(/\D/g, '');
 
     return lojas.filter((loja) => {
       const cidade = cidadeUf(loja);
+      const cnpjDigits = loja.cnpj.replace(/\D/g, '');
+      const telefoneDigits = loja.telefone.replace(/\D/g, '');
       const matchBusca =
         loja.nome.toLowerCase().includes(termo) ||
         cidade.toLowerCase().includes(termo) ||
         loja.bairro.toLowerCase().includes(termo) ||
-        loja.cnpj.includes(busca);
+        loja.cnpj.includes(busca) ||
+        loja.telefone.includes(busca) ||
+        (digits.length > 0 && (cnpjDigits.includes(digits) || telefoneDigits.includes(digits)));
 
       const matchCidade = !cidadeFiltro || cidade === cidadeFiltro;
       const matchProxima = !apenasProximas || isProxima(loja);
@@ -182,17 +189,17 @@ export default function ConcessionariasCliente() {
           <Breadcrumb
             items={[
               { href: '', title: <HomeOutlined /> },
-              { title: <><ShopOutlined /><span> Concessionárias</span></> },
+              { title: <><ShopOutlined /><span> {t('clienteConcessionarias.title')}</span></> },
             ]}
           />
 
           <Title level={2} style={{ margin: 0 }}>
-            Concessionárias
+            {t('clienteConcessionarias.title')}
           </Title>
 
           <Flex gap="middle" wrap="wrap" align="center">
             <Input
-              placeholder="Buscar por nome, cidade, bairro..."
+              placeholder={t('clienteConcessionarias.search.placeholder')}
               prefix={<SearchOutlined />}
               value={busca}
               onChange={(event) => setBusca(event.target.value)}
@@ -201,7 +208,7 @@ export default function ConcessionariasCliente() {
             />
 
             <Select
-              placeholder="Filtrar por cidade"
+              placeholder={t('clienteConcessionarias.city.placeholder')}
               options={cidades}
               value={cidadeFiltro}
               onChange={setCidadeFiltro}
@@ -212,8 +219,8 @@ export default function ConcessionariasCliente() {
             <Tooltip
               title={
                 clienteCidade
-                  ? `Filtrando por: ${clienteCidadeLabel}`
-                  : 'Cadastre seu endereço no Perfil para usar este filtro'
+                  ? t('clienteConcessionarias.near.tooltip.active', { city: clienteCidadeLabel })
+                  : t('clienteConcessionarias.near.tooltip.disabled')
               }
             >
               <Button
@@ -222,7 +229,7 @@ export default function ConcessionariasCliente() {
                 onClick={() => setApenasProximas((value) => !value)}
                 disabled={!clienteCidade}
               >
-                Perto de mim
+                {t('clienteConcessionarias.near.button')}
                 {clienteCidade && proximasCount > 0 && !apenasProximas && (
                   <Tag color="green" style={{ marginLeft: 6, marginRight: -4 }}>
                     {proximasCount}
@@ -234,21 +241,19 @@ export default function ConcessionariasCliente() {
         </Flex>
 
         <Text type="secondary">
-          {filtradas.length} concessionária(s) encontrada(s)
+          {t('clienteConcessionarias.found', { count: filtradas.length })}
           {apenasProximas && clienteCidade && (
-            <Text type="secondary"> - próximas a {clienteCidadeLabel}</Text>
+            <Text type="secondary"> {t('clienteConcessionarias.found.near', { city: clienteCidadeLabel })}</Text>
           )}
         </Text>
 
         {filtradas.length === 0 ? (
           <Card>
-            <Empty description="Nenhuma concessionária encontrada" />
+            <Empty description={t('clienteConcessionarias.empty')} />
           </Card>
         ) : (
           <Flex wrap="wrap" gap="large">
-            {filtradas
-              .slice()
-              .sort((a, b) => (isProxima(b) ? 1 : 0) - (isProxima(a) ? 1 : 0))
+            {ordenarLojasPorProximidade(filtradas, clienteCidade)
               .map((item) => (
                 <div
                   key={item.key}
