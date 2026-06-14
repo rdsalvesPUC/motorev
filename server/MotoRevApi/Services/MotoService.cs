@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
 
@@ -248,9 +249,12 @@ public class MotoService
 
     public virtual Task<bool> TemAgendamentosPendentesAsync(int motoId)
     {
-        // Como o fluxo de agendamentos ainda não foi implementado,
-        // retorna false por padrão.
-        return Task.FromResult(false);
+        return _context.Agendamentos
+            .AnyAsync(a =>
+                a.RevisaoMoto.MotoId == motoId &&
+                (a.Status == StatusAgendamento.AguardandoConfirmacao ||
+                 a.Status == StatusAgendamento.Agendada ||
+                 a.Status == StatusAgendamento.EmExecucao));
     }
 
     public virtual async Task InativarMotoAsync(int id, string userId)
