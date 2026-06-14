@@ -1,11 +1,16 @@
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   Alert,
   Button,
   Card,
   Col,
+  DatePicker,
   Empty,
   Flex,
+  Form,
+  message,
+  Modal,
+  Popconfirm,
   Result,
   Row,
   Spin,
@@ -24,6 +29,7 @@ import {
   SyncOutlined,
   ToolOutlined,
 } from '@ant-design/icons';
+import dayjs, { type Dayjs } from 'dayjs';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { getLocale, t } from '@/app/i18n';
 import { AgendamentoCliente, StatusAgendamentoCliente } from '@/app/models/AgendamentoCliente';
@@ -169,8 +175,124 @@ function CardInfo({
   );
 }
 
-function ActionButtons({ item }: { item: AgendamentoCliente }) {
+function RemarcarAgendamentoModal({
+  item,
+  open,
+  confirming,
+  onConfirm,
+  onCancel,
+}: {
+  item: AgendamentoCliente | null;
+  open: boolean;
+  confirming: boolean;
+  onConfirm: (novaData: string) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [form] = Form.useForm<{ novaData: Dayjs }>();
+
+  useEffect(() => {
+    if (!open) {
+      form.resetFields();
+      return;
+    }
+
+    if (item?.dataAgendada) {
+      form.setFieldsValue({ novaData: dayjs(item.dataAgendada.substring(0, 10)) });
+    }
+  }, [form, item, open]);
+
+  const disabledDate = (date: Dayjs) => {
+    if (!item) return true;
+
+    const data = date.startOf('day');
+    const hoje = dayjs().startOf('day');
+    const minima = dayjs(item.dataMinima.substring(0, 10)).startOf('day');
+    const limite = dayjs(item.dataLimite.substring(0, 10)).endOf('day');
+
+    return data.isBefore(hoje) || data.isBefore(minima) || data.isAfter(limite);
+  };
+
+  const handleOk = async () => {
+    const values = await form.validateFields();
+    await onConfirm(values.novaData.format('YYYY-MM-DD'));
+  };
+
+  const handleCancel = () => {
+    form.resetFields();
+    onCancel();
+  };
+
+  return (
+    <Modal
+      title={t('clienteAgendamentos.rescheduleModal.title')}
+      open={open}
+      onOk={handleOk}
+      onCancel={handleCancel}
+      okText={t('clienteAgendamentos.rescheduleModal.ok')}
+      cancelText={t('clienteAgendamentos.rescheduleModal.cancel')}
+      confirmLoading={confirming}
+      destroyOnHidden
+    >
+      {item && (
+        <Flex vertical gap="middle">
+          <Alert
+            type="info"
+            showIcon
+            message={t('clienteAgendamentos.rescheduleModal.alert.title', {
+              motorcycle: `${item.marca} ${item.modelo}`,
+              revision: item.numeroRevisao,
+            })}
+            description={t('clienteAgendamentos.rescheduleModal.alert.description', {
+              start: formatDate(item.dataMinima),
+              end: formatDate(item.dataLimite),
+            })}
+          />
+
+          {item.nomeLoja && (
+            <CardInfo
+              label={t('clienteAgendamentos.card.dealership')}
+              value={`${item.nomeLoja}${item.cidadeLoja ? ` - ${item.cidadeLoja}` : ''}`}
+            />
+          )}
+
+          <Form form={form} layout="vertical">
+            <Form.Item
+              label={t('clienteAgendamentos.rescheduleModal.date.label')}
+              name="novaData"
+              rules={[{ required: true, message: t('clienteAgendamentos.rescheduleModal.date.required') }]}
+            >
+              <DatePicker
+                style={{ width: '100%' }}
+                format="DD/MM/YYYY"
+                disabledDate={disabledDate}
+                placeholder={t('clienteAgendamentos.rescheduleModal.date.placeholder')}
+              />
+            </Form.Item>
+          </Form>
+
+          <Text type="secondary">
+            {t('clienteAgendamentos.rescheduleModal.footer')}
+          </Text>
+        </Flex>
+      )}
+    </Modal>
+  );
+}
+
+function ActionButtons({
+  item,
+  actionLoadingId,
+  onCancel,
+  onOpenReschedule,
+}: {
+  item: AgendamentoCliente;
+  actionLoadingId: number | null;
+  onCancel: (item: AgendamentoCliente) => Promise<void>;
+  onOpenReschedule: (item: AgendamentoCliente) => void;
+}) {
   const disabledReason = t('clienteAgendamentos.actions.soon');
+  const hasAgendamento = Boolean(item.agendamentoId);
+  const loading = Boolean(item.agendamentoId && actionLoadingId === item.agendamentoId);
 
   if (item.status === STATUS.EM_EXECUCAO) {
     return (
@@ -185,11 +307,30 @@ function ActionButtons({ item }: { item: AgendamentoCliente }) {
   if (item.status === STATUS.AGENDADA) {
     return (
       <Flex gap="small" wrap="wrap">
-        <Tooltip title={disabledReason}>
-          <Button disabled>{t('clienteAgendamentos.actions.cancel')}</Button>
+        <Tooltip title={hasAgendamento ? undefined : t('clienteAgendamentos.actions.unavailable')}>
+          <Popconfirm
+            title={t('clienteAgendamentos.cancelConfirm.title')}
+            description={t('clienteAgendamentos.cancelConfirm.description')}
+            icon={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
+            okText={t('clienteAgendamentos.cancelConfirm.ok')}
+            cancelText={t('clienteAgendamentos.cancelConfirm.cancel')}
+            okButtonProps={{ danger: true, loading }}
+            onConfirm={() => onCancel(item)}
+            disabled={!hasAgendamento || loading}
+          >
+            <Button danger disabled={!hasAgendamento} loading={loading}>
+              {t('clienteAgendamentos.actions.cancel')}
+            </Button>
+          </Popconfirm>
         </Tooltip>
-        <Tooltip title={disabledReason}>
-          <Button type="primary" disabled icon={<SyncOutlined />}>
+        <Tooltip title={hasAgendamento ? undefined : t('clienteAgendamentos.actions.unavailable')}>
+          <Button
+            type="primary"
+            disabled={!hasAgendamento || loading}
+            loading={loading}
+            icon={<SyncOutlined />}
+            onClick={() => onOpenReschedule(item)}
+          >
             {t('clienteAgendamentos.actions.reschedule')}
           </Button>
         </Tooltip>
@@ -259,7 +400,17 @@ function StatusAlert({ item }: { item: AgendamentoCliente }) {
   return null;
 }
 
-function AgendamentoCard({ item }: { item: AgendamentoCliente }) {
+function AgendamentoCard({
+  item,
+  actionLoadingId,
+  onCancel,
+  onOpenReschedule,
+}: {
+  item: AgendamentoCliente;
+  actionLoadingId: number | null;
+  onCancel: (item: AgendamentoCliente) => Promise<void>;
+  onOpenReschedule: (item: AgendamentoCliente) => void;
+}) {
   const { token } = theme.useToken();
   const statusConfig = getStatusConfig(item.status, token);
   const cardStyle: CSSProperties = {
@@ -345,7 +496,12 @@ function AgendamentoCard({ item }: { item: AgendamentoCliente }) {
           <Text type={item.status === STATUS.ATRASADA ? 'danger' : 'secondary'}>
             {getDeadlineText(item)}
           </Text>
-          <ActionButtons item={item} />
+          <ActionButtons
+            item={item}
+            actionLoadingId={actionLoadingId}
+            onCancel={onCancel}
+            onOpenReschedule={onOpenReschedule}
+          />
         </Flex>
       </Flex>
     </Card>
@@ -354,26 +510,59 @@ function AgendamentoCard({ item }: { item: AgendamentoCliente }) {
 
 function AgendamentoSection({
   title,
+  icon,
   items,
+  actionLoadingId,
+  onCancel,
+  onOpenReschedule,
 }: {
   title: string;
+  icon: ReactNode;
   items: AgendamentoCliente[];
+  actionLoadingId: number | null;
+  onCancel: (item: AgendamentoCliente) => Promise<void>;
+  onOpenReschedule: (item: AgendamentoCliente) => void;
 }) {
-  if (items.length === 0) return null;
-
   return (
-    <Flex vertical gap="middle">
-      <Flex align="center" gap="small">
-        <Title level={4} style={{ margin: 0 }}>{title}</Title>
-        <Tag>{items.length}</Tag>
+    <Flex
+      vertical
+      gap="middle"
+      style={{
+        minWidth: 300,
+        flex: '1 1 0',
+      }}
+    >
+      <Flex
+        justify="space-between"
+        align="center"
+        gap="small"
+      >
+        <Flex align="center" gap={8} style={{ minWidth: 0 }}>
+          {icon}
+          <Title level={4} style={{ margin: 0 }} ellipsis={{ tooltip: title }}>
+            {title}
+          </Title>
+        </Flex>
+        <Tag style={{ marginInlineEnd: 0 }}>{items.length}</Tag>
       </Flex>
-      <Row gutter={[16, 16]}>
+
+      <Flex vertical gap="middle">
         {items.map((item) => (
-          <Col key={item.revisaoMotoId} xs={24} lg={12} xl={8}>
-            <AgendamentoCard item={item} />
-          </Col>
+          <AgendamentoCard
+            key={item.revisaoMotoId}
+            item={item}
+            actionLoadingId={actionLoadingId}
+            onCancel={onCancel}
+            onOpenReschedule={onOpenReschedule}
+          />
         ))}
-      </Row>
+
+        {items.length === 0 && (
+          <Card styles={{ body: { padding: 16, textAlign: 'center' } }}>
+            <Text type="secondary">{t('clienteAgendamentos.empty.column')}</Text>
+          </Card>
+        )}
+      </Flex>
     </Flex>
   );
 }
@@ -383,33 +572,74 @@ export default function AgendamentosCliente() {
   const [agendamentos, setAgendamentos] = useState<AgendamentoCliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  const [remarcarItem, setRemarcarItem] = useState<AgendamentoCliente | null>(null);
+  const [remarcando, setRemarcando] = useState(false);
 
-  useEffect(() => {
-    const carregarAgendamentos = async () => {
-      try {
+  const carregarAgendamentos = useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) {
         setLoading(true);
-        setLoadError(false);
-        const data = await agendamentoService.getCliente();
-        setAgendamentos(data);
-      } catch (error) {
-        setLoadError(true);
-        handleApiError(error, 'clienteAgendamentos.load.error');
-      } finally {
+      }
+      setLoadError(false);
+      const data = await agendamentoService.getCliente();
+      setAgendamentos(data);
+    } catch (error) {
+      setLoadError(true);
+      handleApiError(error, 'clienteAgendamentos.load.error');
+    } finally {
+      if (showLoading) {
         setLoading(false);
       }
-    };
-
-    carregarAgendamentos();
+    }
   }, []);
+
+  useEffect(() => {
+    carregarAgendamentos();
+  }, [carregarAgendamentos]);
+
+  const handleCancelar = async (item: AgendamentoCliente) => {
+    if (!item.agendamentoId) return;
+
+    try {
+      setActionLoadingId(item.agendamentoId);
+      await agendamentoService.cancelarCliente(item.agendamentoId);
+      message.success(t('clienteAgendamentos.actions.cancel.success'));
+      await carregarAgendamentos(false);
+    } catch (error) {
+      handleApiError(error, 'clienteAgendamentos.actions.cancel.error');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleRemarcar = async (novaData: string) => {
+    if (!remarcarItem?.agendamentoId) return;
+
+    try {
+      setRemarcando(true);
+      setActionLoadingId(remarcarItem.agendamentoId);
+      await agendamentoService.remarcarCliente(remarcarItem.agendamentoId, novaData);
+      message.success(t('clienteAgendamentos.actions.reschedule.success'));
+      setRemarcarItem(null);
+      await carregarAgendamentos(false);
+    } catch (error) {
+      handleApiError(error, 'clienteAgendamentos.actions.reschedule.error');
+    } finally {
+      setRemarcando(false);
+      setActionLoadingId(null);
+    }
+  };
 
   const grupos = useMemo(() => ({
     emExecucao: agendamentos.filter((item) => item.status === STATUS.EM_EXECUCAO),
     aguardandoConfirmacao: agendamentos.filter((item) => item.status === STATUS.AGUARDANDO_CONFIRMACAO),
     agendadas: agendamentos.filter((item) => item.status === STATUS.AGENDADA),
-    disponiveis: agendamentos.filter((item) =>
-      [STATUS.AGUARDANDO_AGENDAMENTO, STATUS.ATRASADA].includes(item.status)
-    ),
+    atrasadas: agendamentos.filter((item) => item.status === STATUS.ATRASADA),
+    aguardandoAgendamento: agendamentos.filter((item) => item.status === STATUS.AGUARDANDO_AGENDAMENTO),
   }), [agendamentos]);
+
+  const disponiveisCount = grupos.aguardandoAgendamento.length + grupos.atrasadas.length;
 
   if (loadError && !loading) {
     return (
@@ -473,7 +703,7 @@ export default function AgendamentosCliente() {
           <Col xs={24} sm={12} lg={6}>
             <SummaryCard
               title={t('clienteAgendamentos.summary.available')}
-              value={grupos.disponiveis.length}
+              value={disponiveisCount}
               color={token.colorWarning}
               icon={<HourglassOutlined />}
             />
@@ -493,25 +723,65 @@ export default function AgendamentosCliente() {
             </Empty>
           </Card>
         ) : (
-          <Flex vertical gap="large">
+          <Flex
+            gap="middle"
+            align="stretch"
+            style={{
+              width: '100%',
+              overflowX: 'auto',
+              paddingBottom: 8,
+            }}
+          >
             <AgendamentoSection
-              title={t('clienteAgendamentos.sections.inProgress')}
+              title={t('clienteAgendamentos.status.inProgress')}
+              icon={<ToolOutlined style={{ color: token.colorInfo, fontSize: 18 }} />}
               items={grupos.emExecucao}
+              actionLoadingId={actionLoadingId}
+              onCancel={handleCancelar}
+              onOpenReschedule={setRemarcarItem}
             />
             <AgendamentoSection
-              title={t('clienteAgendamentos.sections.awaitingConfirmation')}
+              title={t('clienteAgendamentos.status.awaitingConfirmation')}
+              icon={<ClockCircleOutlined style={{ color: token.colorInfo, fontSize: 18 }} />}
               items={grupos.aguardandoConfirmacao}
+              actionLoadingId={actionLoadingId}
+              onCancel={handleCancelar}
+              onOpenReschedule={setRemarcarItem}
             />
             <AgendamentoSection
-              title={t('clienteAgendamentos.sections.scheduled')}
+              title={t('clienteAgendamentos.status.scheduled')}
+              icon={<CalendarOutlined style={{ color: token.colorPrimary, fontSize: 18 }} />}
               items={grupos.agendadas}
+              actionLoadingId={actionLoadingId}
+              onCancel={handleCancelar}
+              onOpenReschedule={setRemarcarItem}
             />
             <AgendamentoSection
-              title={t('clienteAgendamentos.sections.available')}
-              items={grupos.disponiveis}
+              title={t('clienteAgendamentos.status.late')}
+              icon={<ExclamationCircleOutlined style={{ color: token.colorError, fontSize: 18 }} />}
+              items={grupos.atrasadas}
+              actionLoadingId={actionLoadingId}
+              onCancel={handleCancelar}
+              onOpenReschedule={setRemarcarItem}
+            />
+            <AgendamentoSection
+              title={t('clienteAgendamentos.status.awaitingSchedule')}
+              icon={<HourglassOutlined style={{ color: token.colorWarning, fontSize: 18 }} />}
+              items={grupos.aguardandoAgendamento}
+              actionLoadingId={actionLoadingId}
+              onCancel={handleCancelar}
+              onOpenReschedule={setRemarcarItem}
             />
           </Flex>
         )}
+
+        <RemarcarAgendamentoModal
+          item={remarcarItem}
+          open={Boolean(remarcarItem)}
+          confirming={remarcando}
+          onConfirm={handleRemarcar}
+          onCancel={() => setRemarcarItem(null)}
+        />
       </Flex>
     </Spin>
   );

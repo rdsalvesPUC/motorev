@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
+using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
 using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
@@ -94,6 +95,76 @@ public class AgendamentoService
             .ThenBy(item => item.DataAgendada ?? item.DataIdeal)
             .ThenBy(item => item.NumeroRevisao)
             .ToList();
+    }
+
+    public virtual async Task CancelarAgendamentoClienteAsync(int agendamentoId, string userId)
+    {
+        var agendamento = await BuscarAgendamentoDoClienteAsync(agendamentoId, userId);
+
+        if (agendamento.Status != StatusAgendamento.Agendada)
+        {
+            throw new BusinessRuleException("Somente agendamentos confirmados podem ser cancelados.");
+        }
+
+        agendamento.Status = StatusAgendamento.Cancelada;
+        agendamento.AtualizadoEm = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+    }
+
+    public virtual async Task RemarcarAgendamentoClienteAsync(
+        int agendamentoId,
+        string userId,
+        RemarcarAgendamentoRequest request)
+    {
+        var agendamento = await BuscarAgendamentoDoClienteAsync(agendamentoId, userId);
+
+        if (agendamento.Status != StatusAgendamento.Agendada)
+        {
+            throw new BusinessRuleException("Somente agendamentos confirmados podem ser remarcados.");
+        }
+
+        var novaData = request.NovaData.Date;
+        var hoje = _todayProvider().Date;
+        var dataIdeal = agendamento.RevisaoMoto.DataPrevista.Date;
+        var dataMinima = dataIdeal.AddDays(-15);
+        var dataLimite = dataIdeal.AddDays(15);
+
+        if (novaData < hoje)
+        {
+            throw new BusinessRuleException("A nova data do agendamento não pode ser anterior a hoje.");
+        }
+
+        if (novaData < dataMinima || novaData > dataLimite)
+        {
+            throw new BusinessRuleException("A nova data deve estar dentro da janela de tolerância da revisão.");
+        }
+
+        _context.Agendamentos.Add(new Agendamento
+        {
+            RevisaoMotoId = agendamento.RevisaoMotoId,
+            LojaId = agendamento.LojaId,
+            DataAgendada = novaData,
+            Status = StatusAgendamento.AguardandoConfirmacao,
+            CriadoEm = DateTime.UtcNow,
+            AtualizadoEm = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync();
+    }
+
+    private async Task<Agendamento> BuscarAgendamentoDoClienteAsync(int agendamentoId, string userId)
+    {
+        var agendamento = await _context.Agendamentos
+            .Include(a => a.RevisaoMoto)
+                .ThenInclude(r => r.Moto)
+                    .ThenInclude(m => m.Cliente)
+            .FirstOrDefaultAsync(a =>
+                a.Id == agendamentoId &&
+                a.RevisaoMoto.Moto.Cliente.UsuarioId == userId &&
+                a.RevisaoMoto.Moto.Ativo);
+
+        return agendamento ?? throw new NotFoundException("Agendamento não encontrado.");
     }
 
     private static AgendamentoClienteResponse CriarResponse(

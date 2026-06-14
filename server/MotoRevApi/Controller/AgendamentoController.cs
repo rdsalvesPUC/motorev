@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MotoRevApi.Authorization;
+using MotoRevApi.Dto.Request;
 using MotoRevApi.Services;
 
 namespace MotoRevApi.Controller;
@@ -29,5 +30,35 @@ public class AgendamentoController : ControllerBase
 
         var response = await _agendamentoService.ListarAgendamentosClienteAsync(userId);
         return Ok(response);
+    }
+
+    [HttpPatch("cliente/{agendamentoId:int}/cancelar")]
+    [Authorize(Roles = Roles.Cliente)]
+    public async Task<IActionResult> CancelarAgendamentoCliente(int agendamentoId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        await _agendamentoService.CancelarAgendamentoClienteAsync(agendamentoId, userId);
+        return NoContent();
+    }
+
+    [HttpPost("cliente/{agendamentoId:int}/remarcar")]
+    [Authorize(Roles = Roles.Cliente)]
+    public async Task<IActionResult> RemarcarAgendamentoCliente(
+        int agendamentoId,
+        [FromBody] RemarcarAgendamentoRequest request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        await _agendamentoService.RemarcarAgendamentoClienteAsync(agendamentoId, userId, request);
+        return NoContent();
     }
 }

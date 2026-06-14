@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.DependencyInjection;
 using MotoRevApi.Authorization;
 using MotoRevApi.Data;
+using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
 using MotoRevApi.Enums;
 using MotoRevApi.Model;
@@ -102,6 +103,97 @@ public class AgendamentoEndpointsTests : IDisposable
 
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CancelarAgendamentoCliente_DeveVoltarRevisaoParaAguardandoAgendamento()
+    {
+        // Arrange
+        var userId = "cliente-cancelar-agendamento";
+        var hoje = DateTime.UtcNow.Date;
+        int agendamentoId;
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (moto, loja) = SeedMotoComLoja(context, userId, clienteId: 10, motoId: 10);
+            var revisao = SeedRevisao(context, moto, ordem: 1, dataIdeal: hoje);
+            var agendamento = new Agendamento
+            {
+                RevisaoMotoId = revisao.Id,
+                LojaId = loja.Id,
+                DataAgendada = hoje.AddDays(1),
+                Status = StatusAgendamento.Agendada,
+                CriadoEm = hoje.AddDays(-1),
+                AtualizadoEm = hoje.AddDays(-1)
+            };
+            context.Agendamentos.Add(agendamento);
+            context.SaveChanges();
+            agendamentoId = agendamento.Id;
+        }
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            TestJwtTokenFactory.CreateToken(Roles.Cliente, userId));
+
+        // Act
+        var response = await client.PatchAsync($"/api/Agendamento/cliente/{agendamentoId}/cancelar", null);
+        var listResponse = await client.GetAsync("/api/Agendamento/cliente");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var agendamentos = await listResponse.Content.ReadFromJsonAsync<List<AgendamentoClienteResponse>>(JsonOptions);
+        var item = Assert.Single(agendamentos!);
+        Assert.Equal("aguardando_agendamento", item.Status);
+        Assert.Null(item.AgendamentoId);
+    }
+
+    [Fact]
+    public async Task RemarcarAgendamentoCliente_DeveCriarSolicitacaoAguardandoConfirmacao()
+    {
+        // Arrange
+        var userId = "cliente-remarcar-agendamento";
+        var hoje = DateTime.UtcNow.Date;
+        int agendamentoId;
+        var novaData = hoje.AddDays(3);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (moto, loja) = SeedMotoComLoja(context, userId, clienteId: 11, motoId: 11);
+            var revisao = SeedRevisao(context, moto, ordem: 1, dataIdeal: hoje);
+            var agendamento = new Agendamento
+            {
+                RevisaoMotoId = revisao.Id,
+                LojaId = loja.Id,
+                DataAgendada = hoje.AddDays(1),
+                Status = StatusAgendamento.Agendada,
+                CriadoEm = hoje.AddDays(-1),
+                AtualizadoEm = hoje.AddDays(-1)
+            };
+            context.Agendamentos.Add(agendamento);
+            context.SaveChanges();
+            agendamentoId = agendamento.Id;
+        }
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            TestJwtTokenFactory.CreateToken(Roles.Cliente, userId));
+
+        // Act
+        var response = await client.PostAsJsonAsync(
+            $"/api/Agendamento/cliente/{agendamentoId}/remarcar",
+            new RemarcarAgendamentoRequest(novaData));
+        var listResponse = await client.GetAsync("/api/Agendamento/cliente");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var agendamentos = await listResponse.Content.ReadFromJsonAsync<List<AgendamentoClienteResponse>>(JsonOptions);
+        var item = Assert.Single(agendamentos!);
+        Assert.Equal("aguardando_confirmacao", item.Status);
+        Assert.Equal(novaData.Date, item.DataAgendada?.Date);
     }
 
     private static (Moto Moto, Loja Loja) SeedMotoComLoja(
