@@ -12,4 +12,5 @@ export interface Loja {
   uf: string;
   concessionariaId: number;
   ativo: boolean;
+  foto?: string;
 }

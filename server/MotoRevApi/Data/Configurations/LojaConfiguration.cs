@@ -21,6 +21,7 @@ public class LojaConfiguration : IEntityTypeConfiguration<Loja>
         builder.Property(l => l.Bairro).IsRequired().HasMaxLength(100);
         builder.Property(l => l.Cidade).IsRequired().HasMaxLength(100);
         builder.Property(l => l.Uf).IsRequired().HasMaxLength(2);
+        builder.Property(l => l.Foto);
         builder.Property(l => l.Ativo).IsRequired().HasDefaultValue(true);
         builder.HasIndex(l => l.ConcessionariaId);
         builder.HasIndex(l => new { l.ConcessionariaId, l.Tipo })

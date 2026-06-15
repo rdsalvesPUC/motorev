@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "test": "node --test src/app/pages/cliente/concessionarias/Concessionarias.utils.test.mjs src/app/pages/cliente/revisoes/RevisoesCliente.utils.test.mjs"
   },
   "dependencies": {
     "@ant-design/colors": "^8.0.1",

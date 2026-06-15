@@ -24,6 +24,7 @@ public class AppDbContext : IdentityDbContext<Usuario>
     public DbSet<RevisaoPadraoPeca> RevisaoPadraoPecas { get; set; }
     public DbSet<Alerta> Alertas { get; set; }
     public DbSet<RevisaoMoto> RevisoesMotos { get; set; }
+    public DbSet<Agendamento> Agendamentos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

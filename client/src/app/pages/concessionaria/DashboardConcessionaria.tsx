@@ -1,9 +1,7 @@
 import {Routes, Route, Navigate, useNavigate} from 'react-router';
 import DashboardLayout from '@/app/components/layout/DashboardLayout';
-import {Typography} from 'antd';
 import {tokenManager} from '@/app/services/tokenManager';
 import {PATHS, PATH_SEGMENTS} from '@/app/paths';
-import {t} from '@/app/i18n';
 import FormServico from "@/app/pages/concessionaria/catalogos/FormServico";
 import CatalogoServicos from "@/app/pages/concessionaria/catalogos/CatalogoServicos";
 import CatalogoLinhas from "@/app/pages/concessionaria/catalogos/CatalogoLinhas";
@@ -19,19 +17,8 @@ import CatalogoRevisoes from "@/app/pages/concessionaria/catalogos/CatalogoRevis
 import FormCatalogoRevisoes from "@/app/pages/concessionaria/catalogos/FormCatalogoRevisoes";
 import ModeloRevisaoDetalhes from "@/app/pages/concessionaria/catalogos/ModeloRevisaoDetalhes";
 import RevisaoDetalhes from "@/app/pages/concessionaria/catalogos/RevisaoDetalhes";
-
-const {Title, Paragraph} = Typography;
-
-function DashboardHome() {
-    return (
-        <>
-            <Title level={2}>{t('dashboard.welcome')}</Title>
-            <Paragraph>
-                {t('dashboard.dealershipAreaInfo')}
-            </Paragraph>
-        </>
-    );
-}
+import AgendamentosConcessionaria from "@/app/pages/concessionaria/agendamentos/AgendamentosConcessionaria";
+import DashboardRevisoesConcessionaria from "@/app/pages/concessionaria/dashboard/DashboardRevisoesConcessionaria";
 
 export default function DashboardConcessionaria() {
     const user = tokenManager.getUserData();
@@ -43,11 +30,13 @@ export default function DashboardConcessionaria() {
             userName={user?.nome || 'Concessionária'}
         >
             <Routes>
-                <Route index element={<DashboardHome/>}/>
+                <Route index element={<DashboardRevisoesConcessionaria/>}/>
+                <Route path={PATH_SEGMENTS.CONCESSIONARIA_DASHBOARD} element={<DashboardRevisoesConcessionaria/>}/>
                 <Route path={PATH_SEGMENTS.PERFIL_USUARIO} element={<PerfilConcessionaria />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_LOJAS} element={<Lojas onNavigateToForm={() => navigate(PATHS.CONCESSIONARIA_LOJAS_NOVO)} onNavigateToEdit={(id) => navigate(`${PATHS.CONCESSIONARIA_LOJAS_EDITAR}/${id}`)} />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_LOJAS_NOVO} element={<FormLojas onBack={() => navigate(PATHS.CONCESSIONARIA_LOJAS)} />} />
                 <Route path={`${PATH_SEGMENTS.CONCESSIONARIA_LOJAS_EDITAR}/:id`} element={<FormLojas onBack={() => navigate(PATHS.CONCESSIONARIA_LOJAS)} />} />
+                <Route path={PATH_SEGMENTS.CONCESSIONARIA_AGENDAMENTOS} element={<AgendamentosConcessionaria />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_PECAS} element={<CatalogoPecas />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_PECAS_CREATE} element={<CatalogoPecasCreate />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_MOTOS} element={<CatalogoMotos onNavigateToForm={() => navigate(PATHS.CONCESSIONARIA_CATALOGOS_MOTOS_NOVO)} />} />

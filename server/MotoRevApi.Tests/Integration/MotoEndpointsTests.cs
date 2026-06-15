@@ -126,6 +126,110 @@ public class MotoEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task ListarMinhasMotos_DeveRetornarRevisoesPlanejadasComServicosEPecas()
+    {
+        // Arrange
+        var userId = "user-cliente-moto-revisoes-list";
+        var (cliente, modelo) = SeedBaseData(userId, "Cliente Revisoes Lista");
+        var moto = SeedMoto(cliente.Id, modelo.Id, "REV-1000", "9SB10001000100010", "Cinza", 1200);
+
+        using (var seedScope = _factory.Services.CreateScope())
+        {
+            var seedContext = seedScope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var servico = new Servico
+            {
+                Codigo = "SERV-LIST-001",
+                Nome = "Inspeção geral",
+                Descricao = "Inspeção completa dos itens de segurança",
+                Categoria = CategoriaServico.Verificacao,
+                TempoEstimado = 45,
+                Custo = 120m,
+                Ativo = true
+            };
+            var peca = new Peca
+            {
+                Codigo = "PECA-LIST-001",
+                Nome = "Filtro de ar",
+                Categoria = CategoriaPeca.Filtros,
+                Preco = 65m,
+                Estoque = 8,
+                Status = StatusCadastro.Ativo
+            };
+            var revisaoPadrao = new RevisaoPadrao
+            {
+                LinhaId = modelo.LinhaId,
+                Nome = "Revisão de contrato",
+                Ordem = 1,
+                Quilometragem = 1000,
+                TempoMeses = 6,
+                Ativo = true
+            };
+
+            seedContext.Servicos.Add(servico);
+            seedContext.Pecas.Add(peca);
+            seedContext.RevisoesPadrao.Add(revisaoPadrao);
+            seedContext.SaveChanges();
+
+            seedContext.RevisaoPadraoServicos.Add(new RevisaoPadraoServico
+            {
+                RevisaoPadraoId = revisaoPadrao.Id,
+                ServicoId = servico.Id
+            });
+            seedContext.RevisaoPadraoPecas.Add(new RevisaoPadraoPeca
+            {
+                RevisaoPadraoId = revisaoPadrao.Id,
+                PecaId = peca.Id,
+                Quantidade = 1
+            });
+            seedContext.RevisoesMotos.Add(new RevisaoMoto
+            {
+                MotoId = moto.Id,
+                RevisaoPadraoId = revisaoPadrao.Id,
+                Nome = revisaoPadrao.Nome,
+                Ordem = revisaoPadrao.Ordem,
+                Quilometragem = revisaoPadrao.Quilometragem,
+                TempoMeses = revisaoPadrao.TempoMeses,
+                DataPrevista = moto.DataVenda.AddMonths(revisaoPadrao.TempoMeses),
+                Status = "Planejada"
+            });
+            seedContext.SaveChanges();
+        }
+
+        var client = CreateClient(Roles.Cliente, userId);
+
+        // Act
+        var response = await client.GetAsync("/api/Moto");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var motos = await response.Content.ReadFromJsonAsync<List<MotoResponse>>(JsonOptions);
+        Assert.NotNull(motos);
+        var singleMoto = Assert.Single(motos);
+        Assert.Equal(moto.Id, singleMoto.Id);
+
+        var revisao = Assert.Single(singleMoto.RevisoesPlanejadas);
+        Assert.Equal("Revisão de contrato", revisao.Nome);
+        Assert.Equal(1, revisao.Ordem);
+        Assert.Equal(1000, revisao.Quilometragem);
+        Assert.Equal(6, revisao.TempoMeses);
+        Assert.Equal(moto.DataVenda.Date.AddMonths(6), revisao.DataPrevista.Date);
+        Assert.Equal("Planejada", revisao.Status);
+
+        var servicoResponse = Assert.Single(revisao.Servicos);
+        Assert.Equal("SERV-LIST-001", servicoResponse.Codigo);
+        Assert.Equal("Inspeção geral", servicoResponse.Nome);
+        Assert.Equal(45, servicoResponse.TempoEstimado);
+        Assert.Equal(120m, servicoResponse.Custo);
+
+        var pecaResponse = Assert.Single(revisao.Pecas);
+        Assert.Equal("PECA-LIST-001", pecaResponse.Codigo);
+        Assert.Equal("Filtro de ar", pecaResponse.Nome);
+        Assert.Equal(65m, pecaResponse.Preco);
+        Assert.Equal(1, pecaResponse.Quantidade);
+    }
+
+    [Fact]
     public async Task AdicionarMoto_DeveCadastrarMoto_QuandoDadosForemValidos()
     {
         // Arrange

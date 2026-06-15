@@ -120,6 +120,8 @@ builder.Services.AddScoped<LinhaService>();
 builder.Services.AddScoped<RevisaoPadraoService>();
 builder.Services.AddScoped<AlertaService>();
 builder.Services.AddHostedService<RevisaoAlertaJob>();
+builder.Services.AddScoped<AgendamentoService>();
+builder.Services.AddScoped<DashboardConcessionariaService>();
 builder.Services.AddEndpointsApiExplorer();
 
 // Configurar Mapster
@@ -174,7 +176,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();
 

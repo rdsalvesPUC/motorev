@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using MotoRevApi.Data;
 using MotoRevApi.Dto.Request;
 using MotoRevApi.Dto.Response;
+using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
 
@@ -73,17 +74,23 @@ public class MotoService
             throw new NotFoundException("Modelo de moto não encontrado.");
         }
 
-        var revisoesPadrao = await _context.RevisoesPadrao
-            .Where(rp => rp.LinhaId == modelo.LinhaId && rp.Ativo)
-            .OrderBy(rp => rp.Ordem)
-            .ToListAsync();
-
         // Buscar o cliente a partir do User ID
         var cliente = await _context.Clientes
             .FirstOrDefaultAsync(c => c.UsuarioId == userId);
         if (cliente == null)
         {
             throw new NotFoundException("Cliente não encontrado.");
+        }
+
+        var revisoesPadrao = await _context.RevisoesPadrao
+            .Where(rp => rp.LinhaId == modelo.LinhaId && rp.Ativo)
+            .OrderBy(rp => rp.Ordem)
+            .ToListAsync();
+
+        if (revisoesPadrao.Count == 0)
+        {
+            throw new BusinessRuleException(
+                "Este modelo de moto ainda não possui um modelo de revisão ativo vinculado à sua linha.");
         }
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -242,9 +249,12 @@ public class MotoService
 
     public virtual Task<bool> TemAgendamentosPendentesAsync(int motoId)
     {
-        // Como o fluxo de agendamentos ainda não foi implementado,
-        // retorna false por padrão.
-        return Task.FromResult(false);
+        return _context.Agendamentos
+            .AnyAsync(a =>
+                a.RevisaoMoto.MotoId == motoId &&
+                (a.Status == StatusAgendamento.AguardandoConfirmacao ||
+                 a.Status == StatusAgendamento.Agendada ||
+                 a.Status == StatusAgendamento.EmExecucao));
     }
 
     public virtual async Task InativarMotoAsync(int id, string userId)

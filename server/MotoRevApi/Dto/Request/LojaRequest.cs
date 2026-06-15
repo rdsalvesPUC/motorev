@@ -11,5 +11,7 @@ public record LojaRequest(
     [Required] string Numero,
     [Required] string Bairro,
     [Required] string Cidade,
-    [Required, StringLength(2, MinimumLength = 2)] string Uf
+    [Required, StringLength(2, MinimumLength = 2)] string Uf,
+    bool IsMatriz = false,
+    string? Foto = null
 );

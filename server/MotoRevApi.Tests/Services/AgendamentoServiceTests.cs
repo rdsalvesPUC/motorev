@@ -1,0 +1,636 @@
+using Microsoft.EntityFrameworkCore;
+using MotoRevApi.Data;
+using MotoRevApi.Dto.Request;
+using MotoRevApi.Enums;
+using MotoRevApi.Exceptions;
+using MotoRevApi.Model;
+using MotoRevApi.Services;
+using Xunit;
+
+namespace MotoRevApi.Tests.Services;
+
+public class AgendamentoServiceTests
+{
+    private readonly DbContextOptions<AppDbContext> _dbContextOptions;
+    private readonly DateTime _hoje = new(2026, 6, 14);
+
+    public AgendamentoServiceTests()
+    {
+        _dbContextOptions = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(x => x.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
+            .Options;
+    }
+
+    private AppDbContext CreateContext() => new(_dbContextOptions);
+
+    [Fact]
+    public async Task ListarAgendamentosClienteAsync_DeveExibirSomenteRevisoesDentroDaToleranciaOuComAgendamentoAtivo()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+
+        AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje.AddDays(16)); // Planejada
+        AddRevisao(context, moto, ordem: 2, dataIdeal: _hoje.AddDays(15)); // D-15
+        AddRevisao(context, moto, ordem: 3, dataIdeal: _hoje.AddDays(-16)); // Perdida
+        var revisaoAgendada = AddRevisao(context, moto, ordem: 4, dataIdeal: _hoje.AddDays(5));
+        var revisaoEmExecucao = AddRevisao(context, moto, ordem: 5, dataIdeal: _hoje.AddDays(-30)); // Fora da tolerancia, mas em execução
+        var revisaoConcluida = AddRevisao(context, moto, ordem: 6, dataIdeal: _hoje);
+        revisaoConcluida.Status = "Concluida";
+
+        context.Agendamentos.AddRange(
+            new Agendamento
+            {
+                RevisaoMotoId = revisaoAgendada.Id,
+                LojaId = loja.Id,
+                DataAgendada = _hoje.AddDays(2),
+                Status = StatusAgendamento.Agendada,
+                CriadoEm = _hoje.AddDays(-1),
+                AtualizadoEm = _hoje.AddDays(-1)
+            },
+            new Agendamento
+            {
+                RevisaoMotoId = revisaoEmExecucao.Id,
+                LojaId = loja.Id,
+                DataAgendada = _hoje,
+                Status = StatusAgendamento.EmExecucao,
+                CriadoEm = _hoje.AddDays(-1),
+                AtualizadoEm = _hoje.AddDays(-1)
+            });
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        var result = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        Assert.Equal(3, result.Count);
+        Assert.DoesNotContain(result, item => item.NumeroRevisao is 1 or 3 or 6);
+        Assert.Contains(result, item => item.NumeroRevisao == 2 && item.Status == "aguardando_agendamento");
+        Assert.Contains(result, item => item.NumeroRevisao == 4 && item.Status == "agendada" && item.NomeLoja == "Loja Centro");
+        Assert.Contains(result, item => item.NumeroRevisao == 5 && item.Status == "em_execucao");
+    }
+
+    [Fact]
+    public async Task ListarAgendamentosClienteAsync_DeveMarcarComoAtrasada_QuandoAgendamentoFoiPerdidoDentroDaTolerancia()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        context.Agendamentos.Add(new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(-1),
+            Status = StatusAgendamento.Agendada,
+            CriadoEm = _hoje.AddDays(-5),
+            AtualizadoEm = _hoje.AddDays(-5)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        var result = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        var item = Assert.Single(result);
+        Assert.Equal("atrasada", item.Status);
+        Assert.Equal(_hoje.AddDays(15), item.DataLimite);
+    }
+
+    [Fact]
+    public async Task ListarAgendamentosClienteAsync_NaoDeveRetornarAgendamentosDeOutroCliente()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (motoCliente, _) = SeedBaseData(context, "cliente-user", clienteId: 1, motoId: 1);
+        var (motoOutroCliente, _) = SeedBaseData(context, "outro-user", clienteId: 2, motoId: 2);
+        AddRevisao(context, motoCliente, ordem: 1, dataIdeal: _hoje);
+        AddRevisao(context, motoOutroCliente, ordem: 1, dataIdeal: _hoje);
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        var result = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        var item = Assert.Single(result);
+        Assert.Equal(motoCliente.Id, item.MotoId);
+    }
+
+    [Fact]
+    public async Task CancelarAgendamentoClienteAsync_DeveCancelarAgendamentoERevisaoVoltarParaAguardandoAgendamento()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.Agendada,
+            CriadoEm = _hoje.AddDays(-2),
+            AtualizadoEm = _hoje.AddDays(-2)
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        await service.CancelarAgendamentoClienteAsync(agendamento.Id, "cliente-user");
+        var result = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        Assert.Equal(StatusAgendamento.Cancelada, agendamento.Status);
+        var item = Assert.Single(result);
+        Assert.Equal("aguardando_agendamento", item.Status);
+        Assert.Null(item.AgendamentoId);
+    }
+
+    [Fact]
+    public async Task CancelarAgendamentoClienteAsync_DeveBloquearAgendamentoDeOutroCliente()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "outro-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.Agendada,
+            CriadoEm = _hoje.AddDays(-2),
+            AtualizadoEm = _hoje.AddDays(-2)
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act / Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.CancelarAgendamentoClienteAsync(agendamento.Id, "cliente-user"));
+    }
+
+    [Fact]
+    public async Task RemarcarAgendamentoClienteAsync_DeveCriarSolicitacaoAguardandoConfirmacaoDentroDaTolerancia()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.Agendada,
+            CriadoEm = _hoje.AddDays(-2),
+            AtualizadoEm = _hoje.AddDays(-2)
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var novaData = _hoje.AddDays(3);
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        await service.RemarcarAgendamentoClienteAsync(
+            agendamento.Id,
+            "cliente-user",
+            new RemarcarAgendamentoRequest(novaData));
+        var result = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        var agendamentos = await context.Agendamentos
+            .Where(a => a.RevisaoMotoId == revisao.Id)
+            .OrderBy(a => a.Id)
+            .ToListAsync();
+        Assert.Equal(2, agendamentos.Count);
+        Assert.Equal(StatusAgendamento.Cancelada, agendamentos.First().Status);
+        Assert.Equal(StatusAgendamento.AguardandoConfirmacao, agendamentos.Last().Status);
+        Assert.Equal(novaData.Date, agendamentos.Last().DataAgendada.Date);
+
+        var item = Assert.Single(result);
+        Assert.Equal("aguardando_confirmacao", item.Status);
+        Assert.Equal(novaData.Date, item.DataAgendada?.Date);
+        Assert.Equal(loja.Id, item.LojaId);
+
+        var agendamentosConcessionaria = await service.ListarAgendamentosConcessionariaAsync("concessionaria-1");
+        var itemConcessionaria = Assert.Single(agendamentosConcessionaria);
+        Assert.Equal(agendamentos.Last().Id, itemConcessionaria.AgendamentoId);
+        Assert.Equal("aguardando_confirmacao", itemConcessionaria.Status);
+    }
+
+    [Fact]
+    public async Task RemarcarAgendamentoClienteAsync_DeveBloquearDataForaDaTolerancia()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.Agendada,
+            CriadoEm = _hoje.AddDays(-2),
+            AtualizadoEm = _hoje.AddDays(-2)
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act / Assert
+        await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.RemarcarAgendamentoClienteAsync(
+                agendamento.Id,
+                "cliente-user",
+                new RemarcarAgendamentoRequest(_hoje.AddDays(16))));
+    }
+
+    [Fact]
+    public async Task AgendarRevisaoClienteAsync_DeveCriarSolicitacaoAguardandoConfirmacaoParaRevisaoDisponivel()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var dataAgendada = _hoje.AddDays(2);
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        await service.AgendarRevisaoClienteAsync(
+            revisao.Id,
+            "cliente-user",
+            new AgendarRevisaoRequest(loja.Id, dataAgendada));
+        var result = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        var agendamento = await context.Agendamentos.SingleAsync(a => a.RevisaoMotoId == revisao.Id);
+        Assert.Equal(StatusAgendamento.AguardandoConfirmacao, agendamento.Status);
+        Assert.Equal(loja.Id, agendamento.LojaId);
+        Assert.Equal(dataAgendada.Date, agendamento.DataAgendada.Date);
+
+        var item = Assert.Single(result);
+        Assert.Equal("aguardando_confirmacao", item.Status);
+        Assert.Equal(loja.Id, item.LojaId);
+        Assert.Equal(dataAgendada.Date, item.DataAgendada?.Date);
+    }
+
+    [Fact]
+    public async Task AgendarRevisaoClienteAsync_DeveBloquearDataForaDaTolerancia()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act / Assert
+        await Assert.ThrowsAsync<BusinessRuleException>(() =>
+            service.AgendarRevisaoClienteAsync(
+                revisao.Id,
+                "cliente-user",
+                new AgendarRevisaoRequest(loja.Id, _hoje.AddDays(16))));
+    }
+
+    [Fact]
+    public async Task AgendarRevisaoClienteAsync_DeveBloquearRevisaoDeOutroCliente()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "outro-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act / Assert
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            service.AgendarRevisaoClienteAsync(
+                revisao.Id,
+                "cliente-user",
+                new AgendarRevisaoRequest(loja.Id, _hoje.AddDays(1))));
+    }
+
+    [Fact]
+    public async Task AgendarRevisaoClienteAsync_DevePermitirReagendarRevisaoAtrasada()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        context.Agendamentos.Add(new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(-1),
+            Status = StatusAgendamento.Agendada,
+            CriadoEm = _hoje.AddDays(-5),
+            AtualizadoEm = _hoje.AddDays(-5)
+        });
+        await context.SaveChangesAsync();
+
+        var dataAgendada = _hoje.AddDays(2);
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        await service.AgendarRevisaoClienteAsync(
+            revisao.Id,
+            "cliente-user",
+            new AgendarRevisaoRequest(loja.Id, dataAgendada));
+        var result = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        var agendamentos = await context.Agendamentos
+            .Where(a => a.RevisaoMotoId == revisao.Id)
+            .OrderBy(a => a.Id)
+            .ToListAsync();
+        Assert.Equal(2, agendamentos.Count);
+        Assert.Equal(StatusAgendamento.Cancelada, agendamentos.First().Status);
+        Assert.Equal(StatusAgendamento.AguardandoConfirmacao, agendamentos.Last().Status);
+        Assert.Equal(dataAgendada.Date, agendamentos.Last().DataAgendada.Date);
+
+        var item = Assert.Single(result);
+        Assert.Equal("aguardando_confirmacao", item.Status);
+        Assert.Equal(dataAgendada.Date, item.DataAgendada?.Date);
+
+        var agendamentosConcessionaria = await service.ListarAgendamentosConcessionariaAsync("concessionaria-1");
+        var itemConcessionaria = Assert.Single(agendamentosConcessionaria);
+        Assert.Equal(agendamentos.Last().Id, itemConcessionaria.AgendamentoId);
+        Assert.Equal("aguardando_confirmacao", itemConcessionaria.Status);
+    }
+
+    [Fact]
+    public async Task ListarAgendamentosConcessionariaAsync_DeveRetornarAgendamentosDasLojasDaConcessionaria()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        context.Agendamentos.Add(new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.AguardandoConfirmacao,
+            CriadoEm = _hoje.AddDays(-1),
+            AtualizadoEm = _hoje.AddDays(-1)
+        });
+
+        var (motoOutraConcessionaria, lojaOutraConcessionaria) = SeedBaseData(context, "outro-cliente", clienteId: 2, motoId: 2);
+        var revisaoOutraConcessionaria = AddRevisao(context, motoOutraConcessionaria, ordem: 1, dataIdeal: _hoje);
+        context.Agendamentos.Add(new Agendamento
+        {
+            RevisaoMotoId = revisaoOutraConcessionaria.Id,
+            LojaId = lojaOutraConcessionaria.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.Agendada,
+            CriadoEm = _hoje.AddDays(-1),
+            AtualizadoEm = _hoje.AddDays(-1)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        var result = await service.ListarAgendamentosConcessionariaAsync("concessionaria-1");
+
+        // Assert
+        var item = Assert.Single(result);
+        Assert.Equal(revisao.Id, item.RevisaoMotoId);
+        Assert.Equal("aguardando_confirmacao", item.Status);
+        Assert.Equal("Cliente 1", item.ClienteNome);
+        Assert.Equal(loja.Id, item.LojaId);
+    }
+
+    [Fact]
+    public async Task AceitarSolicitacaoConcessionariaAsync_DeveAtualizarStatusParaAgendada()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.AguardandoConfirmacao,
+            CriadoEm = _hoje.AddDays(-1),
+            AtualizadoEm = _hoje.AddDays(-1)
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        await service.AceitarSolicitacaoConcessionariaAsync(agendamento.Id, "concessionaria-1");
+        var clienteResult = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        Assert.Equal(StatusAgendamento.Agendada, agendamento.Status);
+        var item = Assert.Single(clienteResult);
+        Assert.Equal("agendada", item.Status);
+    }
+
+    [Fact]
+    public async Task RecusarSolicitacaoConcessionariaAsync_DeveVoltarClienteParaAguardandoAgendamentoComMensagem()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.AguardandoConfirmacao,
+            CriadoEm = _hoje.AddDays(-1),
+            AtualizadoEm = _hoje.AddDays(-1)
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        await service.RecusarSolicitacaoConcessionariaAsync(
+            agendamento.Id,
+            "concessionaria-1",
+            new RecusarAgendamentoRequest("Agenda lotada para esta data."));
+        var clienteResult = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        Assert.Equal(StatusAgendamento.Recusada, agendamento.Status);
+        Assert.Equal("Agenda lotada para esta data.", agendamento.MensagemRecusa);
+        Assert.Equal(_hoje.Date, agendamento.DataRecusa?.Date);
+
+        var item = Assert.Single(clienteResult);
+        Assert.Equal("aguardando_agendamento", item.Status);
+        Assert.Equal("Agenda lotada para esta data.", item.MensagemRecusa);
+    }
+
+    [Fact]
+    public async Task VisualizarRecusaClienteAsync_DeveOcultarMensagemRecusa()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.Recusada,
+            MensagemRecusa = "Agenda indisponivel para esta data.",
+            DataRecusa = _hoje,
+            RecusaVisualizadaCliente = false,
+            CriadoEm = _hoje.AddDays(-1),
+            AtualizadoEm = _hoje.AddDays(-1)
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        await service.VisualizarRecusaClienteAsync(agendamento.Id, "cliente-user");
+        var clienteResult = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        Assert.True(agendamento.RecusaVisualizadaCliente);
+        var item = Assert.Single(clienteResult);
+        Assert.Equal("aguardando_agendamento", item.Status);
+        Assert.Null(item.MensagemRecusa);
+        Assert.Null(item.DataRecusa);
+    }
+
+    private static (Moto Moto, Loja Loja) SeedBaseData(
+        AppDbContext context,
+        string userId,
+        int clienteId = 1,
+        int motoId = 1)
+    {
+        var linha = new Linha { Id = clienteId, Nome = $"Linha {clienteId}", Ativo = true };
+        var modelo = new ModeloMoto
+        {
+            Id = clienteId,
+            NomeModelo = $"Modelo {clienteId}",
+            Marca = "Honda",
+            LinhaId = linha.Id,
+            Linha = linha,
+            Ativo = true
+        };
+        var cliente = new Cliente { Id = clienteId, Nome = $"Cliente {clienteId}", UsuarioId = userId };
+        var moto = new Moto
+        {
+            Id = motoId,
+            Placa = $"ABC{clienteId}234",
+            Chassi = $"9SB0000000000000{clienteId}",
+            ClienteId = cliente.Id,
+            Cliente = cliente,
+            ModeloMotoId = modelo.Id,
+            ModeloMoto = modelo,
+            Cor = "Preta",
+            KilometragemAtual = 1000,
+            DataVenda = new DateTime(2025, 12, 14),
+            Ativo = true
+        };
+        var concessionaria = new Concessionaria
+        {
+            Id = clienteId,
+            Nome = $"Concessionaria {clienteId}",
+            Cnpj = $"0000000000000{clienteId}",
+            Telefone = $"4199999000{clienteId}",
+            UsuarioId = $"concessionaria-{clienteId}"
+        };
+        var loja = new Loja
+        {
+            Id = clienteId,
+            Nome = "Loja Centro",
+            Tipo = "Matriz",
+            Cnpj = $"1000000000000{clienteId}",
+            Telefone = $"4198888000{clienteId}",
+            Cep = "80000000",
+            Logradouro = "Rua Centro",
+            Numero = "100",
+            Bairro = "Centro",
+            Cidade = "Curitiba",
+            Uf = "PR",
+            Ativo = true,
+            ConcessionariaId = concessionaria.Id,
+            Concessionaria = concessionaria
+        };
+
+        context.Linhas.Add(linha);
+        context.ModelosMotos.Add(modelo);
+        context.Clientes.Add(cliente);
+        context.Motos.Add(moto);
+        context.Concessionarias.Add(concessionaria);
+        context.Lojas.Add(loja);
+        context.SaveChanges();
+        return (moto, loja);
+    }
+
+    private static RevisaoMoto AddRevisao(AppDbContext context, Moto moto, int ordem, DateTime dataIdeal)
+    {
+        var servico = new Servico
+        {
+            Id = (moto.Id * 1000) + ordem,
+            Codigo = $"SERV-{moto.Id}-{ordem}",
+            Nome = $"Servico {ordem}",
+            Descricao = "Servico de revisao",
+            Categoria = CategoriaServico.Verificacao,
+            TempoEstimado = 30,
+            Custo = 100m,
+            Ativo = true
+        };
+        var revisaoPadrao = new RevisaoPadrao
+        {
+            Id = (moto.Id * 100) + ordem,
+            Nome = $"{ordem} revisao",
+            Ordem = ordem,
+            Quilometragem = ordem * 1000,
+            TempoMeses = ordem * 6,
+            LinhaId = moto.ModeloMoto.LinhaId,
+            Ativo = true,
+            Servicos = new List<RevisaoPadraoServico>
+            {
+                new() { ServicoId = servico.Id, Servico = servico }
+            }
+        };
+        var revisaoMoto = new RevisaoMoto
+        {
+            MotoId = moto.Id,
+            Moto = moto,
+            RevisaoPadraoId = revisaoPadrao.Id,
+            RevisaoPadrao = revisaoPadrao,
+            Nome = revisaoPadrao.Nome,
+            Ordem = ordem,
+            Quilometragem = revisaoPadrao.Quilometragem,
+            TempoMeses = revisaoPadrao.TempoMeses,
+            DataPrevista = dataIdeal,
+            Status = "Planejada"
+        };
+
+        context.Servicos.Add(servico);
+        context.RevisoesPadrao.Add(revisaoPadrao);
+        context.RevisoesMotos.Add(revisaoMoto);
+        context.SaveChanges();
+        return revisaoMoto;
+    }
+}

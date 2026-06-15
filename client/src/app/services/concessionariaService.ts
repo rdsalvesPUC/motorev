@@ -4,6 +4,7 @@ import { Loja } from '@/app/models/Loja';
 import { LojaRequest } from '@/app/models/LojaRequest';
 import { ConcessionariaPerfilRequest } from '@/app/models/ConcessionariaPerfilRequest';
 import { ConcessionariaAlterarSenhaRequest } from '@/app/models/ConcessionariaAlterarSenhaRequest';
+import { t } from '@/app/i18n';
 
 export const concessionariaService = {
   async register(data: any) {
@@ -52,7 +53,7 @@ export const concessionariaService = {
 
   async getLojasAtivas(): Promise<Loja[]> {
     const response = await apiFetch(`${BASE_URL}/Concessionaria/lojas/ativas`);
-    return handleResponse(response, 'Falha ao buscar lojas ativas');
+    return handleResponse(response, t('clienteConcessionarias.load.error'));
   },
 
   async getLojaById(concessionariaId: number, lojaId: number): Promise<Loja> {
@@ -109,5 +110,15 @@ export const concessionariaService = {
       method: 'PATCH',
     });
     return handleResponse(response, 'Falha ao alterar status da loja');
+  },
+
+  async uploadImage(file: File): Promise<{ url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await apiFetch(`${BASE_URL}/Upload`, {
+      method: 'POST',
+      body: formData,
+    });
+    return handleResponse(response, t('lojas.form.foto.error'));
   },
 };
