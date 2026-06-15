@@ -194,6 +194,19 @@ public class AgendamentoEndpointsTests : IDisposable
         var item = Assert.Single(agendamentos!);
         Assert.Equal("aguardando_confirmacao", item.Status);
         Assert.Equal(novaData.Date, item.DataAgendada?.Date);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var registros = context.Agendamentos
+                .Where(a => a.RevisaoMoto.Moto.Cliente.UsuarioId == userId)
+                .OrderBy(a => a.Id)
+                .ToList();
+
+            Assert.Equal(2, registros.Count);
+            Assert.Equal(StatusAgendamento.Cancelada, registros.First().Status);
+            Assert.Equal(StatusAgendamento.AguardandoConfirmacao, registros.Last().Status);
+        }
     }
 
     [Fact]
@@ -233,6 +246,69 @@ public class AgendamentoEndpointsTests : IDisposable
         Assert.Equal("aguardando_confirmacao", item.Status);
         Assert.Equal(lojaId, item.LojaId);
         Assert.Equal(dataAgendada.Date, item.DataAgendada?.Date);
+    }
+
+    [Fact]
+    public async Task AgendarRevisaoCliente_DeveCancelarAgendamentoAtrasadoAntesDeReagendar()
+    {
+        // Arrange
+        var userId = "cliente-reagendar-revisao-atrasada";
+        var hoje = DateTime.Today;
+        int revisaoMotoId;
+        int lojaId;
+        var dataAgendada = hoje.AddDays(2);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (moto, loja) = SeedMotoComLoja(context, userId, clienteId: 17, motoId: 17);
+            var revisao = SeedRevisao(context, moto, ordem: 1, dataIdeal: hoje);
+            revisaoMotoId = revisao.Id;
+            lojaId = loja.Id;
+
+            context.Agendamentos.Add(new Agendamento
+            {
+                RevisaoMotoId = revisao.Id,
+                LojaId = loja.Id,
+                DataAgendada = hoje.AddDays(-1),
+                Status = StatusAgendamento.Agendada,
+                CriadoEm = hoje.AddDays(-5),
+                AtualizadoEm = hoje.AddDays(-5)
+            });
+            context.SaveChanges();
+        }
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            TestJwtTokenFactory.CreateToken(Roles.Cliente, userId));
+
+        // Act
+        var response = await client.PostAsJsonAsync(
+            $"/api/Agendamento/cliente/revisoes/{revisaoMotoId}/agendar",
+            new AgendarRevisaoRequest(lojaId, dataAgendada));
+        var listResponse = await client.GetAsync("/api/Agendamento/cliente");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var agendamentos = await listResponse.Content.ReadFromJsonAsync<List<AgendamentoClienteResponse>>(JsonOptions);
+        var item = Assert.Single(agendamentos!);
+        Assert.Equal("aguardando_confirmacao", item.Status);
+        Assert.Equal(lojaId, item.LojaId);
+        Assert.Equal(dataAgendada.Date, item.DataAgendada?.Date);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var registros = context.Agendamentos
+                .Where(a => a.RevisaoMotoId == revisaoMotoId)
+                .OrderBy(a => a.Id)
+                .ToList();
+
+            Assert.Equal(2, registros.Count);
+            Assert.Equal(StatusAgendamento.Cancelada, registros.First().Status);
+            Assert.Equal(StatusAgendamento.AguardandoConfirmacao, registros.Last().Status);
+        }
     }
 
     [Fact]

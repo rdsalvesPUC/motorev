@@ -19,6 +19,15 @@ public class AgendamentoService
         "atrasada",
     };
 
+    private static readonly StatusAgendamento[] StatusesVisiveisConcessionaria =
+    [
+        StatusAgendamento.AguardandoConfirmacao,
+        StatusAgendamento.Agendada,
+        StatusAgendamento.Recusada,
+        StatusAgendamento.EmExecucao,
+        StatusAgendamento.Concluida,
+    ];
+
     private readonly AppDbContext _context;
     private readonly Func<DateTime> _todayProvider;
 
@@ -124,7 +133,9 @@ public class AgendamentoService
                 .ThenInclude(r => r.RevisaoPadrao)
                     .ThenInclude(rp => rp.Pecas)
             .AsSplitQuery()
-            .Where(a => a.Loja.ConcessionariaId == concessionaria.Id)
+            .Where(a =>
+                a.Loja.ConcessionariaId == concessionaria.Id &&
+                StatusesVisiveisConcessionaria.Contains(a.Status))
             .ToListAsync();
 
         return agendamentos
@@ -177,14 +188,18 @@ public class AgendamentoService
             throw new BusinessRuleException("A nova data deve estar dentro da janela de tolerância da revisão.");
         }
 
+        var agora = DateTime.UtcNow;
+        agendamento.Status = StatusAgendamento.Cancelada;
+        agendamento.AtualizadoEm = agora;
+
         _context.Agendamentos.Add(new Agendamento
         {
             RevisaoMotoId = agendamento.RevisaoMotoId,
             LojaId = agendamento.LojaId,
             DataAgendada = novaData,
             Status = StatusAgendamento.AguardandoConfirmacao,
-            CriadoEm = DateTime.UtcNow,
-            AtualizadoEm = DateTime.UtcNow
+            CriadoEm = agora,
+            AtualizadoEm = agora
         });
 
         await _context.SaveChangesAsync();
@@ -206,7 +221,6 @@ public class AgendamentoService
         }
 
         var ultimoAgendamento = await _context.Agendamentos
-            .AsNoTracking()
             .Where(a => a.RevisaoMotoId == revisaoMotoId)
             .OrderByDescending(a => a.CriadoEm)
             .ThenByDescending(a => a.Id)
@@ -226,14 +240,22 @@ public class AgendamentoService
         var dataAgendada = request.DataAgendada.Date;
         ValidarDataDentroDaJanela(dataAgendada, hoje, dataMinima, dataLimite);
 
+        var agora = DateTime.UtcNow;
+        if (ultimoAgendamento is { Status: StatusAgendamento.Agendada } &&
+            hoje > ultimoAgendamento.DataAgendada.Date)
+        {
+            ultimoAgendamento.Status = StatusAgendamento.Cancelada;
+            ultimoAgendamento.AtualizadoEm = agora;
+        }
+
         _context.Agendamentos.Add(new Agendamento
         {
             RevisaoMotoId = revisaoMotoId,
             LojaId = request.LojaId,
             DataAgendada = dataAgendada,
             Status = StatusAgendamento.AguardandoConfirmacao,
-            CriadoEm = DateTime.UtcNow,
-            AtualizadoEm = DateTime.UtcNow
+            CriadoEm = agora,
+            AtualizadoEm = agora
         });
 
         await _context.SaveChangesAsync();

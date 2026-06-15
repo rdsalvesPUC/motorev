@@ -216,6 +216,7 @@ public class AgendamentoServiceTests
             .OrderBy(a => a.Id)
             .ToListAsync();
         Assert.Equal(2, agendamentos.Count);
+        Assert.Equal(StatusAgendamento.Cancelada, agendamentos.First().Status);
         Assert.Equal(StatusAgendamento.AguardandoConfirmacao, agendamentos.Last().Status);
         Assert.Equal(novaData.Date, agendamentos.Last().DataAgendada.Date);
 
@@ -223,6 +224,11 @@ public class AgendamentoServiceTests
         Assert.Equal("aguardando_confirmacao", item.Status);
         Assert.Equal(novaData.Date, item.DataAgendada?.Date);
         Assert.Equal(loja.Id, item.LojaId);
+
+        var agendamentosConcessionaria = await service.ListarAgendamentosConcessionariaAsync("concessionaria-1");
+        var itemConcessionaria = Assert.Single(agendamentosConcessionaria);
+        Assert.Equal(agendamentos.Last().Id, itemConcessionaria.AgendamentoId);
+        Assert.Equal("aguardando_confirmacao", itemConcessionaria.Status);
     }
 
     [Fact]
@@ -351,11 +357,18 @@ public class AgendamentoServiceTests
             .OrderBy(a => a.Id)
             .ToListAsync();
         Assert.Equal(2, agendamentos.Count);
+        Assert.Equal(StatusAgendamento.Cancelada, agendamentos.First().Status);
         Assert.Equal(StatusAgendamento.AguardandoConfirmacao, agendamentos.Last().Status);
+        Assert.Equal(dataAgendada.Date, agendamentos.Last().DataAgendada.Date);
 
         var item = Assert.Single(result);
         Assert.Equal("aguardando_confirmacao", item.Status);
         Assert.Equal(dataAgendada.Date, item.DataAgendada?.Date);
+
+        var agendamentosConcessionaria = await service.ListarAgendamentosConcessionariaAsync("concessionaria-1");
+        var itemConcessionaria = Assert.Single(agendamentosConcessionaria);
+        Assert.Equal(agendamentos.Last().Id, itemConcessionaria.AgendamentoId);
+        Assert.Equal("aguardando_confirmacao", itemConcessionaria.Status);
     }
 
     [Fact]
