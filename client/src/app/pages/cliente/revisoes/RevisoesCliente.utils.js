@@ -1,17 +1,27 @@
 export const REVISION_STATUS = {
   CONCLUIDA: 'concluida',
   EM_EXECUCAO: 'em_execucao',
+  AGUARDANDO_CONFIRMACAO: 'aguardando_confirmacao',
   AGENDADA: 'agendada',
   ATRASADA: 'atrasada',
+  AGUARDANDO_AGENDAMENTO: 'aguardando_agendamento',
   PLANEJADA: 'planejada',
+};
+
+export const EXECUTION_ITEM_STATUS = {
+  CONCLUIDO: 'concluido',
+  EM_EXECUCAO: 'em_execucao',
+  PENDENTE: 'pendente',
 };
 
 const STATUS_PRIORITY = {
   [REVISION_STATUS.ATRASADA]: 0,
   [REVISION_STATUS.EM_EXECUCAO]: 1,
-  [REVISION_STATUS.AGENDADA]: 2,
-  [REVISION_STATUS.PLANEJADA]: 3,
-  [REVISION_STATUS.CONCLUIDA]: 4,
+  [REVISION_STATUS.AGUARDANDO_CONFIRMACAO]: 2,
+  [REVISION_STATUS.AGENDADA]: 3,
+  [REVISION_STATUS.AGUARDANDO_AGENDAMENTO]: 4,
+  [REVISION_STATUS.PLANEJADA]: 5,
+  [REVISION_STATUS.CONCLUIDA]: 6,
 };
 
 export function normalizeStatus(status) {
@@ -31,14 +41,22 @@ export function getRevisionStatus(revisao, today = new Date()) {
   const status = normalizeStatus(revisao?.status);
   if (status.includes('concluida')) return REVISION_STATUS.CONCLUIDA;
   if (status.includes('execucao')) return REVISION_STATUS.EM_EXECUCAO;
+  if (status.includes('aguardando_confirmacao')) return REVISION_STATUS.AGUARDANDO_CONFIRMACAO;
+  if (status.includes('aguardando_agendamento')) return REVISION_STATUS.AGUARDANDO_AGENDAMENTO;
   if (status.includes('agendada')) return REVISION_STATUS.AGENDADA;
   if (status.includes('atrasada')) return REVISION_STATUS.ATRASADA;
 
   const referenceDate = new Date(today);
   referenceDate.setHours(0, 0, 0, 0);
-  return parseLocalDate(revisao?.dataPrevista) < referenceDate
-    ? REVISION_STATUS.ATRASADA
-    : REVISION_STATUS.PLANEJADA;
+  const dataPrevista = parseLocalDate(revisao?.dataPrevista);
+  const dataMinima = new Date(dataPrevista);
+  dataMinima.setDate(dataMinima.getDate() - 15);
+  const dataLimite = new Date(dataPrevista);
+  dataLimite.setDate(dataLimite.getDate() + 15);
+
+  if (referenceDate < dataMinima) return REVISION_STATUS.PLANEJADA;
+  if (referenceDate <= dataLimite) return REVISION_STATUS.AGUARDANDO_AGENDAMENTO;
+  return REVISION_STATUS.ATRASADA;
 }
 
 export function getRevisionPartsEstimate(revisao) {
@@ -72,10 +90,18 @@ export function getDaysUntilRevision(revisao, today = new Date()) {
   return Math.ceil((parseLocalDate(revisao?.dataPrevista).getTime() - referenceDate.getTime()) / 86400000);
 }
 
-export function agruparRevisoesDasMotos(motos, today = new Date()) {
+export function agruparRevisoesDasMotos(motos, today = new Date(), agendamentos = []) {
+  const agendamentoPorRevisao = new Map(
+    (agendamentos ?? []).map((agendamento) => [agendamento.revisaoMotoId, agendamento])
+  );
+
   return (motos ?? []).flatMap((moto) =>
     (moto.revisoesPlanejadas ?? []).map((revisao) => {
-      const status = getRevisionStatus(revisao, today);
+      const agendamento = agendamentoPorRevisao.get(revisao.id);
+      const revisaoComStatus = agendamento
+        ? { ...revisao, status: agendamento.status }
+        : revisao;
+      const status = getRevisionStatus(revisaoComStatus, today);
 
       return {
         key: `${moto.id}-${revisao.id}`,
@@ -91,16 +117,16 @@ export function agruparRevisoesDasMotos(motos, today = new Date()) {
           kilometragemAtual: moto.kilometragemAtual,
           foto: moto.foto,
         },
-        revisao,
+        revisao: revisaoComStatus,
         status,
-        dataPrevista: revisao.dataPrevista,
-        ordem: revisao.ordem,
-        quilometragem: revisao.quilometragem,
+        dataPrevista: revisaoComStatus.dataPrevista,
+        ordem: revisaoComStatus.ordem,
+        quilometragem: revisaoComStatus.quilometragem,
         diasAteRevisao: getDaysUntilRevision(revisao, today),
-        totalPecas: getRevisionPartsEstimate(revisao),
-        totalServicos: getRevisionServicesEstimate(revisao),
-        totalEstimado: getRevisionEstimate(revisao),
-        totalTempo: getRevisionTime(revisao),
+        totalPecas: getRevisionPartsEstimate(revisaoComStatus),
+        totalServicos: getRevisionServicesEstimate(revisaoComStatus),
+        totalEstimado: getRevisionEstimate(revisaoComStatus),
+        totalTempo: getRevisionTime(revisaoComStatus),
       };
     })
   );
@@ -118,7 +144,9 @@ export function calcularResumoRevisoes(revisoes) {
 
   for (const item of revisoes) {
     if (item.status === REVISION_STATUS.CONCLUIDA) resumo.concluidas += 1;
-    if (item.status === REVISION_STATUS.PLANEJADA) resumo.pendentes += 1;
+    if (item.status === REVISION_STATUS.PLANEJADA || item.status === REVISION_STATUS.AGUARDANDO_AGENDAMENTO) {
+      resumo.pendentes += 1;
+    }
     if (item.status === REVISION_STATUS.AGENDADA) resumo.agendadas += 1;
     if (item.status === REVISION_STATUS.EM_EXECUCAO) resumo.emExecucao += 1;
     if (item.status === REVISION_STATUS.ATRASADA) resumo.atrasadas += 1;
@@ -164,4 +192,51 @@ export function ordenarRevisoes(revisoes) {
 
     return a.ordem - b.ordem;
   });
+}
+
+export function getExecutionItemStatus(item) {
+  if (item?.concluido === true) return EXECUTION_ITEM_STATUS.CONCLUIDO;
+  if (item?.emExecucao === true) return EXECUTION_ITEM_STATUS.EM_EXECUCAO;
+
+  const status = normalizeStatus(item?.statusExecucao ?? item?.statusItem ?? item?.status);
+  if (status.includes('concluid')) return EXECUTION_ITEM_STATUS.CONCLUIDO;
+  if (status.includes('execucao') || status.includes('andamento')) return EXECUTION_ITEM_STATUS.EM_EXECUCAO;
+
+  return EXECUTION_ITEM_STATUS.PENDENTE;
+}
+
+export function getExecutionProgress(servicos = [], pecas = []) {
+  const items = [...servicos, ...pecas];
+  const total = items.length;
+  const concluidos = items.filter((item) => getExecutionItemStatus(item) === EXECUTION_ITEM_STATUS.CONCLUIDO).length;
+  const emExecucao = items.filter((item) => getExecutionItemStatus(item) === EXECUTION_ITEM_STATUS.EM_EXECUCAO).length;
+
+  return {
+    total,
+    concluidos,
+    emExecucao,
+    percentual: total > 0 ? Math.round((concluidos / total) * 100) : 0,
+  };
+}
+
+export function applyRevisionStatusOverride(revisao, status) {
+  if (!revisao || !status) return revisao;
+
+  const normalizedStatus = normalizeStatus(status);
+  if (!Object.values(REVISION_STATUS).includes(normalizedStatus)) return revisao;
+
+  return {
+    ...revisao,
+    status: normalizedStatus,
+  };
+}
+
+export function buildMotoRevisionDetailsPath(basePath, motoId, revisaoMotoId, status, returnTo) {
+  const params = new URLSearchParams();
+  if (revisaoMotoId) params.set('revisaoMotoId', String(revisaoMotoId));
+  if (status) params.set('status', String(status));
+  if (returnTo) params.set('returnTo', String(returnTo));
+
+  const query = params.toString();
+  return `${basePath}/${motoId}${query ? `?${query}` : ''}`;
 }

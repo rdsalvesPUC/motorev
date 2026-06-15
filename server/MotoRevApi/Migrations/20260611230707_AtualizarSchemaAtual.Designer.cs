@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MotoRevApi.Data;
 
@@ -11,9 +12,11 @@ using MotoRevApi.Data;
 namespace MotoRevApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260611230707_AtualizarSchemaAtual")]
+    partial class AtualizarSchemaAtual
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -153,56 +156,6 @@ namespace MotoRevApi.Migrations
                     b.HasKey("UserId", "LoginProvider", "Name");
 
                     b.ToTable("AspNetUserTokens", (string)null);
-                });
-
-            modelBuilder.Entity("MotoRevApi.Model.Agendamento", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("AtualizadoEm")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("CriadoEm")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("DataAgendada")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DataRecusa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("LojaId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("MensagemRecusa")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("RecusaVisualizadaCliente")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("RevisaoMotoId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("LojaId");
-
-                    b.HasIndex("RevisaoMotoId");
-
-                    b.HasIndex("RevisaoMotoId", "Status")
-                        .HasFilter("[Status] IN ('AguardandoConfirmacao', 'Agendada', 'EmExecucao')");
-
-                    b.ToTable("Agendamentos");
                 });
 
             modelBuilder.Entity("MotoRevApi.Model.Cliente", b =>
@@ -614,8 +567,14 @@ namespace MotoRevApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime?>("DataAgendamento")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("DataPrevista")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("LojaId")
+                        .HasColumnType("int");
 
                     b.Property<int>("MotoId")
                         .HasColumnType("int");
@@ -643,6 +602,8 @@ namespace MotoRevApi.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LojaId");
 
                     b.HasIndex("MotoId");
 
@@ -895,25 +856,6 @@ namespace MotoRevApi.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("MotoRevApi.Model.Agendamento", b =>
-                {
-                    b.HasOne("MotoRevApi.Model.Loja", "Loja")
-                        .WithMany()
-                        .HasForeignKey("LojaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("MotoRevApi.Model.RevisaoMoto", "RevisaoMoto")
-                        .WithMany()
-                        .HasForeignKey("RevisaoMotoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Loja");
-
-                    b.Navigation("RevisaoMoto");
-                });
-
             modelBuilder.Entity("MotoRevApi.Model.Cliente", b =>
                 {
                     b.HasOne("MotoRevApi.Model.Endereco", "Endereco")
@@ -993,6 +935,11 @@ namespace MotoRevApi.Migrations
 
             modelBuilder.Entity("MotoRevApi.Model.RevisaoMoto", b =>
                 {
+                    b.HasOne("MotoRevApi.Model.Loja", "Loja")
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("MotoRevApi.Model.Moto", "Moto")
                         .WithMany("RevisoesPlanejadas")
                         .HasForeignKey("MotoId")
@@ -1004,6 +951,8 @@ namespace MotoRevApi.Migrations
                         .HasForeignKey("RevisaoPadraoId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Loja");
 
                     b.Navigation("Moto");
 

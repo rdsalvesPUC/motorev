@@ -4,8 +4,6 @@ import {
   Button,
   Card,
   Col,
-  Descriptions,
-  Drawer,
   Empty,
   Flex,
   Input,
@@ -30,18 +28,21 @@ import {
   HourglassOutlined,
   SearchOutlined,
   ToolOutlined,
-  WarningFilled,
 } from '@ant-design/icons';
+import { useNavigate } from 'react-router';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { getLocale, t } from '@/app/i18n';
 import { Moto, RevisaoMotoResponse } from '@/app/models/Moto';
+import { AgendamentoCliente } from '@/app/models/AgendamentoCliente';
 import { motoService } from '@/app/services/motoService';
+import { agendamentoService } from '@/app/services/agendamentoService';
 import { PATHS } from '@/app/paths';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { formatCurrency, formatIntegerInput } from '@/app/utils/formatters';
 import {
   REVISION_STATUS,
   agruparRevisoesDasMotos,
+  buildMotoRevisionDetailsPath,
   calcularResumoRevisoes,
   filtrarRevisoes,
   ordenarRevisoes,
@@ -49,7 +50,14 @@ import {
 
 const { Title, Text } = Typography;
 
-type RevisionStatus = 'concluida' | 'em_execucao' | 'agendada' | 'atrasada' | 'planejada';
+type RevisionStatus =
+  | 'concluida'
+  | 'em_execucao'
+  | 'aguardando_confirmacao'
+  | 'agendada'
+  | 'atrasada'
+  | 'aguardando_agendamento'
+  | 'planejada';
 type ThemeToken = ReturnType<typeof theme.useToken>['token'];
 
 interface RevisaoAgregada {
@@ -81,15 +89,6 @@ interface RevisaoAgregada {
 const formatDate = (date: string) =>
   new Date(`${date.substring(0, 10)}T00:00:00`).toLocaleDateString(getLocale());
 
-const formatDuration = (minutes: number) => {
-  if (!minutes) return '-';
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  if (!hours) return t('motoRevisaoDetalhes.duration.minutes', { minutes: remainingMinutes });
-  if (!remainingMinutes) return t('motoRevisaoDetalhes.duration.hours', { hours });
-  return t('motoRevisaoDetalhes.duration.hoursMinutes', { hours, minutes: remainingMinutes });
-};
-
 const getRevisionTitle = (revisao: RevisaoMotoResponse) =>
   t('motoDetalhes.revisions.order', { order: revisao.ordem });
 
@@ -107,6 +106,12 @@ const getStatusConfig = (status: RevisionStatus, token: ThemeToken) => {
       cardColor: token.colorInfo,
       icon: <ClockCircleFilled style={{ color: token.colorInfo }} />,
     },
+    aguardando_confirmacao: {
+      label: t('clienteAgendamentos.status.awaitingConfirmation'),
+      tagColor: 'processing',
+      cardColor: token.colorInfo,
+      icon: <ClockCircleFilled style={{ color: token.colorInfo }} />,
+    },
     agendada: {
       label: t('motoDetalhes.status.agendada'),
       tagColor: 'blue',
@@ -118,6 +123,12 @@ const getStatusConfig = (status: RevisionStatus, token: ThemeToken) => {
       tagColor: 'error',
       cardColor: token.colorError,
       icon: <CloseCircleFilled style={{ color: token.colorError }} />,
+    },
+    aguardando_agendamento: {
+      label: t('clienteAgendamentos.status.awaitingSchedule'),
+      tagColor: 'warning',
+      cardColor: token.colorWarning,
+      icon: <HourglassOutlined style={{ color: token.colorWarning }} />,
     },
     planejada: {
       label: t('motoDetalhes.status.planejada'),
@@ -176,204 +187,28 @@ function SummaryCard({
   );
 }
 
-function RevisaoDetalhesDrawer({
-  item,
-  onClose,
-}: {
-  item: RevisaoAgregada | null;
-  onClose: () => void;
-}) {
-  const { token } = theme.useToken();
-  if (!item) return null;
-
-  const statusConfig = getStatusConfig(item.status, token);
-
-  const pecasColumns: ColumnsType<RevisaoMotoResponse['pecas'][number]> = [
-    { title: t('motoRevisaoDetalhes.parts.code'), dataIndex: 'codigo', key: 'codigo', width: 120 },
-    { title: t('motoRevisaoDetalhes.parts.name'), dataIndex: 'nome', key: 'nome' },
-    {
-      title: t('motoRevisaoDetalhes.parts.quantity'),
-      dataIndex: 'quantidade',
-      key: 'quantidade',
-      width: 90,
-      align: 'center',
-    },
-    {
-      title: t('motoRevisaoDetalhes.parts.unitValue'),
-      dataIndex: 'preco',
-      key: 'preco',
-      width: 130,
-      align: 'right',
-      render: (value: number) => formatCurrency(value),
-    },
-    {
-      title: t('motoRevisaoDetalhes.parts.total'),
-      key: 'total',
-      width: 130,
-      align: 'right',
-      render: (_, record) => (
-        <Text strong>{formatCurrency((record.preco || 0) * (record.quantidade || 0))}</Text>
-      ),
-    },
-  ];
-
-  const servicosColumns: ColumnsType<RevisaoMotoResponse['servicos'][number]> = [
-    { title: t('motoRevisaoDetalhes.services.name'), dataIndex: 'nome', key: 'nome' },
-    {
-      title: t('motoRevisaoDetalhes.services.time'),
-      dataIndex: 'tempoEstimado',
-      key: 'tempoEstimado',
-      width: 130,
-      align: 'center',
-      render: (value: number) => formatDuration(value),
-    },
-    {
-      title: t('motoRevisaoDetalhes.services.cost'),
-      dataIndex: 'custo',
-      key: 'custo',
-      width: 140,
-      align: 'right',
-      render: (value: number) => <Text strong>{formatCurrency(value)}</Text>,
-    },
-  ];
-
-  return (
-    <Drawer
-      open
-      width={920}
-      onClose={onClose}
-      title={t('clienteRevisoes.details.title', {
-        revision: getRevisionTitle(item.revisao),
-        moto: `${item.moto.marca} ${item.moto.nomeModelo}`,
-      })}
-    >
-      <Flex vertical gap="large">
-        {item.status === REVISION_STATUS.ATRASADA && (
-          <Alert
-            type="error"
-            showIcon
-            icon={<WarningFilled />}
-            message={t('motoRevisaoDetalhes.alert.overdue.title')}
-            description={t('motoRevisaoDetalhes.alert.overdue.description')}
-          />
-        )}
-
-        <Card title={t('motoRevisaoDetalhes.deadline.title')}>
-          <Descriptions size="small" column={{ xs: 1, sm: 2 }}>
-            <Descriptions.Item label={t('clienteRevisoes.table.motorcycle')}>
-              {item.moto.marca} {item.moto.nomeModelo} - {item.moto.placa}
-            </Descriptions.Item>
-            <Descriptions.Item label={t('motoRevisaoDetalhes.deadline.status')}>
-              <Tag icon={statusConfig.icon} color={statusConfig.tagColor}>{statusConfig.label}</Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label={t('motoRevisaoDetalhes.deadline.idealDate')}>
-              {formatDate(item.revisao.dataPrevista)}
-            </Descriptions.Item>
-            <Descriptions.Item label={t('motoRevisaoDetalhes.deadline.mileage')}>
-              {formatIntegerInput(item.revisao.quilometragem)} km
-            </Descriptions.Item>
-            <Descriptions.Item label={t('motoRevisaoDetalhes.deadline.months')}>
-              {t('motoRevisaoDetalhes.deadline.monthsValue', { months: item.revisao.tempoMeses })}
-            </Descriptions.Item>
-            <Descriptions.Item label={t('motoRevisaoDetalhes.info.estimatedCost')}>
-              <Text strong style={{ color: token.colorPrimary }}>{formatCurrency(item.totalEstimado)}</Text>
-            </Descriptions.Item>
-          </Descriptions>
-        </Card>
-
-        <Card
-          title={
-            <Flex align="center" gap={8}>
-              <ToolOutlined />
-              <span>{t('motoRevisaoDetalhes.services.title')}</span>
-              <Tag>{item.revisao.servicos?.length ?? 0}</Tag>
-            </Flex>
-          }
-        >
-          <Table
-            dataSource={item.revisao.servicos ?? []}
-            columns={servicosColumns}
-            rowKey="id"
-            pagination={false}
-            size="small"
-            scroll={{ x: true }}
-            locale={{ emptyText: t('motoRevisaoDetalhes.services.empty') }}
-            summary={() => (
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0}>
-                  <Text strong>{t('motoRevisaoDetalhes.services.totalServices')}</Text>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={1} align="center">
-                  <Text strong>{formatDuration(item.totalTempo)}</Text>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={2} align="right">
-                  <Text strong style={{ color: token.colorPrimary }}>{formatCurrency(item.totalServicos)}</Text>
-                </Table.Summary.Cell>
-              </Table.Summary.Row>
-            )}
-          />
-        </Card>
-
-        <Card
-          title={
-            <Flex align="center" gap={8}>
-              <DashboardOutlined />
-              <span>{t('motoRevisaoDetalhes.parts.title')}</span>
-              <Tag>{item.revisao.pecas?.length ?? 0}</Tag>
-            </Flex>
-          }
-        >
-          <Table
-            dataSource={item.revisao.pecas ?? []}
-            columns={pecasColumns}
-            rowKey="id"
-            pagination={false}
-            size="small"
-            scroll={{ x: true }}
-            locale={{ emptyText: t('motoRevisaoDetalhes.parts.empty') }}
-            summary={() => (
-              <Table.Summary.Row>
-                <Table.Summary.Cell index={0} colSpan={4}>
-                  <Text strong>{t('motoRevisaoDetalhes.parts.totalParts')}</Text>
-                </Table.Summary.Cell>
-                <Table.Summary.Cell index={1} align="right">
-                  <Text strong style={{ color: token.colorPrimary }}>{formatCurrency(item.totalPecas)}</Text>
-                </Table.Summary.Cell>
-              </Table.Summary.Row>
-            )}
-          />
-        </Card>
-
-        <Card size="small">
-          <Flex justify="space-between" align="center" gap="middle" wrap="wrap">
-            <Text type="secondary">{t('motoRevisaoDetalhes.footer.totalLabel')}</Text>
-            <Title level={3} style={{ margin: 0, color: token.colorPrimary }}>
-              {formatCurrency(item.totalEstimado)}
-            </Title>
-          </Flex>
-        </Card>
-      </Flex>
-    </Drawer>
-  );
-}
-
 export default function RevisoesCliente() {
   const { token } = theme.useToken();
+  const navigate = useNavigate();
   const [motos, setMotos] = useState<Moto[]>([]);
+  const [agendamentosCliente, setAgendamentosCliente] = useState<AgendamentoCliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [busca, setBusca] = useState('');
   const [motoFiltro, setMotoFiltro] = useState<number | 'todas'>('todas');
   const [statusFiltro, setStatusFiltro] = useState<RevisionStatus | 'todos'>('todos');
-  const [selectedRevision, setSelectedRevision] = useState<RevisaoAgregada | null>(null);
 
   useEffect(() => {
     const carregarMotos = async () => {
       try {
         setLoading(true);
         setLoadError(false);
-        const motosData = await motoService.getAll();
+        const [motosData, agendamentosData] = await Promise.all([
+          motoService.getAll(),
+          agendamentoService.getCliente(),
+        ]);
         setMotos(motosData);
+        setAgendamentosCliente(agendamentosData);
       } catch (error) {
         setLoadError(true);
         handleApiError(error);
@@ -386,9 +221,19 @@ export default function RevisoesCliente() {
   }, []);
 
   const revisoes = useMemo<RevisaoAgregada[]>(
-    () => ordenarRevisoes(agruparRevisoesDasMotos(motos)) as RevisaoAgregada[],
-    [motos]
+    () => ordenarRevisoes(agruparRevisoesDasMotos(motos, new Date(), agendamentosCliente)) as RevisaoAgregada[],
+    [agendamentosCliente, motos]
   );
+
+  const handleOpenDetails = (item: RevisaoAgregada) => {
+    navigate(buildMotoRevisionDetailsPath(
+      PATHS.CLIENTE_MOTOS_DETALHES,
+      item.motoId,
+      item.revisao.id,
+      item.status,
+      PATHS.CLIENTE_REVISOES
+    ));
+  };
 
   const revisoesFiltradas = useMemo<RevisaoAgregada[]>(
     () => filtrarRevisoes(revisoes, { motoId: motoFiltro, status: statusFiltro, busca }) as RevisaoAgregada[],
@@ -401,7 +246,9 @@ export default function RevisoesCliente() {
     { value: 'todos', label: t('clienteRevisoes.filters.allStatuses') },
     { value: REVISION_STATUS.ATRASADA, label: t('motoDetalhes.status.atrasada') },
     { value: REVISION_STATUS.EM_EXECUCAO, label: t('motoDetalhes.status.emExecucao') },
+    { value: REVISION_STATUS.AGUARDANDO_CONFIRMACAO, label: t('clienteAgendamentos.status.awaitingConfirmation') },
     { value: REVISION_STATUS.AGENDADA, label: t('motoDetalhes.status.agendada') },
+    { value: REVISION_STATUS.AGUARDANDO_AGENDAMENTO, label: t('clienteAgendamentos.status.awaitingSchedule') },
     { value: REVISION_STATUS.PLANEJADA, label: t('motoDetalhes.status.planejada') },
     { value: REVISION_STATUS.CONCLUIDA, label: t('motoDetalhes.status.concluida') },
   ];
@@ -477,7 +324,7 @@ export default function RevisoesCliente() {
         <Button
           size="small"
           icon={<EyeOutlined />}
-          onClick={() => setSelectedRevision(item)}
+          onClick={() => handleOpenDetails(item)}
         >
           {t('clienteRevisoes.actions.details')}
         </Button>
@@ -641,12 +488,8 @@ export default function RevisoesCliente() {
             )}
           </Flex>
         </Card>
-
-        <RevisaoDetalhesDrawer
-          item={selectedRevision}
-          onClose={() => setSelectedRevision(null)}
-        />
       </Flex>
     </Spin>
   );
 }
+
