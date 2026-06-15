@@ -90,10 +90,18 @@ export function getDaysUntilRevision(revisao, today = new Date()) {
   return Math.ceil((parseLocalDate(revisao?.dataPrevista).getTime() - referenceDate.getTime()) / 86400000);
 }
 
-export function agruparRevisoesDasMotos(motos, today = new Date()) {
+export function agruparRevisoesDasMotos(motos, today = new Date(), agendamentos = []) {
+  const agendamentoPorRevisao = new Map(
+    (agendamentos ?? []).map((agendamento) => [agendamento.revisaoMotoId, agendamento])
+  );
+
   return (motos ?? []).flatMap((moto) =>
     (moto.revisoesPlanejadas ?? []).map((revisao) => {
-      const status = getRevisionStatus(revisao, today);
+      const agendamento = agendamentoPorRevisao.get(revisao.id);
+      const revisaoComStatus = agendamento
+        ? { ...revisao, status: agendamento.status }
+        : revisao;
+      const status = getRevisionStatus(revisaoComStatus, today);
 
       return {
         key: `${moto.id}-${revisao.id}`,
@@ -109,16 +117,16 @@ export function agruparRevisoesDasMotos(motos, today = new Date()) {
           kilometragemAtual: moto.kilometragemAtual,
           foto: moto.foto,
         },
-        revisao,
+        revisao: revisaoComStatus,
         status,
-        dataPrevista: revisao.dataPrevista,
-        ordem: revisao.ordem,
-        quilometragem: revisao.quilometragem,
+        dataPrevista: revisaoComStatus.dataPrevista,
+        ordem: revisaoComStatus.ordem,
+        quilometragem: revisaoComStatus.quilometragem,
         diasAteRevisao: getDaysUntilRevision(revisao, today),
-        totalPecas: getRevisionPartsEstimate(revisao),
-        totalServicos: getRevisionServicesEstimate(revisao),
-        totalEstimado: getRevisionEstimate(revisao),
-        totalTempo: getRevisionTime(revisao),
+        totalPecas: getRevisionPartsEstimate(revisaoComStatus),
+        totalServicos: getRevisionServicesEstimate(revisaoComStatus),
+        totalEstimado: getRevisionEstimate(revisaoComStatus),
+        totalTempo: getRevisionTime(revisaoComStatus),
       };
     })
   );

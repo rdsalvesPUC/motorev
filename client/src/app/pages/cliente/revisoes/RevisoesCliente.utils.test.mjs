@@ -118,6 +118,17 @@ test('agruparRevisoesDasMotos achata revisoes preservando contexto da moto', () 
   assert.equal(revisoes[0].totalTempo, 30);
 });
 
+test('agruparRevisoesDasMotos usa status real do agendamento quando existir', () => {
+  const revisoes = agruparRevisoesDasMotos(
+    motos,
+    today,
+    [{ revisaoMotoId: 1, status: REVISION_STATUS.EM_EXECUCAO }]
+  );
+
+  assert.equal(revisoes[0].status, REVISION_STATUS.EM_EXECUCAO);
+  assert.equal(revisoes[0].revisao.status, REVISION_STATUS.EM_EXECUCAO);
+});
+
 test('calcularResumoRevisoes contabiliza os status exibidos na pagina', () => {
   const revisoes = agruparRevisoesDasMotos(motos, today);
   const resumo = calcularResumoRevisoes(revisoes);

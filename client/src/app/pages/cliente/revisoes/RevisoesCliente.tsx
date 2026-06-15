@@ -33,7 +33,9 @@ import { useNavigate } from 'react-router';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { getLocale, t } from '@/app/i18n';
 import { Moto, RevisaoMotoResponse } from '@/app/models/Moto';
+import { AgendamentoCliente } from '@/app/models/AgendamentoCliente';
 import { motoService } from '@/app/services/motoService';
+import { agendamentoService } from '@/app/services/agendamentoService';
 import { PATHS } from '@/app/paths';
 import { handleApiError } from '@/app/utils/errorHandler';
 import { formatCurrency, formatIntegerInput } from '@/app/utils/formatters';
@@ -189,6 +191,7 @@ export default function RevisoesCliente() {
   const { token } = theme.useToken();
   const navigate = useNavigate();
   const [motos, setMotos] = useState<Moto[]>([]);
+  const [agendamentosCliente, setAgendamentosCliente] = useState<AgendamentoCliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [busca, setBusca] = useState('');
@@ -200,8 +203,12 @@ export default function RevisoesCliente() {
       try {
         setLoading(true);
         setLoadError(false);
-        const motosData = await motoService.getAll();
+        const [motosData, agendamentosData] = await Promise.all([
+          motoService.getAll(),
+          agendamentoService.getCliente(),
+        ]);
         setMotos(motosData);
+        setAgendamentosCliente(agendamentosData);
       } catch (error) {
         setLoadError(true);
         handleApiError(error);
@@ -214,8 +221,8 @@ export default function RevisoesCliente() {
   }, []);
 
   const revisoes = useMemo<RevisaoAgregada[]>(
-    () => ordenarRevisoes(agruparRevisoesDasMotos(motos)) as RevisaoAgregada[],
-    [motos]
+    () => ordenarRevisoes(agruparRevisoesDasMotos(motos, new Date(), agendamentosCliente)) as RevisaoAgregada[],
+    [agendamentosCliente, motos]
   );
 
   const handleOpenDetails = (item: RevisaoAgregada) => {
