@@ -30,6 +30,7 @@ public class AgendamentoConfiguration : IEntityTypeConfiguration<Agendamento>
 
         builder.HasIndex(a => a.RevisaoMotoId);
         builder.HasIndex(a => a.LojaId);
+        builder.HasIndex(a => new { a.LojaId, a.DataAgendada, a.Status });
         builder.HasIndex(a => new { a.RevisaoMotoId, a.Status })
             .HasFilter("[Status] IN ('AguardandoConfirmacao', 'Agendada', 'EmExecucao')");
 

@@ -75,14 +75,14 @@ BEGIN TRY
         -- da Ana, e a DataPrevista vem de DataVenda + TempoMeses.
         (N'SCA1A01', 1, N'aguardando_agendamento', N'Planejada', NULL, NULL, NULL, NULL),
         (N'SCA1A02', 1, N'aguardando_confirmacao', N'Planejada', N'AguardandoConfirmacao', DATEADD(DAY, 2, @Hoje), @LojaSaoPauloId, DATEADD(HOUR, -5, CAST(@Hoje AS datetime2))),
-        (N'SCA1A03', 1, N'agendada', N'Planejada', N'Agendada', DATEADD(DAY, 7, @Hoje), @LojaSaoPauloId, DATEADD(HOUR, -4, CAST(@Hoje AS datetime2))),
+        (N'SCA1A03', 1, N'agendada', N'Planejada', N'Agendada', @Hoje, @LojaSaoPauloId, DATEADD(HOUR, -4, CAST(@Hoje AS datetime2))),
         (N'SCA1A04', 1, N'atrasada', N'Planejada', N'Agendada', DATEADD(DAY, -1, @Hoje), @LojaCuritibaId, DATEADD(HOUR, -3, CAST(@Hoje AS datetime2))),
-        (N'SCA1A05', 1, N'em_execucao', N'Planejada', N'EmExecucao', DATEADD(DAY, -1, @Hoje), @LojaSaoPauloId, DATEADD(HOUR, -2, CAST(@Hoje AS datetime2))),
+        (N'SCA1A05', 1, N'em_execucao', N'Planejada', N'EmExecucao', @Hoje, @LojaSaoPauloId, DATEADD(HOUR, -2, CAST(@Hoje AS datetime2))),
 
         -- Status de controle que nao devem aparecer como cards.
         (N'SCA1A06', 1, N'planejada_oculta', N'Planejada', NULL, NULL, NULL, NULL),
         (N'SCA1A07', 1, N'perdida_oculta', N'Planejada', NULL, NULL, NULL, NULL),
-        (N'SCA1A08', 1, N'concluida_oculta', N'Concluida', N'Concluida', DATEADD(DAY, -1, @Hoje), @LojaSaoPauloId, DATEADD(HOUR, -1, CAST(@Hoje AS datetime2)));
+        (N'SCA1A08', 1, N'concluida_oculta', N'Concluida', N'Concluida', @Hoje, @LojaSaoPauloId, DATEADD(HOUR, -1, CAST(@Hoje AS datetime2)));
 
     IF EXISTS
     (
