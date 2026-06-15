@@ -142,7 +142,9 @@ function CardRevisaoFila({ item }: { item: ItemFilaRevisao }) {
         <Flex justify="space-between" align="center" gap="small">
           <Badge
             status={status.badge}
-            text={isEmExecucao ? status.label : t('concessionariaDashboard.queue.position', { position: item.posicaoFila })}
+            text={item.status === 'agendada'
+              ? t('concessionariaDashboard.queue.position', { position: item.posicaoFila })
+              : status.label}
           />
           <Tag color={status.tag}>{status.label}</Tag>
         </Flex>

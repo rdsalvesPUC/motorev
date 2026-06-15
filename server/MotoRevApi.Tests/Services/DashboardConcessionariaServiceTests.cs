@@ -28,14 +28,14 @@ public class DashboardConcessionariaServiceTests
     {
         // Arrange
         using var context = CreateContext();
-        var (_, loja) = SeedBaseData(context, "concessionaria-1", "cliente-1");
-        var (_, lojaOutraConcessionaria) = SeedBaseData(context, "concessionaria-2", "cliente-2", idBase: 20);
+        var (moto, loja) = SeedBaseData(context, "concessionaria-1", "cliente-1");
+        var (motoOutraConcessionaria, lojaOutraConcessionaria) = SeedBaseData(context, "concessionaria-2", "cliente-2", idBase: 20);
 
-        AddAgendamento(context, loja, ordem: 1, dataAgendada: _hoje.AddHours(8), StatusAgendamento.Agendada);
-        AddAgendamento(context, loja, ordem: 2, dataAgendada: _hoje.AddHours(9), StatusAgendamento.EmExecucao);
-        AddAgendamento(context, loja, ordem: 3, dataAgendada: _hoje.AddDays(1), StatusAgendamento.Agendada);
-        AddAgendamento(context, loja, ordem: 4, dataAgendada: _hoje.AddHours(10), StatusAgendamento.AguardandoConfirmacao);
-        AddAgendamento(context, lojaOutraConcessionaria, ordem: 1, dataAgendada: _hoje.AddHours(8), StatusAgendamento.Agendada);
+        AddAgendamento(context, moto, loja, ordem: 1, dataAgendada: _hoje.AddHours(8), StatusAgendamento.Agendada);
+        AddAgendamento(context, moto, loja, ordem: 2, dataAgendada: _hoje.AddHours(9), StatusAgendamento.EmExecucao);
+        AddAgendamento(context, moto, loja, ordem: 3, dataAgendada: _hoje.AddDays(1), StatusAgendamento.Agendada);
+        AddAgendamento(context, moto, loja, ordem: 4, dataAgendada: _hoje.AddHours(10), StatusAgendamento.AguardandoConfirmacao);
+        AddAgendamento(context, motoOutraConcessionaria, lojaOutraConcessionaria, ordem: 1, dataAgendada: _hoje.AddHours(8), StatusAgendamento.Agendada);
         await context.SaveChangesAsync();
 
         var service = new DashboardConcessionariaService(context, () => _hoje);
@@ -59,11 +59,11 @@ public class DashboardConcessionariaServiceTests
     {
         // Arrange
         using var context = CreateContext();
-        var (_, loja) = SeedBaseData(context, "concessionaria-1", "cliente-1");
+        var (moto, loja) = SeedBaseData(context, "concessionaria-1", "cliente-1");
 
         for (var i = 1; i <= 6; i++)
         {
-            AddAgendamento(context, loja, ordem: i, dataAgendada: _hoje.AddHours(8).AddMinutes(i), StatusAgendamento.Agendada);
+            AddAgendamento(context, moto, loja, ordem: i, dataAgendada: _hoje.AddHours(8).AddMinutes(i), StatusAgendamento.Agendada);
         }
 
         await context.SaveChangesAsync();
@@ -85,11 +85,11 @@ public class DashboardConcessionariaServiceTests
     {
         // Arrange
         using var context = CreateContext();
-        var (_, loja) = SeedBaseData(context, "concessionaria-1", "cliente-1");
+        var (moto, loja) = SeedBaseData(context, "concessionaria-1", "cliente-1");
 
-        AddAgendamento(context, loja, ordem: 1, dataAgendada: _hoje.AddHours(8), StatusAgendamento.Agendada);
-        AddAgendamento(context, loja, ordem: 2, dataAgendada: _hoje.AddHours(9), StatusAgendamento.EmExecucao);
-        AddAgendamento(context, loja, ordem: 3, dataAgendada: _hoje.AddHours(10), StatusAgendamento.Concluida);
+        AddAgendamento(context, moto, loja, ordem: 1, dataAgendada: _hoje.AddHours(8), StatusAgendamento.Agendada);
+        AddAgendamento(context, moto, loja, ordem: 2, dataAgendada: _hoje.AddHours(9), StatusAgendamento.EmExecucao);
+        AddAgendamento(context, moto, loja, ordem: 3, dataAgendada: _hoje.AddHours(10), StatusAgendamento.Concluida);
         await context.SaveChangesAsync();
 
         var service = new DashboardConcessionariaService(context, () => _hoje);
@@ -186,6 +186,7 @@ public class DashboardConcessionariaServiceTests
 
     private static void AddAgendamento(
         AppDbContext context,
+        Moto moto,
         Loja loja,
         int ordem,
         DateTime dataAgendada,
@@ -219,7 +220,7 @@ public class DashboardConcessionariaServiceTests
             Ordem = ordem,
             Quilometragem = ordem * 1000,
             TempoMeses = ordem * 6,
-            LinhaId = loja.Id,
+            LinhaId = moto.ModeloMoto.LinhaId,
             Ativo = true,
             Servicos = new List<RevisaoPadraoServico>
             {
@@ -232,7 +233,7 @@ public class DashboardConcessionariaServiceTests
         };
         var revisaoMoto = new RevisaoMoto
         {
-            MotoId = loja.Id,
+            MotoId = moto.Id,
             RevisaoPadraoId = revisaoPadrao.Id,
             RevisaoPadrao = revisaoPadrao,
             Nome = revisaoPadrao.Nome,
