@@ -94,6 +94,7 @@ builder.Services.AddScoped<ModeloMotoService>();
 builder.Services.AddScoped<LinhaService>();
 builder.Services.AddScoped<RevisaoPadraoService>();
 builder.Services.AddScoped<AgendamentoService>();
+builder.Services.AddScoped<DashboardConcessionariaService>();
 builder.Services.AddEndpointsApiExplorer();
 
 // Configurar Mapster
