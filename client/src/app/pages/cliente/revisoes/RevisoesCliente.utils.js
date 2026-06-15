@@ -6,6 +6,12 @@ export const REVISION_STATUS = {
   PLANEJADA: 'planejada',
 };
 
+export const EXECUTION_ITEM_STATUS = {
+  CONCLUIDO: 'concluido',
+  EM_EXECUCAO: 'em_execucao',
+  PENDENTE: 'pendente',
+};
+
 const STATUS_PRIORITY = {
   [REVISION_STATUS.ATRASADA]: 0,
   [REVISION_STATUS.EM_EXECUCAO]: 1,
@@ -164,4 +170,51 @@ export function ordenarRevisoes(revisoes) {
 
     return a.ordem - b.ordem;
   });
+}
+
+export function getExecutionItemStatus(item) {
+  if (item?.concluido === true) return EXECUTION_ITEM_STATUS.CONCLUIDO;
+  if (item?.emExecucao === true) return EXECUTION_ITEM_STATUS.EM_EXECUCAO;
+
+  const status = normalizeStatus(item?.statusExecucao ?? item?.statusItem ?? item?.status);
+  if (status.includes('concluid')) return EXECUTION_ITEM_STATUS.CONCLUIDO;
+  if (status.includes('execucao') || status.includes('andamento')) return EXECUTION_ITEM_STATUS.EM_EXECUCAO;
+
+  return EXECUTION_ITEM_STATUS.PENDENTE;
+}
+
+export function getExecutionProgress(servicos = [], pecas = []) {
+  const items = [...servicos, ...pecas];
+  const total = items.length;
+  const concluidos = items.filter((item) => getExecutionItemStatus(item) === EXECUTION_ITEM_STATUS.CONCLUIDO).length;
+  const emExecucao = items.filter((item) => getExecutionItemStatus(item) === EXECUTION_ITEM_STATUS.EM_EXECUCAO).length;
+
+  return {
+    total,
+    concluidos,
+    emExecucao,
+    percentual: total > 0 ? Math.round((concluidos / total) * 100) : 0,
+  };
+}
+
+export function applyRevisionStatusOverride(revisao, status) {
+  if (!revisao || !status) return revisao;
+
+  const normalizedStatus = normalizeStatus(status);
+  if (!Object.values(REVISION_STATUS).includes(normalizedStatus)) return revisao;
+
+  return {
+    ...revisao,
+    status: normalizedStatus,
+  };
+}
+
+export function buildMotoRevisionDetailsPath(basePath, motoId, revisaoMotoId, status, returnTo) {
+  const params = new URLSearchParams();
+  if (revisaoMotoId) params.set('revisaoMotoId', String(revisaoMotoId));
+  if (status) params.set('status', String(status));
+  if (returnTo) params.set('returnTo', String(returnTo));
+
+  const query = params.toString();
+  return `${basePath}/${motoId}${query ? `?${query}` : ''}`;
 }

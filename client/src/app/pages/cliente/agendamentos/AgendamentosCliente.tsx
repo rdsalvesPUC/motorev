@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useNavigate } from 'react-router';
 import {
   Alert,
   Button,
@@ -36,6 +37,7 @@ import { AgendamentoCliente, StatusAgendamentoCliente } from '@/app/models/Agend
 import { PATHS } from '@/app/paths';
 import { agendamentoService } from '@/app/services/agendamentoService';
 import { handleApiError } from '@/app/utils/errorHandler';
+import { buildMotoRevisionDetailsPath } from '@/app/pages/cliente/revisoes/RevisoesCliente.utils';
 
 const { Title, Text } = Typography;
 
@@ -284,11 +286,13 @@ function ActionButtons({
   actionLoadingId,
   onCancel,
   onOpenReschedule,
+  onFollow,
 }: {
   item: AgendamentoCliente;
   actionLoadingId: number | null;
   onCancel: (item: AgendamentoCliente) => Promise<void>;
   onOpenReschedule: (item: AgendamentoCliente) => void;
+  onFollow: (item: AgendamentoCliente) => void;
 }) {
   const disabledReason = t('clienteAgendamentos.actions.soon');
   const hasAgendamento = Boolean(item.agendamentoId);
@@ -296,11 +300,9 @@ function ActionButtons({
 
   if (item.status === STATUS.EM_EXECUCAO) {
     return (
-      <Tooltip title={disabledReason}>
-        <Button type="primary" disabled icon={<ToolOutlined />}>
-          {t('clienteAgendamentos.actions.follow')}
-        </Button>
-      </Tooltip>
+      <Button type="primary" icon={<ToolOutlined />} onClick={() => onFollow(item)}>
+        {t('clienteAgendamentos.actions.follow')}
+      </Button>
     );
   }
 
@@ -405,11 +407,13 @@ function AgendamentoCard({
   actionLoadingId,
   onCancel,
   onOpenReschedule,
+  onFollow,
 }: {
   item: AgendamentoCliente;
   actionLoadingId: number | null;
   onCancel: (item: AgendamentoCliente) => Promise<void>;
   onOpenReschedule: (item: AgendamentoCliente) => void;
+  onFollow: (item: AgendamentoCliente) => void;
 }) {
   const { token } = theme.useToken();
   const statusConfig = getStatusConfig(item.status, token);
@@ -501,6 +505,7 @@ function AgendamentoCard({
             actionLoadingId={actionLoadingId}
             onCancel={onCancel}
             onOpenReschedule={onOpenReschedule}
+            onFollow={onFollow}
           />
         </Flex>
       </Flex>
@@ -515,6 +520,7 @@ function AgendamentoSection({
   actionLoadingId,
   onCancel,
   onOpenReschedule,
+  onFollow,
 }: {
   title: string;
   icon: ReactNode;
@@ -522,6 +528,7 @@ function AgendamentoSection({
   actionLoadingId: number | null;
   onCancel: (item: AgendamentoCliente) => Promise<void>;
   onOpenReschedule: (item: AgendamentoCliente) => void;
+  onFollow: (item: AgendamentoCliente) => void;
 }) {
   return (
     <Flex
@@ -554,6 +561,7 @@ function AgendamentoSection({
             actionLoadingId={actionLoadingId}
             onCancel={onCancel}
             onOpenReschedule={onOpenReschedule}
+            onFollow={onFollow}
           />
         ))}
 
@@ -569,6 +577,7 @@ function AgendamentoSection({
 
 export default function AgendamentosCliente() {
   const { token } = theme.useToken();
+  const navigate = useNavigate();
   const [agendamentos, setAgendamentos] = useState<AgendamentoCliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -629,6 +638,16 @@ export default function AgendamentosCliente() {
       setRemarcando(false);
       setActionLoadingId(null);
     }
+  };
+
+  const handleAcompanhar = (item: AgendamentoCliente) => {
+    navigate(buildMotoRevisionDetailsPath(
+      PATHS.CLIENTE_MOTOS_DETALHES,
+      item.motoId,
+      item.revisaoMotoId,
+      item.status,
+      PATHS.CLIENTE_AGENDAMENTOS
+    ));
   };
 
   const grupos = useMemo(() => ({
@@ -739,6 +758,7 @@ export default function AgendamentosCliente() {
               actionLoadingId={actionLoadingId}
               onCancel={handleCancelar}
               onOpenReschedule={setRemarcarItem}
+              onFollow={handleAcompanhar}
             />
             <AgendamentoSection
               title={t('clienteAgendamentos.status.awaitingConfirmation')}
@@ -747,6 +767,7 @@ export default function AgendamentosCliente() {
               actionLoadingId={actionLoadingId}
               onCancel={handleCancelar}
               onOpenReschedule={setRemarcarItem}
+              onFollow={handleAcompanhar}
             />
             <AgendamentoSection
               title={t('clienteAgendamentos.status.scheduled')}
@@ -755,6 +776,7 @@ export default function AgendamentosCliente() {
               actionLoadingId={actionLoadingId}
               onCancel={handleCancelar}
               onOpenReschedule={setRemarcarItem}
+              onFollow={handleAcompanhar}
             />
             <AgendamentoSection
               title={t('clienteAgendamentos.status.late')}
@@ -763,6 +785,7 @@ export default function AgendamentosCliente() {
               actionLoadingId={actionLoadingId}
               onCancel={handleCancelar}
               onOpenReschedule={setRemarcarItem}
+              onFollow={handleAcompanhar}
             />
             <AgendamentoSection
               title={t('clienteAgendamentos.status.awaitingSchedule')}
@@ -771,6 +794,7 @@ export default function AgendamentosCliente() {
               actionLoadingId={actionLoadingId}
               onCancel={handleCancelar}
               onOpenReschedule={setRemarcarItem}
+              onFollow={handleAcompanhar}
             />
           </Flex>
         )}

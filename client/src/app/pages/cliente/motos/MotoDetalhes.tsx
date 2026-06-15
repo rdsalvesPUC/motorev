@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router';
+import { useParams, useNavigate, useSearchParams } from 'react-router';
 import {
   Typography,
   Button,
@@ -18,6 +18,7 @@ import {
   Statistic,
   Table,
   Timeline,
+  Progress,
   theme,
   Empty,
 } from 'antd';
@@ -27,6 +28,7 @@ import {
   DashboardOutlined,
   ArrowLeftOutlined,
   DeleteOutlined,
+  CheckOutlined,
   CheckCircleFilled,
   ClockCircleFilled,
   CloseCircleFilled,
@@ -43,11 +45,25 @@ import { PATHS } from '@/app/paths';
 import { getImageUrl } from '@/app/utils/imageUtils';
 import { ApiError } from '@/app/services/http';
 import { formatCurrency } from '@/app/utils/formatters';
+import {
+  EXECUTION_ITEM_STATUS,
+  applyRevisionStatusOverride,
+  getExecutionItemStatus,
+  getExecutionProgress,
+} from '@/app/pages/cliente/revisoes/RevisoesCliente.utils';
 
 const { Title, Text } = Typography;
 
 type RevisionStatus = 'concluida' | 'em_execucao' | 'agendada' | 'atrasada' | 'planejada';
 type ThemeToken = ReturnType<typeof theme.useToken>['token'];
+type ExecutionItemStatus = 'concluido' | 'em_execucao' | 'pendente';
+type ExecutionItem = {
+  status?: string;
+  statusExecucao?: string;
+  statusItem?: string;
+  concluido?: boolean;
+  emExecucao?: boolean;
+};
 
 const normalizeStatus = (status: string) =>
   status
@@ -143,6 +159,28 @@ const getStatusConfig = (status: RevisionStatus, token: ThemeToken) => {
   return configs[status];
 };
 
+const getExecutionStatusConfig = (status: ExecutionItemStatus, token: ThemeToken) => {
+  const configs = {
+    concluido: {
+      label: t('motoRevisaoDetalhes.execution.status.completed'),
+      color: 'success',
+      icon: <CheckOutlined />,
+    },
+    em_execucao: {
+      label: t('motoRevisaoDetalhes.execution.status.inProgress'),
+      color: 'processing',
+      icon: <ClockCircleFilled style={{ color: token.colorInfo }} />,
+    },
+    pendente: {
+      label: t('motoRevisaoDetalhes.execution.status.pending'),
+      color: 'default',
+      icon: <HourglassOutlined style={{ color: token.colorTextTertiary }} />,
+    },
+  };
+
+  return configs[status];
+};
+
 function RevisaoPlanejadaCard({ revisao, onClick }: { revisao: RevisaoMotoResponse; onClick: () => void }) {
   const { token } = theme.useToken();
   const status = getRevisionStatus(revisao);
@@ -211,13 +249,32 @@ function RevisaoDetalhes({
   const { token } = theme.useToken();
   const status = getRevisionStatus(revisao);
   const statusConfig = getStatusConfig(status, token);
+  const isInExecution = status === 'em_execucao';
+  const executionProgress = getExecutionProgress(revisao.servicos ?? [], revisao.pecas ?? []);
   const daysUntilRevision = getDaysUntilRevision(revisao);
   const totalPecas = getRevisionPartsEstimate(revisao);
   const totalServicos = getRevisionServicesEstimate(revisao);
   const totalGeral = totalPecas + totalServicos;
   const totalTempo = getRevisionTime(revisao);
 
-  const pecasColumns = [
+  const executionStatusColumn = {
+    title: t('motoRevisaoDetalhes.execution.status.title'),
+    key: 'executionStatus',
+    width: 150,
+    align: 'center' as const,
+    render: (_: unknown, record: ExecutionItem) => {
+      const executionStatus = getExecutionItemStatus(record) as ExecutionItemStatus;
+      const executionConfig = getExecutionStatusConfig(executionStatus, token);
+
+      return (
+        <Tag icon={executionConfig.icon} color={executionConfig.color} style={{ marginInlineEnd: 0 }}>
+          {executionConfig.label}
+        </Tag>
+      );
+    },
+  };
+
+  const pecasColumnsBase = [
     { title: t('motoRevisaoDetalhes.parts.code'), dataIndex: 'codigo', key: 'codigo', width: 120 },
     { title: t('motoRevisaoDetalhes.parts.name'), dataIndex: 'nome', key: 'nome' },
     { title: t('motoRevisaoDetalhes.parts.quantity'), dataIndex: 'quantidade', key: 'quantidade', width: 90, align: 'center' as const },
@@ -239,8 +296,9 @@ function RevisaoDetalhes({
       ),
     },
   ];
+  const pecasColumns = isInExecution ? [...pecasColumnsBase, executionStatusColumn] : pecasColumnsBase;
 
-  const servicosColumns = [
+  const servicosColumnsBase = [
     { title: t('motoRevisaoDetalhes.services.name'), dataIndex: 'nome', key: 'nome' },
     {
       title: t('motoRevisaoDetalhes.services.time'),
@@ -259,6 +317,7 @@ function RevisaoDetalhes({
       render: (value: number) => <Text strong>{formatCurrency(value)}</Text>,
     },
   ];
+  const servicosColumns = isInExecution ? [...servicosColumnsBase, executionStatusColumn] : servicosColumnsBase;
 
   return (
     <Flex vertical gap="large" style={{ width: '100%' }}>
@@ -344,12 +403,51 @@ function RevisaoDetalhes({
         </Descriptions>
       </Card>
 
+      {isInExecution && (
+        <Card size="small">
+          <Flex vertical gap={8}>
+            <Flex justify="space-between" align="center" gap="middle" wrap="wrap">
+              <Flex align="center" gap={8}>
+                <ClockCircleFilled style={{ color: token.colorInfo }} />
+                <Text strong>{t('motoRevisaoDetalhes.execution.title')}</Text>
+              </Flex>
+              <Text type="secondary">
+                {t('motoRevisaoDetalhes.execution.summary', {
+                  done: executionProgress.concluidos,
+                  total: executionProgress.total,
+                  current: executionProgress.emExecucao,
+                })}
+              </Text>
+            </Flex>
+            <Progress
+              percent={executionProgress.percentual}
+              status={executionProgress.percentual === 100 ? 'success' : 'active'}
+            />
+            {executionProgress.total > 0 && executionProgress.concluidos === 0 && executionProgress.emExecucao === 0 && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {t('motoRevisaoDetalhes.execution.waitingForUpdates')}
+              </Text>
+            )}
+          </Flex>
+        </Card>
+      )}
+
       <Card
         title={
           <Flex align="center" gap={8}>
             <TagOutlined />
             <span>{t('motoRevisaoDetalhes.parts.title')}</span>
             <Tag>{revisao.pecas?.length ?? 0}</Tag>
+            {isInExecution && (
+              <Tag color="success">
+                {t('motoRevisaoDetalhes.execution.completedCount', {
+                  done: (revisao.pecas ?? [])
+                    .filter((peca) => getExecutionItemStatus(peca) === EXECUTION_ITEM_STATUS.CONCLUIDO)
+                    .length,
+                  total: revisao.pecas?.length ?? 0,
+                })}
+              </Tag>
+            )}
           </Flex>
         }
       >
@@ -368,6 +466,7 @@ function RevisaoDetalhes({
               <Table.Summary.Cell index={1} align="right">
                 <Text strong style={{ color: token.colorPrimary }}>{formatCurrency(totalPecas)}</Text>
               </Table.Summary.Cell>
+              {isInExecution && <Table.Summary.Cell index={2} />}
             </Table.Summary.Row>
           )}
         />
@@ -379,6 +478,16 @@ function RevisaoDetalhes({
             <ToolOutlined />
             <span>{t('motoRevisaoDetalhes.services.title')}</span>
             <Tag>{revisao.servicos?.length ?? 0}</Tag>
+            {isInExecution && (
+              <Tag color="success">
+                {t('motoRevisaoDetalhes.execution.completedCount', {
+                  done: (revisao.servicos ?? [])
+                    .filter((servico) => getExecutionItemStatus(servico) === EXECUTION_ITEM_STATUS.CONCLUIDO)
+                    .length,
+                  total: revisao.servicos?.length ?? 0,
+                })}
+              </Tag>
+            )}
           </Flex>
         }
       >
@@ -400,6 +509,7 @@ function RevisaoDetalhes({
               <Table.Summary.Cell index={2} align="right">
                 <Text strong style={{ color: token.colorPrimary }}>{formatCurrency(totalServicos)}</Text>
               </Table.Summary.Cell>
+              {isInExecution && <Table.Summary.Cell index={3} />}
             </Table.Summary.Row>
           )}
         />
@@ -429,6 +539,7 @@ export default function MotoDetalhes() {
   const { token } = theme.useToken();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [moto, setMoto] = useState<Moto | null>(null);
   const [selectedRevisionId, setSelectedRevisionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -472,6 +583,34 @@ export default function MotoDetalhes() {
 
     carregarDetalhes();
   }, [id]);
+
+  useEffect(() => {
+    const revisaoMotoId = searchParams.get('revisaoMotoId');
+    if (!moto || !revisaoMotoId) return;
+
+    const revisionId = Number(revisaoMotoId);
+    const revisionExists = moto.revisoesPlanejadas?.some((revisao) => revisao.id === revisionId);
+    if (revisionExists && selectedRevisionId !== revisionId) {
+      setSelectedRevisionId(revisionId);
+    }
+  }, [moto, searchParams, selectedRevisionId]);
+
+  const voltarParaDetalhesDaMoto = () => {
+    const returnTo = searchParams.get('returnTo');
+    if (returnTo) {
+      navigate(returnTo);
+      return;
+    }
+
+    setSelectedRevisionId(null);
+    if (searchParams.has('revisaoMotoId') || searchParams.has('status') || searchParams.has('returnTo')) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('revisaoMotoId');
+      nextParams.delete('status');
+      nextParams.delete('returnTo');
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
 
   if (loading) {
     return (
@@ -524,16 +663,20 @@ export default function MotoDetalhes() {
   if (!moto) return null;
 
   const revisoes = [...(moto.revisoesPlanejadas ?? [])].sort((a, b) => a.ordem - b.ordem);
-  const selectedRevision = selectedRevisionId
+  const selectedRevisionBase = selectedRevisionId
     ? revisoes.find((revisao) => revisao.id === selectedRevisionId)
     : null;
+  const selectedRevision = applyRevisionStatusOverride(
+    selectedRevisionBase,
+    searchParams.get('status')
+  ) as RevisaoMotoResponse | null;
 
   if (selectedRevision) {
     return (
       <RevisaoDetalhes
         moto={moto}
         revisao={selectedRevision}
-        onBack={() => setSelectedRevisionId(null)}
+        onBack={voltarParaDetalhesDaMoto}
       />
     );
   }

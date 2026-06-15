@@ -2,9 +2,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   REVISION_STATUS,
+  EXECUTION_ITEM_STATUS,
   agruparRevisoesDasMotos,
+  applyRevisionStatusOverride,
+  buildMotoRevisionDetailsPath,
   calcularResumoRevisoes,
   filtrarRevisoes,
+  getExecutionItemStatus,
+  getExecutionProgress,
   getRevisionEstimate,
   getRevisionStatus,
   ordenarRevisoes,
@@ -124,4 +129,49 @@ test('getRevisionEstimate soma servicos e pecas com quantidade', () => {
   const estimate = getRevisionEstimate(motos[0].revisoesPlanejadas[0]);
 
   assert.equal(estimate, 170);
+});
+
+test('getExecutionItemStatus entende status explicito de checklist', () => {
+  assert.equal(getExecutionItemStatus({ concluido: true }), EXECUTION_ITEM_STATUS.CONCLUIDO);
+  assert.equal(getExecutionItemStatus({ emExecucao: true }), EXECUTION_ITEM_STATUS.EM_EXECUCAO);
+  assert.equal(getExecutionItemStatus({ statusExecucao: 'Concluído' }), EXECUTION_ITEM_STATUS.CONCLUIDO);
+  assert.equal(getExecutionItemStatus({ statusExecucao: 'Em andamento' }), EXECUTION_ITEM_STATUS.EM_EXECUCAO);
+  assert.equal(getExecutionItemStatus({ nome: 'Sem progresso informado' }), EXECUTION_ITEM_STATUS.PENDENTE);
+});
+
+test('getExecutionProgress calcula progresso de pecas e servicos em execucao', () => {
+  const progresso = getExecutionProgress(
+    [{ id: 1, concluido: true }, { id: 2, emExecucao: true }],
+    [{ id: 3, statusExecucao: 'Pendente' }]
+  );
+
+  assert.deepEqual(progresso, {
+    total: 3,
+    concluidos: 1,
+    emExecucao: 1,
+    percentual: 33,
+  });
+});
+
+test('applyRevisionStatusOverride aplica status vindo de agendamentos sem alterar status invalido', () => {
+  const revisoes = agruparRevisoesDasMotos(motos, today);
+  const revisao = revisoes[1];
+
+  assert.equal(applyRevisionStatusOverride(revisao, 'Em Execução').status, REVISION_STATUS.EM_EXECUCAO);
+  assert.equal(applyRevisionStatusOverride(revisao, 'status-invalido').status, revisao.status);
+});
+
+test('buildMotoRevisionDetailsPath monta destino unico para detalhes da revisao', () => {
+  const path = buildMotoRevisionDetailsPath(
+    '/dashboard/cliente/motos/detalhes',
+    16,
+    99,
+    'em_execucao',
+    '/dashboard/cliente/agendamentos'
+  );
+
+  assert.equal(
+    path,
+    '/dashboard/cliente/motos/detalhes/16?revisaoMotoId=99&status=em_execucao&returnTo=%2Fdashboard%2Fcliente%2Fagendamentos'
+  );
 });
