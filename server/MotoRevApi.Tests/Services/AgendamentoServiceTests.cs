@@ -358,6 +358,154 @@ public class AgendamentoServiceTests
         Assert.Equal(dataAgendada.Date, item.DataAgendada?.Date);
     }
 
+    [Fact]
+    public async Task ListarAgendamentosConcessionariaAsync_DeveRetornarAgendamentosDasLojasDaConcessionaria()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        context.Agendamentos.Add(new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.AguardandoConfirmacao,
+            CriadoEm = _hoje.AddDays(-1),
+            AtualizadoEm = _hoje.AddDays(-1)
+        });
+
+        var (motoOutraConcessionaria, lojaOutraConcessionaria) = SeedBaseData(context, "outro-cliente", clienteId: 2, motoId: 2);
+        var revisaoOutraConcessionaria = AddRevisao(context, motoOutraConcessionaria, ordem: 1, dataIdeal: _hoje);
+        context.Agendamentos.Add(new Agendamento
+        {
+            RevisaoMotoId = revisaoOutraConcessionaria.Id,
+            LojaId = lojaOutraConcessionaria.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.Agendada,
+            CriadoEm = _hoje.AddDays(-1),
+            AtualizadoEm = _hoje.AddDays(-1)
+        });
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        var result = await service.ListarAgendamentosConcessionariaAsync("concessionaria-1");
+
+        // Assert
+        var item = Assert.Single(result);
+        Assert.Equal(revisao.Id, item.RevisaoMotoId);
+        Assert.Equal("aguardando_confirmacao", item.Status);
+        Assert.Equal("Cliente 1", item.ClienteNome);
+        Assert.Equal(loja.Id, item.LojaId);
+    }
+
+    [Fact]
+    public async Task AceitarSolicitacaoConcessionariaAsync_DeveAtualizarStatusParaAgendada()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.AguardandoConfirmacao,
+            CriadoEm = _hoje.AddDays(-1),
+            AtualizadoEm = _hoje.AddDays(-1)
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        await service.AceitarSolicitacaoConcessionariaAsync(agendamento.Id, "concessionaria-1");
+        var clienteResult = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        Assert.Equal(StatusAgendamento.Agendada, agendamento.Status);
+        var item = Assert.Single(clienteResult);
+        Assert.Equal("agendada", item.Status);
+    }
+
+    [Fact]
+    public async Task RecusarSolicitacaoConcessionariaAsync_DeveVoltarClienteParaAguardandoAgendamentoComMensagem()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.AguardandoConfirmacao,
+            CriadoEm = _hoje.AddDays(-1),
+            AtualizadoEm = _hoje.AddDays(-1)
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        await service.RecusarSolicitacaoConcessionariaAsync(
+            agendamento.Id,
+            "concessionaria-1",
+            new RecusarAgendamentoRequest("Agenda lotada para esta data."));
+        var clienteResult = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        Assert.Equal(StatusAgendamento.Recusada, agendamento.Status);
+        Assert.Equal("Agenda lotada para esta data.", agendamento.MensagemRecusa);
+        Assert.Equal(_hoje.Date, agendamento.DataRecusa?.Date);
+
+        var item = Assert.Single(clienteResult);
+        Assert.Equal("aguardando_agendamento", item.Status);
+        Assert.Equal("Agenda lotada para esta data.", item.MensagemRecusa);
+    }
+
+    [Fact]
+    public async Task VisualizarRecusaClienteAsync_DeveOcultarMensagemRecusa()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.Recusada,
+            MensagemRecusa = "Agenda indisponivel para esta data.",
+            DataRecusa = _hoje,
+            RecusaVisualizadaCliente = false,
+            CriadoEm = _hoje.AddDays(-1),
+            AtualizadoEm = _hoje.AddDays(-1)
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var service = new AgendamentoService(context, () => _hoje);
+
+        // Act
+        await service.VisualizarRecusaClienteAsync(agendamento.Id, "cliente-user");
+        var clienteResult = await service.ListarAgendamentosClienteAsync("cliente-user");
+
+        // Assert
+        Assert.True(agendamento.RecusaVisualizadaCliente);
+        var item = Assert.Single(clienteResult);
+        Assert.Equal("aguardando_agendamento", item.Status);
+        Assert.Null(item.MensagemRecusa);
+        Assert.Null(item.DataRecusa);
+    }
+
     private static (Moto Moto, Loja Loja) SeedBaseData(
         AppDbContext context,
         string userId,

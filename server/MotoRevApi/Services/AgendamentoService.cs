@@ -97,6 +97,43 @@ public class AgendamentoService
             .ToList();
     }
 
+    public virtual async Task<List<AgendamentoConcessionariaResponse>> ListarAgendamentosConcessionariaAsync(string userId)
+    {
+        var concessionaria = await _context.Concessionarias
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.UsuarioId == userId);
+
+        if (concessionaria == null)
+        {
+            throw new NotFoundException("Concessionária não encontrada.");
+        }
+
+        var agendamentos = await _context.Agendamentos
+            .AsNoTracking()
+            .Include(a => a.Loja)
+            .Include(a => a.RevisaoMoto)
+                .ThenInclude(r => r.Moto)
+                    .ThenInclude(m => m.Cliente)
+            .Include(a => a.RevisaoMoto)
+                .ThenInclude(r => r.Moto)
+                    .ThenInclude(m => m.ModeloMoto)
+            .Include(a => a.RevisaoMoto)
+                .ThenInclude(r => r.RevisaoPadrao)
+                    .ThenInclude(rp => rp.Servicos)
+            .Include(a => a.RevisaoMoto)
+                .ThenInclude(r => r.RevisaoPadrao)
+                    .ThenInclude(rp => rp.Pecas)
+            .AsSplitQuery()
+            .Where(a => a.Loja.ConcessionariaId == concessionaria.Id)
+            .ToListAsync();
+
+        return agendamentos
+            .OrderBy(a => ObterPrioridadeConcessionaria(a.Status))
+            .ThenBy(a => a.DataAgendada)
+            .Select(CriarResponseConcessionaria)
+            .ToList();
+    }
+
     public virtual async Task CancelarAgendamentoClienteAsync(int agendamentoId, string userId)
     {
         var agendamento = await BuscarAgendamentoDoClienteAsync(agendamentoId, userId);
@@ -202,6 +239,62 @@ public class AgendamentoService
         await _context.SaveChangesAsync();
     }
 
+    public virtual async Task VisualizarRecusaClienteAsync(int agendamentoId, string userId)
+    {
+        var agendamento = await BuscarAgendamentoDoClienteAsync(agendamentoId, userId);
+
+        if (agendamento.Status != StatusAgendamento.Recusada)
+        {
+            throw new BusinessRuleException("Somente recusas podem ser marcadas como visualizadas.");
+        }
+
+        agendamento.RecusaVisualizadaCliente = true;
+        agendamento.AtualizadoEm = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+    }
+
+    public virtual async Task AceitarSolicitacaoConcessionariaAsync(int agendamentoId, string userId)
+    {
+        var agendamento = await BuscarAgendamentoDaConcessionariaAsync(agendamentoId, userId);
+
+        if (agendamento.Status != StatusAgendamento.AguardandoConfirmacao)
+        {
+            throw new BusinessRuleException("Somente solicitações aguardando confirmação podem ser aceitas.");
+        }
+
+        agendamento.Status = StatusAgendamento.Agendada;
+        agendamento.MensagemRecusa = null;
+        agendamento.DataRecusa = null;
+        agendamento.RecusaVisualizadaCliente = false;
+        agendamento.AtualizadoEm = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+    }
+
+    public virtual async Task RecusarSolicitacaoConcessionariaAsync(
+        int agendamentoId,
+        string userId,
+        RecusarAgendamentoRequest request)
+    {
+        var agendamento = await BuscarAgendamentoDaConcessionariaAsync(agendamentoId, userId);
+
+        if (agendamento.Status != StatusAgendamento.AguardandoConfirmacao)
+        {
+            throw new BusinessRuleException("Somente solicitações aguardando confirmação podem ser recusadas.");
+        }
+
+        agendamento.Status = StatusAgendamento.Recusada;
+        agendamento.MensagemRecusa = string.IsNullOrWhiteSpace(request.Motivo)
+            ? "Solicitação recusada pela concessionária."
+            : request.Motivo.Trim();
+        agendamento.DataRecusa = _todayProvider().Date;
+        agendamento.RecusaVisualizadaCliente = false;
+        agendamento.AtualizadoEm = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+    }
+
     private async Task<Agendamento> BuscarAgendamentoDoClienteAsync(int agendamentoId, string userId)
     {
         var agendamento = await _context.Agendamentos
@@ -212,6 +305,18 @@ public class AgendamentoService
                 a.Id == agendamentoId &&
                 a.RevisaoMoto.Moto.Cliente.UsuarioId == userId &&
                 a.RevisaoMoto.Moto.Ativo);
+
+        return agendamento ?? throw new NotFoundException("Agendamento não encontrado.");
+    }
+
+    private async Task<Agendamento> BuscarAgendamentoDaConcessionariaAsync(int agendamentoId, string userId)
+    {
+        var agendamento = await _context.Agendamentos
+            .Include(a => a.Loja)
+                .ThenInclude(l => l.Concessionaria)
+            .FirstOrDefaultAsync(a =>
+                a.Id == agendamentoId &&
+                a.Loja.Concessionaria.UsuarioId == userId);
 
         return agendamento ?? throw new NotFoundException("Agendamento não encontrado.");
     }
@@ -281,8 +386,42 @@ public class AgendamentoService
             agendamento?.Loja.Cidade,
             revisao.RevisaoPadrao.Pecas.Count,
             revisao.RevisaoPadrao.Servicos.Count,
-            CriarPrazoTexto(status, hoje, dataIdeal, dataLimite)
+            CriarPrazoTexto(status, hoje, dataIdeal, dataLimite),
+            agendamento?.Status == StatusAgendamento.Recusada && !agendamento.RecusaVisualizadaCliente
+                ? agendamento.MensagemRecusa
+                : null,
+            agendamento?.Status == StatusAgendamento.Recusada && !agendamento.RecusaVisualizadaCliente
+                ? agendamento.DataRecusa
+                : null
         );
+    }
+
+    private static AgendamentoConcessionariaResponse CriarResponseConcessionaria(Agendamento agendamento)
+    {
+        var revisao = agendamento.RevisaoMoto;
+        var moto = revisao.Moto;
+        var modelo = moto.ModeloMoto;
+
+        return new AgendamentoConcessionariaResponse(
+            agendamento.Id,
+            revisao.Id,
+            moto.Id,
+            agendamento.LojaId,
+            agendamento.Loja.Nome,
+            moto.Cliente.Nome,
+            modelo.Marca,
+            modelo.NomeModelo,
+            moto.Placa,
+            revisao.Ordem,
+            revisao.Nome,
+            NormalizarStatusAgendamento(agendamento.Status),
+            revisao.DataPrevista.Date,
+            agendamento.DataAgendada.Date,
+            revisao.Quilometragem,
+            revisao.RevisaoPadrao.Pecas.Count,
+            revisao.RevisaoPadrao.Servicos.Count,
+            agendamento.MensagemRecusa,
+            agendamento.DataRecusa);
     }
 
     private static string CalcularStatus(
@@ -321,6 +460,11 @@ public class AgendamentoService
         if (agendamento?.Status == StatusAgendamento.Agendada)
         {
             return hoje > agendamento.DataAgendada.Date ? "atrasada" : "agendada";
+        }
+
+        if (agendamento?.Status == StatusAgendamento.Recusada)
+        {
+            return "aguardando_agendamento";
         }
 
         if (agendamento?.Status == StatusAgendamento.Cancelada)
@@ -384,6 +528,27 @@ public class AgendamentoService
         "atrasada" => 3,
         "aguardando_agendamento" => 4,
         _ => 5
+    };
+
+    private static int ObterPrioridadeConcessionaria(StatusAgendamento status) => status switch
+    {
+        StatusAgendamento.AguardandoConfirmacao => 0,
+        StatusAgendamento.Agendada => 1,
+        StatusAgendamento.Recusada => 2,
+        StatusAgendamento.EmExecucao => 3,
+        StatusAgendamento.Concluida => 4,
+        _ => 5
+    };
+
+    private static string NormalizarStatusAgendamento(StatusAgendamento status) => status switch
+    {
+        StatusAgendamento.AguardandoConfirmacao => "aguardando_confirmacao",
+        StatusAgendamento.Agendada => "agendada",
+        StatusAgendamento.EmExecucao => "em_execucao",
+        StatusAgendamento.Concluida => "concluida",
+        StatusAgendamento.Recusada => "recusada",
+        StatusAgendamento.Cancelada => "cancelada",
+        _ => NormalizarStatus(status.ToString())
     };
 
     private static string NormalizarStatus(string status)

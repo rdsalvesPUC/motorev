@@ -14,6 +14,9 @@ public class Agendamento
 
     public DateTime DataAgendada { get; set; }
     public StatusAgendamento Status { get; set; } = StatusAgendamento.AguardandoConfirmacao;
+    public string? MensagemRecusa { get; set; }
+    public DateTime? DataRecusa { get; set; }
+    public bool RecusaVisualizadaCliente { get; set; }
     public DateTime CriadoEm { get; set; } = DateTime.UtcNow;
     public DateTime AtualizadoEm { get; set; } = DateTime.UtcNow;
 }

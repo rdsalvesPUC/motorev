@@ -19,6 +19,9 @@ public class AgendamentoConfiguration : IEntityTypeConfiguration<Agendamento>
         builder.Property(a => a.DataAgendada)
             .IsRequired();
 
+        builder.Property(a => a.MensagemRecusa)
+            .HasMaxLength(500);
+
         builder.Property(a => a.CriadoEm)
             .IsRequired();
 

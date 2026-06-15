@@ -363,7 +363,26 @@ function ActionButtons({
   return null;
 }
 
-function StatusAlert({ item }: { item: AgendamentoCliente }) {
+function StatusAlert({
+  item,
+  onDismissRecusa,
+}: {
+  item: AgendamentoCliente;
+  onDismissRecusa: (item: AgendamentoCliente) => Promise<void>;
+}) {
+  if (item.mensagemRecusa) {
+    return (
+      <Alert
+        type="warning"
+        showIcon
+        closable
+        message={t('clienteAgendamentos.alerts.refused.title')}
+        description={item.mensagemRecusa}
+        onClose={() => onDismissRecusa(item)}
+      />
+    );
+  }
+
   if (item.status === STATUS.ATRASADA) {
     return (
       <Alert
@@ -409,6 +428,7 @@ function AgendamentoCard({
   onOpenReschedule,
   onOpenSchedule,
   onFollow,
+  onDismissRecusa,
 }: {
   item: AgendamentoCliente;
   actionLoadingId: number | null;
@@ -416,6 +436,7 @@ function AgendamentoCard({
   onOpenReschedule: (item: AgendamentoCliente) => void;
   onOpenSchedule: (item: AgendamentoCliente) => void;
   onFollow: (item: AgendamentoCliente) => void;
+  onDismissRecusa: (item: AgendamentoCliente) => Promise<void>;
 }) {
   const { token } = theme.useToken();
   const statusConfig = getStatusConfig(item.status, token);
@@ -496,7 +517,7 @@ function AgendamentoCard({
           </Col>
         </Row>
 
-        <StatusAlert item={item} />
+        <StatusAlert item={item} onDismissRecusa={onDismissRecusa} />
 
         <Flex justify="space-between" align="center" gap="middle" wrap="wrap" style={{ marginTop: 'auto' }}>
           <Text type={item.status === STATUS.ATRASADA ? 'danger' : 'secondary'}>
@@ -525,6 +546,7 @@ function AgendamentoSection({
   onOpenReschedule,
   onOpenSchedule,
   onFollow,
+  onDismissRecusa,
 }: {
   title: string;
   icon: ReactNode;
@@ -534,6 +556,7 @@ function AgendamentoSection({
   onOpenReschedule: (item: AgendamentoCliente) => void;
   onOpenSchedule: (item: AgendamentoCliente) => void;
   onFollow: (item: AgendamentoCliente) => void;
+  onDismissRecusa: (item: AgendamentoCliente) => Promise<void>;
 }) {
   return (
     <Flex
@@ -568,6 +591,7 @@ function AgendamentoSection({
             onOpenReschedule={onOpenReschedule}
             onOpenSchedule={onOpenSchedule}
             onFollow={onFollow}
+            onDismissRecusa={onDismissRecusa}
           />
         ))}
 
@@ -688,6 +712,21 @@ export default function AgendamentosCliente() {
     ));
   };
 
+  const handleDismissRecusa = async (item: AgendamentoCliente) => {
+    if (!item.agendamentoId) return;
+
+    try {
+      await agendamentoService.visualizarRecusaCliente(item.agendamentoId);
+      setAgendamentos((current) => current.map((agendamento) => (
+        agendamento.agendamentoId === item.agendamentoId
+          ? { ...agendamento, mensagemRecusa: null, dataRecusa: null }
+          : agendamento
+      )));
+    } catch (error) {
+      handleApiError(error, 'clienteAgendamentos.alerts.refused.dismissError');
+    }
+  };
+
   const grupos = useMemo(() => ({
     emExecucao: agendamentos.filter((item) => item.status === STATUS.EM_EXECUCAO),
     aguardandoConfirmacao: agendamentos.filter((item) => item.status === STATUS.AGUARDANDO_CONFIRMACAO),
@@ -798,6 +837,7 @@ export default function AgendamentosCliente() {
               onOpenReschedule={setRemarcarItem}
               onOpenSchedule={setAgendarItem}
               onFollow={handleAcompanhar}
+              onDismissRecusa={handleDismissRecusa}
             />
             <AgendamentoSection
               title={t('clienteAgendamentos.status.awaitingConfirmation')}
@@ -808,6 +848,7 @@ export default function AgendamentosCliente() {
               onOpenReschedule={setRemarcarItem}
               onOpenSchedule={setAgendarItem}
               onFollow={handleAcompanhar}
+              onDismissRecusa={handleDismissRecusa}
             />
             <AgendamentoSection
               title={t('clienteAgendamentos.status.scheduled')}
@@ -818,6 +859,7 @@ export default function AgendamentosCliente() {
               onOpenReschedule={setRemarcarItem}
               onOpenSchedule={setAgendarItem}
               onFollow={handleAcompanhar}
+              onDismissRecusa={handleDismissRecusa}
             />
             <AgendamentoSection
               title={t('clienteAgendamentos.status.late')}
@@ -828,6 +870,7 @@ export default function AgendamentosCliente() {
               onOpenReschedule={setRemarcarItem}
               onOpenSchedule={setAgendarItem}
               onFollow={handleAcompanhar}
+              onDismissRecusa={handleDismissRecusa}
             />
             <AgendamentoSection
               title={t('clienteAgendamentos.status.awaitingSchedule')}
@@ -838,6 +881,7 @@ export default function AgendamentosCliente() {
               onOpenReschedule={setRemarcarItem}
               onOpenSchedule={setAgendarItem}
               onFollow={handleAcompanhar}
+              onDismissRecusa={handleDismissRecusa}
             />
           </Flex>
         )}

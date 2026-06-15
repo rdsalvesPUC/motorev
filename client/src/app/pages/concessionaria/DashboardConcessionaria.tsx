@@ -19,6 +19,7 @@ import CatalogoRevisoes from "@/app/pages/concessionaria/catalogos/CatalogoRevis
 import FormCatalogoRevisoes from "@/app/pages/concessionaria/catalogos/FormCatalogoRevisoes";
 import ModeloRevisaoDetalhes from "@/app/pages/concessionaria/catalogos/ModeloRevisaoDetalhes";
 import RevisaoDetalhes from "@/app/pages/concessionaria/catalogos/RevisaoDetalhes";
+import AgendamentosConcessionaria from "@/app/pages/concessionaria/agendamentos/AgendamentosConcessionaria";
 
 const {Title, Paragraph} = Typography;
 
@@ -48,6 +49,7 @@ export default function DashboardConcessionaria() {
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_LOJAS} element={<Lojas onNavigateToForm={() => navigate(PATHS.CONCESSIONARIA_LOJAS_NOVO)} onNavigateToEdit={(id) => navigate(`${PATHS.CONCESSIONARIA_LOJAS_EDITAR}/${id}`)} />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_LOJAS_NOVO} element={<FormLojas onBack={() => navigate(PATHS.CONCESSIONARIA_LOJAS)} />} />
                 <Route path={`${PATH_SEGMENTS.CONCESSIONARIA_LOJAS_EDITAR}/:id`} element={<FormLojas onBack={() => navigate(PATHS.CONCESSIONARIA_LOJAS)} />} />
+                <Route path={PATH_SEGMENTS.CONCESSIONARIA_AGENDAMENTOS} element={<AgendamentosConcessionaria />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_PECAS} element={<CatalogoPecas />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_PECAS_CREATE} element={<CatalogoPecasCreate />} />
                 <Route path={PATH_SEGMENTS.CONCESSIONARIA_CATALOGOS_MOTOS} element={<CatalogoMotos onNavigateToForm={() => navigate(PATHS.CONCESSIONARIA_CATALOGOS_MOTOS_NOVO)} />} />

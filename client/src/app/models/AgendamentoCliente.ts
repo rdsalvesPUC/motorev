@@ -25,4 +25,6 @@ export interface AgendamentoCliente {
   quantidadePecas: number;
   quantidadeServicos: number;
   prazoTexto: string;
+  mensagemRecusa?: string | null;
+  dataRecusa?: string | null;
 }

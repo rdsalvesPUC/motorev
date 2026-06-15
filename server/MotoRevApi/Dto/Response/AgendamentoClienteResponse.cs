@@ -19,5 +19,7 @@ public record AgendamentoClienteResponse(
     string? CidadeLoja,
     int QuantidadePecas,
     int QuantidadeServicos,
-    string PrazoTexto
+    string PrazoTexto,
+    string? MensagemRecusa = null,
+    DateTime? DataRecusa = null
 );

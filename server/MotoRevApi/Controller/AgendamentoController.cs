@@ -77,4 +77,62 @@ public class AgendamentoController : ControllerBase
         await _agendamentoService.AgendarRevisaoClienteAsync(revisaoMotoId, userId, request);
         return NoContent();
     }
+
+    [HttpPatch("cliente/{agendamentoId:int}/recusa/visualizar")]
+    [Authorize(Roles = Roles.Cliente)]
+    public async Task<IActionResult> VisualizarRecusaCliente(int agendamentoId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        await _agendamentoService.VisualizarRecusaClienteAsync(agendamentoId, userId);
+        return NoContent();
+    }
+
+    [HttpGet("concessionaria")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    public async Task<IActionResult> ListarAgendamentosConcessionaria()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var response = await _agendamentoService.ListarAgendamentosConcessionariaAsync(userId);
+        return Ok(response);
+    }
+
+    [HttpPatch("concessionaria/{agendamentoId:int}/aceitar")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    public async Task<IActionResult> AceitarSolicitacaoConcessionaria(int agendamentoId)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        await _agendamentoService.AceitarSolicitacaoConcessionariaAsync(agendamentoId, userId);
+        return NoContent();
+    }
+
+    [HttpPost("concessionaria/{agendamentoId:int}/recusar")]
+    [Authorize(Roles = Roles.Concessionaria)]
+    public async Task<IActionResult> RecusarSolicitacaoConcessionaria(
+        int agendamentoId,
+        [FromBody] RecusarAgendamentoRequest request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        await _agendamentoService.RecusarSolicitacaoConcessionariaAsync(agendamentoId, userId, request);
+        return NoContent();
+    }
 }
