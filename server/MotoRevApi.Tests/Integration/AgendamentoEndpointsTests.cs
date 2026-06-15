@@ -34,7 +34,7 @@ public class AgendamentoEndpointsTests : IDisposable
         // Arrange
         var userId = "cliente-agendamentos";
         var outroUserId = "outro-cliente-agendamentos";
-        var hoje = DateTime.UtcNow.Date;
+        var hoje = DateTime.Today;
         Moto moto;
         RevisaoMoto revisaoDisponivel;
         RevisaoMoto revisaoAgendada;
@@ -110,7 +110,7 @@ public class AgendamentoEndpointsTests : IDisposable
     {
         // Arrange
         var userId = "cliente-cancelar-agendamento";
-        var hoje = DateTime.UtcNow.Date;
+        var hoje = DateTime.Today;
         int agendamentoId;
 
         using (var scope = _factory.Services.CreateScope())
@@ -154,7 +154,7 @@ public class AgendamentoEndpointsTests : IDisposable
     {
         // Arrange
         var userId = "cliente-remarcar-agendamento";
-        var hoje = DateTime.UtcNow.Date;
+        var hoje = DateTime.Today;
         int agendamentoId;
         var novaData = hoje.AddDays(3);
 
@@ -196,6 +196,45 @@ public class AgendamentoEndpointsTests : IDisposable
         Assert.Equal(novaData.Date, item.DataAgendada?.Date);
     }
 
+    [Fact]
+    public async Task AgendarRevisaoCliente_DeveCriarSolicitacaoAguardandoConfirmacao()
+    {
+        // Arrange
+        var userId = "cliente-agendar-revisao";
+        var hoje = DateTime.Today;
+        int revisaoMotoId;
+        int lojaId;
+        var dataAgendada = hoje.AddDays(2);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var (moto, loja) = SeedMotoComLoja(context, userId, clienteId: 12, motoId: 12);
+            var revisao = SeedRevisao(context, moto, ordem: 1, dataIdeal: hoje);
+            revisaoMotoId = revisao.Id;
+            lojaId = loja.Id;
+        }
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            TestJwtTokenFactory.CreateToken(Roles.Cliente, userId));
+
+        // Act
+        var response = await client.PostAsJsonAsync(
+            $"/api/Agendamento/cliente/revisoes/{revisaoMotoId}/agendar",
+            new AgendarRevisaoRequest(lojaId, dataAgendada));
+        var listResponse = await client.GetAsync("/api/Agendamento/cliente");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var agendamentos = await listResponse.Content.ReadFromJsonAsync<List<AgendamentoClienteResponse>>(JsonOptions);
+        var item = Assert.Single(agendamentos!);
+        Assert.Equal("aguardando_confirmacao", item.Status);
+        Assert.Equal(lojaId, item.LojaId);
+        Assert.Equal(dataAgendada.Date, item.DataAgendada?.Date);
+    }
+
     private static (Moto Moto, Loja Loja) SeedMotoComLoja(
         AppDbContext context,
         string userId,
@@ -224,7 +263,7 @@ public class AgendamentoEndpointsTests : IDisposable
             ModeloMoto = modelo,
             Cor = "Preta",
             KilometragemAtual = 1000,
-            DataVenda = DateTime.UtcNow.Date.AddMonths(-6),
+            DataVenda = DateTime.Today.AddMonths(-6),
             Ativo = true
         };
         var concessionaria = new Concessionaria

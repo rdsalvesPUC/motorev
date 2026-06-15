@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router';
 import {
   Typography,
@@ -33,18 +33,25 @@ import {
   ClockCircleFilled,
   CloseCircleFilled,
   HourglassOutlined,
+  SyncOutlined,
   ToolOutlined,
   TagOutlined,
   WarningFilled,
 } from '@ant-design/icons';
 import { motoService } from '@/app/services/motoService';
 import { Moto, RevisaoMotoResponse } from '@/app/models/Moto';
+import { Loja } from '@/app/models/Loja';
+import { AgendamentoCliente } from '@/app/models/AgendamentoCliente';
 import { getLocale, t } from '@/app/i18n';
 import DashboardBreadcrumb from '@/app/components/layout/DashboardBreadcrumb';
 import { PATHS } from '@/app/paths';
 import { getImageUrl } from '@/app/utils/imageUtils';
 import { ApiError } from '@/app/services/http';
+import { agendamentoService } from '@/app/services/agendamentoService';
+import { concessionariaService } from '@/app/services/concessionariaService';
 import { formatCurrency } from '@/app/utils/formatters';
+import { handleApiError } from '@/app/utils/errorHandler';
+import AgendamentoSolicitacaoModal from '@/app/components/cliente/AgendamentoSolicitacaoModal';
 import {
   EXECUTION_ITEM_STATUS,
   applyRevisionStatusOverride,
@@ -54,7 +61,14 @@ import {
 
 const { Title, Text } = Typography;
 
-type RevisionStatus = 'concluida' | 'em_execucao' | 'agendada' | 'atrasada' | 'planejada';
+type RevisionStatus =
+  | 'concluida'
+  | 'em_execucao'
+  | 'aguardando_confirmacao'
+  | 'agendada'
+  | 'atrasada'
+  | 'aguardando_agendamento'
+  | 'planejada';
 type ThemeToken = ReturnType<typeof theme.useToken>['token'];
 type ExecutionItemStatus = 'concluido' | 'em_execucao' | 'pendente';
 type ExecutionItem = {
@@ -78,15 +92,42 @@ const formatDate = (date: string) => parseLocalDate(date).toLocaleDateString(get
 
 const formatNumber = (value: number) => value.toLocaleString(getLocale());
 
+const addDays = (date: Date, days: number) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+const formatDateOnly = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const getRevisionWindow = (revisao: RevisaoMotoResponse) => {
+  const dataIdeal = parseLocalDate(revisao.dataPrevista);
+  return {
+    dataMinima: addDays(dataIdeal, -15),
+    dataLimite: addDays(dataIdeal, 15),
+  };
+};
+
 const getRevisionStatus = (revisao: RevisaoMotoResponse): RevisionStatus => {
   const status = normalizeStatus(revisao.status);
   if (status.includes('concluida')) return 'concluida';
   if (status.includes('execucao')) return 'em_execucao';
+  if (status.includes('aguardando_confirmacao')) return 'aguardando_confirmacao';
+  if (status.includes('aguardando_agendamento')) return 'aguardando_agendamento';
   if (status.includes('agendada')) return 'agendada';
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  return parseLocalDate(revisao.dataPrevista) < today ? 'atrasada' : 'planejada';
+  const { dataMinima, dataLimite } = getRevisionWindow(revisao);
+
+  if (today < dataMinima) return 'planejada';
+  if (today <= dataLimite) return 'aguardando_agendamento';
+  return 'atrasada';
 };
 
 const getRevisionEstimate = (revisao: RevisaoMotoResponse) => {
@@ -136,6 +177,12 @@ const getStatusConfig = (status: RevisionStatus, token: ThemeToken) => {
       tagColor: 'processing',
       icon: <ClockCircleFilled style={{ color: token.colorInfo }} />,
     },
+    aguardando_confirmacao: {
+      label: t('clienteAgendamentos.status.awaitingConfirmation'),
+      badgeStatus: 'processing' as const,
+      tagColor: 'processing',
+      icon: <ClockCircleFilled style={{ color: token.colorInfo }} />,
+    },
     agendada: {
       label: t('motoDetalhes.status.agendada'),
       badgeStatus: 'processing' as const,
@@ -147,6 +194,12 @@ const getStatusConfig = (status: RevisionStatus, token: ThemeToken) => {
       badgeStatus: 'error' as const,
       tagColor: 'error',
       icon: <CloseCircleFilled style={{ color: token.colorError }} />,
+    },
+    aguardando_agendamento: {
+      label: t('clienteAgendamentos.status.awaitingSchedule'),
+      badgeStatus: 'warning' as const,
+      tagColor: 'warning',
+      icon: <HourglassOutlined style={{ color: token.colorWarning }} />,
     },
     planejada: {
       label: t('motoDetalhes.status.planejada'),
@@ -240,16 +293,26 @@ function RevisaoPlanejadaCard({ revisao, onClick }: { revisao: RevisaoMotoRespon
 function RevisaoDetalhes({
   moto,
   revisao,
+  lojas,
+  scheduling,
+  onSchedule,
   onBack,
 }: {
   moto: Moto;
   revisao: RevisaoMotoResponse;
+  lojas: Loja[];
+  scheduling: boolean;
+  onSchedule: (revisao: RevisaoMotoResponse, values: { lojaId: number; dataAgendada: string }) => Promise<void>;
   onBack: () => void;
 }) {
   const { token } = theme.useToken();
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const status = getRevisionStatus(revisao);
   const statusConfig = getStatusConfig(status, token);
   const isInExecution = status === 'em_execucao';
+  const canSchedule = status === 'aguardando_agendamento' || status === 'atrasada';
+  const scheduleMode = status === 'atrasada' ? 'reagendar' : 'agendar';
+  const { dataMinima, dataLimite } = getRevisionWindow(revisao);
   const executionProgress = getExecutionProgress(revisao.servicos ?? [], revisao.pecas ?? []);
   const daysUntilRevision = getDaysUntilRevision(revisao);
   const totalPecas = getRevisionPartsEstimate(revisao);
@@ -360,6 +423,32 @@ function RevisaoDetalhes({
           message={t('motoRevisaoDetalhes.alert.overdue.title')}
           description={t('motoRevisaoDetalhes.alert.overdue.description')}
         />
+      )}
+
+      {canSchedule && (
+        <Card size="small">
+          <Flex justify="space-between" align="center" gap="middle" wrap="wrap">
+            <Flex vertical gap={2}>
+              <Text strong>{t('motoRevisaoDetalhes.schedule.title')}</Text>
+              <Text type="secondary">
+                {t('motoRevisaoDetalhes.schedule.description', {
+                  start: formatDate(formatDateOnly(dataMinima)),
+                  end: formatDate(formatDateOnly(dataLimite)),
+                })}
+              </Text>
+            </Flex>
+            <Button
+              type="primary"
+              danger={status === 'atrasada'}
+              icon={status === 'atrasada' ? <SyncOutlined /> : <CalendarOutlined />}
+              onClick={() => setScheduleOpen(true)}
+            >
+              {status === 'atrasada'
+                ? t('clienteAgendamentos.actions.rescheduleLate')
+                : t('clienteAgendamentos.actions.schedule')}
+            </Button>
+          </Flex>
+        </Card>
       )}
 
       <Card title={t('motoRevisaoDetalhes.deadline.title')}>
@@ -531,6 +620,23 @@ function RevisaoDetalhes({
           </Flex>
         </Flex>
       </Card>
+
+      <AgendamentoSolicitacaoModal
+        item={{
+          marca: moto.marca,
+          modelo: moto.nomeModelo,
+          numeroRevisao: revisao.ordem,
+          dataMinima: formatDateOnly(dataMinima),
+          dataLimite: formatDateOnly(dataLimite),
+          dataIdeal: revisao.dataPrevista,
+        }}
+        lojas={lojas}
+        open={scheduleOpen}
+        confirming={scheduling}
+        mode={scheduleMode}
+        onConfirm={(values) => onSchedule(revisao, values).then(() => setScheduleOpen(false))}
+        onCancel={() => setScheduleOpen(false)}
+      />
     </Flex>
   );
 }
@@ -545,6 +651,9 @@ export default function MotoDetalhes() {
   const [loading, setLoading] = useState(true);
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [lojas, setLojas] = useState<Loja[]>([]);
+  const [scheduling, setScheduling] = useState(false);
+  const [agendamentosCliente, setAgendamentosCliente] = useState<AgendamentoCliente[]>([]);
 
   const executarRemocao = async () => {
     if (!moto) return;
@@ -567,22 +676,48 @@ export default function MotoDetalhes() {
     }
   };
 
+  const carregarDetalhes = useCallback(async () => {
+    if (!id) return;
+    try {
+      const data = await motoService.getById(Number(id));
+      setMoto(data);
+    } catch (err: any) {
+      console.error('Falha ao carregar detalhes da moto:', err);
+      setErrorStatus(err instanceof ApiError ? (err.status ?? 500) : 500);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
   useEffect(() => {
-    const carregarDetalhes = async () => {
-      if (!id) return;
+    carregarDetalhes();
+  }, [carregarDetalhes]);
+
+  const carregarAgendamentosCliente = useCallback(async () => {
+    try {
+      const data = await agendamentoService.getCliente();
+      setAgendamentosCliente(data);
+    } catch (error) {
+      handleApiError(error, 'clienteAgendamentos.load.error');
+    }
+  }, []);
+
+  useEffect(() => {
+    carregarAgendamentosCliente();
+  }, [carregarAgendamentosCliente]);
+
+  useEffect(() => {
+    const carregarLojas = async () => {
       try {
-        const data = await motoService.getById(Number(id));
-        setMoto(data);
-      } catch (err: any) {
-        console.error('Falha ao carregar detalhes da moto:', err);
-        setErrorStatus(err instanceof ApiError ? (err.status ?? 500) : 500);
-      } finally {
-        setLoading(false);
+        const data = await concessionariaService.getLojasAtivas();
+        setLojas(data);
+      } catch (error) {
+        handleApiError(error, 'clienteConcessionarias.load.error');
       }
     };
 
-    carregarDetalhes();
-  }, [id]);
+    carregarLojas();
+  }, []);
 
   useEffect(() => {
     const revisaoMotoId = searchParams.get('revisaoMotoId');
@@ -609,6 +744,26 @@ export default function MotoDetalhes() {
       nextParams.delete('status');
       nextParams.delete('returnTo');
       setSearchParams(nextParams, { replace: true });
+    }
+  };
+
+  const handleScheduleRevision = async (
+    revisao: RevisaoMotoResponse,
+    values: { lojaId: number; dataAgendada: string }
+  ) => {
+    try {
+      setScheduling(true);
+      await agendamentoService.agendarCliente(revisao.id, values.lojaId, values.dataAgendada);
+      message.success(t('clienteAgendamentos.actions.schedule.success'));
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('revisaoMotoId', String(revisao.id));
+      nextParams.set('status', 'aguardando_confirmacao');
+      setSearchParams(nextParams, { replace: true });
+      await Promise.all([carregarDetalhes(), carregarAgendamentosCliente()]);
+    } catch (error) {
+      handleApiError(error, 'clienteAgendamentos.actions.schedule.error');
+    } finally {
+      setScheduling(false);
     }
   };
 
@@ -662,13 +817,26 @@ export default function MotoDetalhes() {
 
   if (!moto) return null;
 
-  const revisoes = [...(moto.revisoesPlanejadas ?? [])].sort((a, b) => a.ordem - b.ordem);
+  const agendamentoPorRevisao = new Map(
+    agendamentosCliente.map((agendamento) => [agendamento.revisaoMotoId, agendamento])
+  );
+  const aplicarStatusAgendamento = (revisao: RevisaoMotoResponse): RevisaoMotoResponse => {
+    const agendamento = agendamentoPorRevisao.get(revisao.id);
+    return agendamento ? { ...revisao, status: agendamento.status } : revisao;
+  };
+
+  const revisoes = [...(moto.revisoesPlanejadas ?? [])]
+    .sort((a, b) => a.ordem - b.ordem)
+    .map(aplicarStatusAgendamento);
   const selectedRevisionBase = selectedRevisionId
     ? revisoes.find((revisao) => revisao.id === selectedRevisionId)
     : null;
+  const selectedRevisionHasServerStatus = selectedRevisionBase
+    ? agendamentoPorRevisao.has(selectedRevisionBase.id)
+    : false;
   const selectedRevision = applyRevisionStatusOverride(
     selectedRevisionBase,
-    searchParams.get('status')
+    selectedRevisionHasServerStatus ? null : searchParams.get('status')
   ) as RevisaoMotoResponse | null;
 
   if (selectedRevision) {
@@ -676,6 +844,9 @@ export default function MotoDetalhes() {
       <RevisaoDetalhes
         moto={moto}
         revisao={selectedRevision}
+        lojas={lojas}
+        scheduling={scheduling}
+        onSchedule={handleScheduleRevision}
         onBack={voltarParaDetalhesDaMoto}
       />
     );
@@ -687,7 +858,9 @@ export default function MotoDetalhes() {
     agendada: revisionsWithStatus.filter((item) => item.status === 'agendada').length,
     emExecucao: revisionsWithStatus.filter((item) => item.status === 'em_execucao').length,
     atrasada: revisionsWithStatus.filter((item) => item.status === 'atrasada').length,
-    planejada: revisionsWithStatus.filter((item) => item.status === 'planejada').length,
+    planejada: revisionsWithStatus.filter((item) =>
+      item.status === 'planejada' || item.status === 'aguardando_agendamento'
+    ).length,
   };
   const proximaRevisao = revisionsWithStatus.find((item) => item.status !== 'concluida')?.revisao;
   const totalEstimado = revisoes.reduce((total, revisao) => total + getRevisionEstimate(revisao), 0);

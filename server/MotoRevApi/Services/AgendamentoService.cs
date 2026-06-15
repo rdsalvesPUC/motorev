@@ -153,6 +153,55 @@ public class AgendamentoService
         await _context.SaveChangesAsync();
     }
 
+    public virtual async Task AgendarRevisaoClienteAsync(
+        int revisaoMotoId,
+        string userId,
+        AgendarRevisaoRequest request)
+    {
+        var revisao = await BuscarRevisaoDoClienteAsync(revisaoMotoId, userId);
+        var lojaExiste = await _context.Lojas
+            .AsNoTracking()
+            .AnyAsync(l => l.Id == request.LojaId && l.Ativo);
+
+        if (!lojaExiste)
+        {
+            throw new NotFoundException("Loja não encontrada.");
+        }
+
+        var ultimoAgendamento = await _context.Agendamentos
+            .AsNoTracking()
+            .Where(a => a.RevisaoMotoId == revisaoMotoId)
+            .OrderByDescending(a => a.CriadoEm)
+            .ThenByDescending(a => a.Id)
+            .FirstOrDefaultAsync();
+
+        var hoje = _todayProvider().Date;
+        var dataIdeal = revisao.DataPrevista.Date;
+        var dataMinima = dataIdeal.AddDays(-15);
+        var dataLimite = dataIdeal.AddDays(15);
+        var statusAtual = CalcularStatus(revisao, ultimoAgendamento, hoje, dataMinima, dataLimite);
+
+        if (statusAtual is not ("aguardando_agendamento" or "atrasada"))
+        {
+            throw new BusinessRuleException("Esta revisão não está disponível para agendamento.");
+        }
+
+        var dataAgendada = request.DataAgendada.Date;
+        ValidarDataDentroDaJanela(dataAgendada, hoje, dataMinima, dataLimite);
+
+        _context.Agendamentos.Add(new Agendamento
+        {
+            RevisaoMotoId = revisaoMotoId,
+            LojaId = request.LojaId,
+            DataAgendada = dataAgendada,
+            Status = StatusAgendamento.AguardandoConfirmacao,
+            CriadoEm = DateTime.UtcNow,
+            AtualizadoEm = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync();
+    }
+
     private async Task<Agendamento> BuscarAgendamentoDoClienteAsync(int agendamentoId, string userId)
     {
         var agendamento = await _context.Agendamentos
@@ -165,6 +214,36 @@ public class AgendamentoService
                 a.RevisaoMoto.Moto.Ativo);
 
         return agendamento ?? throw new NotFoundException("Agendamento não encontrado.");
+    }
+
+    private async Task<RevisaoMoto> BuscarRevisaoDoClienteAsync(int revisaoMotoId, string userId)
+    {
+        var revisao = await _context.RevisoesMotos
+            .Include(r => r.Moto)
+                .ThenInclude(m => m.Cliente)
+            .FirstOrDefaultAsync(r =>
+                r.Id == revisaoMotoId &&
+                r.Moto.Cliente.UsuarioId == userId &&
+                r.Moto.Ativo);
+
+        return revisao ?? throw new NotFoundException("Revisão não encontrada.");
+    }
+
+    private static void ValidarDataDentroDaJanela(
+        DateTime dataAgendada,
+        DateTime hoje,
+        DateTime dataMinima,
+        DateTime dataLimite)
+    {
+        if (dataAgendada < hoje)
+        {
+            throw new BusinessRuleException("A data do agendamento não pode ser anterior a hoje.");
+        }
+
+        if (dataAgendada < dataMinima || dataAgendada > dataLimite)
+        {
+            throw new BusinessRuleException("A data deve estar dentro da janela de tolerância da revisão.");
+        }
     }
 
     private static AgendamentoClienteResponse CriarResponse(

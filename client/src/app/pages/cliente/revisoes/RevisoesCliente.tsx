@@ -48,7 +48,14 @@ import {
 
 const { Title, Text } = Typography;
 
-type RevisionStatus = 'concluida' | 'em_execucao' | 'agendada' | 'atrasada' | 'planejada';
+type RevisionStatus =
+  | 'concluida'
+  | 'em_execucao'
+  | 'aguardando_confirmacao'
+  | 'agendada'
+  | 'atrasada'
+  | 'aguardando_agendamento'
+  | 'planejada';
 type ThemeToken = ReturnType<typeof theme.useToken>['token'];
 
 interface RevisaoAgregada {
@@ -97,6 +104,12 @@ const getStatusConfig = (status: RevisionStatus, token: ThemeToken) => {
       cardColor: token.colorInfo,
       icon: <ClockCircleFilled style={{ color: token.colorInfo }} />,
     },
+    aguardando_confirmacao: {
+      label: t('clienteAgendamentos.status.awaitingConfirmation'),
+      tagColor: 'processing',
+      cardColor: token.colorInfo,
+      icon: <ClockCircleFilled style={{ color: token.colorInfo }} />,
+    },
     agendada: {
       label: t('motoDetalhes.status.agendada'),
       tagColor: 'blue',
@@ -108,6 +121,12 @@ const getStatusConfig = (status: RevisionStatus, token: ThemeToken) => {
       tagColor: 'error',
       cardColor: token.colorError,
       icon: <CloseCircleFilled style={{ color: token.colorError }} />,
+    },
+    aguardando_agendamento: {
+      label: t('clienteAgendamentos.status.awaitingSchedule'),
+      tagColor: 'warning',
+      cardColor: token.colorWarning,
+      icon: <HourglassOutlined style={{ color: token.colorWarning }} />,
     },
     planejada: {
       label: t('motoDetalhes.status.planejada'),
@@ -220,7 +239,9 @@ export default function RevisoesCliente() {
     { value: 'todos', label: t('clienteRevisoes.filters.allStatuses') },
     { value: REVISION_STATUS.ATRASADA, label: t('motoDetalhes.status.atrasada') },
     { value: REVISION_STATUS.EM_EXECUCAO, label: t('motoDetalhes.status.emExecucao') },
+    { value: REVISION_STATUS.AGUARDANDO_CONFIRMACAO, label: t('clienteAgendamentos.status.awaitingConfirmation') },
     { value: REVISION_STATUS.AGENDADA, label: t('motoDetalhes.status.agendada') },
+    { value: REVISION_STATUS.AGUARDANDO_AGENDAMENTO, label: t('clienteAgendamentos.status.awaitingSchedule') },
     { value: REVISION_STATUS.PLANEJADA, label: t('motoDetalhes.status.planejada') },
     { value: REVISION_STATUS.CONCLUIDA, label: t('motoDetalhes.status.concluida') },
   ];

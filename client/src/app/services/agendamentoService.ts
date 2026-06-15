@@ -24,4 +24,12 @@ export const agendamentoService = {
     });
     await handleResponse(response, t('clienteAgendamentos.actions.reschedule.error'));
   },
+
+  async agendarCliente(revisaoMotoId: number, lojaId: number, dataAgendada: string): Promise<void> {
+    const response = await apiFetch(`${AGENDAMENTO_URL}/cliente/revisoes/${revisaoMotoId}/agendar`, {
+      method: 'POST',
+      body: JSON.stringify({ lojaId, dataAgendada }),
+    });
+    await handleResponse(response, t('clienteAgendamentos.actions.schedule.error'));
+  },
 };

@@ -83,6 +83,30 @@ test('getRevisionStatus marca planejada vencida como atrasada', () => {
   assert.equal(status, REVISION_STATUS.ATRASADA);
 });
 
+test('getRevisionStatus marca revisao dentro da tolerancia como aguardando agendamento', () => {
+  const status = getRevisionStatus(
+    {
+      dataPrevista: '2026-06-18T00:00:00',
+      status: 'Planejada',
+    },
+    new Date('2026-06-14T12:00:00')
+  );
+
+  assert.equal(status, REVISION_STATUS.AGUARDANDO_AGENDAMENTO);
+});
+
+test('getRevisionStatus mantem planejada quando ainda nao entrou na tolerancia', () => {
+  const status = getRevisionStatus(
+    {
+      dataPrevista: '2026-07-10T00:00:00',
+      status: 'Planejada',
+    },
+    new Date('2026-06-14T12:00:00')
+  );
+
+  assert.equal(status, REVISION_STATUS.PLANEJADA);
+});
+
 test('agruparRevisoesDasMotos achata revisoes preservando contexto da moto', () => {
   const revisoes = agruparRevisoesDasMotos(motos, today);
 

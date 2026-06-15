@@ -1,8 +1,10 @@
 export const REVISION_STATUS = {
   CONCLUIDA: 'concluida',
   EM_EXECUCAO: 'em_execucao',
+  AGUARDANDO_CONFIRMACAO: 'aguardando_confirmacao',
   AGENDADA: 'agendada',
   ATRASADA: 'atrasada',
+  AGUARDANDO_AGENDAMENTO: 'aguardando_agendamento',
   PLANEJADA: 'planejada',
 };
 
@@ -15,9 +17,11 @@ export const EXECUTION_ITEM_STATUS = {
 const STATUS_PRIORITY = {
   [REVISION_STATUS.ATRASADA]: 0,
   [REVISION_STATUS.EM_EXECUCAO]: 1,
-  [REVISION_STATUS.AGENDADA]: 2,
-  [REVISION_STATUS.PLANEJADA]: 3,
-  [REVISION_STATUS.CONCLUIDA]: 4,
+  [REVISION_STATUS.AGUARDANDO_CONFIRMACAO]: 2,
+  [REVISION_STATUS.AGENDADA]: 3,
+  [REVISION_STATUS.AGUARDANDO_AGENDAMENTO]: 4,
+  [REVISION_STATUS.PLANEJADA]: 5,
+  [REVISION_STATUS.CONCLUIDA]: 6,
 };
 
 export function normalizeStatus(status) {
@@ -37,14 +41,22 @@ export function getRevisionStatus(revisao, today = new Date()) {
   const status = normalizeStatus(revisao?.status);
   if (status.includes('concluida')) return REVISION_STATUS.CONCLUIDA;
   if (status.includes('execucao')) return REVISION_STATUS.EM_EXECUCAO;
+  if (status.includes('aguardando_confirmacao')) return REVISION_STATUS.AGUARDANDO_CONFIRMACAO;
+  if (status.includes('aguardando_agendamento')) return REVISION_STATUS.AGUARDANDO_AGENDAMENTO;
   if (status.includes('agendada')) return REVISION_STATUS.AGENDADA;
   if (status.includes('atrasada')) return REVISION_STATUS.ATRASADA;
 
   const referenceDate = new Date(today);
   referenceDate.setHours(0, 0, 0, 0);
-  return parseLocalDate(revisao?.dataPrevista) < referenceDate
-    ? REVISION_STATUS.ATRASADA
-    : REVISION_STATUS.PLANEJADA;
+  const dataPrevista = parseLocalDate(revisao?.dataPrevista);
+  const dataMinima = new Date(dataPrevista);
+  dataMinima.setDate(dataMinima.getDate() - 15);
+  const dataLimite = new Date(dataPrevista);
+  dataLimite.setDate(dataLimite.getDate() + 15);
+
+  if (referenceDate < dataMinima) return REVISION_STATUS.PLANEJADA;
+  if (referenceDate <= dataLimite) return REVISION_STATUS.AGUARDANDO_AGENDAMENTO;
+  return REVISION_STATUS.ATRASADA;
 }
 
 export function getRevisionPartsEstimate(revisao) {
@@ -124,7 +136,9 @@ export function calcularResumoRevisoes(revisoes) {
 
   for (const item of revisoes) {
     if (item.status === REVISION_STATUS.CONCLUIDA) resumo.concluidas += 1;
-    if (item.status === REVISION_STATUS.PLANEJADA) resumo.pendentes += 1;
+    if (item.status === REVISION_STATUS.PLANEJADA || item.status === REVISION_STATUS.AGUARDANDO_AGENDAMENTO) {
+      resumo.pendentes += 1;
+    }
     if (item.status === REVISION_STATUS.AGENDADA) resumo.agendadas += 1;
     if (item.status === REVISION_STATUS.EM_EXECUCAO) resumo.emExecucao += 1;
     if (item.status === REVISION_STATUS.ATRASADA) resumo.atrasadas += 1;

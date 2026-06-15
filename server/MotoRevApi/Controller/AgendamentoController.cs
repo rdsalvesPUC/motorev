@@ -61,4 +61,20 @@ public class AgendamentoController : ControllerBase
         await _agendamentoService.RemarcarAgendamentoClienteAsync(agendamentoId, userId, request);
         return NoContent();
     }
+
+    [HttpPost("cliente/revisoes/{revisaoMotoId:int}/agendar")]
+    [Authorize(Roles = Roles.Cliente)]
+    public async Task<IActionResult> AgendarRevisaoCliente(
+        int revisaoMotoId,
+        [FromBody] AgendarRevisaoRequest request)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        await _agendamentoService.AgendarRevisaoClienteAsync(revisaoMotoId, userId, request);
+        return NoContent();
+    }
 }
