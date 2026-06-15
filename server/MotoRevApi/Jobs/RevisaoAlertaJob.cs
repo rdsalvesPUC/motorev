@@ -72,7 +72,7 @@ public class RevisaoAlertaJob : BackgroundService
         }
     }
 
-    private async Task VerificarMotoAsync(Moto moto, AppDbContext context, AlertaService alertaService, CancellationToken stoppingToken)
+    public async Task VerificarMotoAsync(Moto moto, AppDbContext context, AlertaService alertaService, CancellationToken stoppingToken)
     {
         // 1. Determinar a próxima revisão baseada nas revisões planejadas da moto
         // Buscamos a primeira que ainda está com status "Planejada" (não foi concluída ou cancelada)
@@ -83,26 +83,14 @@ public class RevisaoAlertaJob : BackgroundService
 
         if (proximaRevisao == null) return;
 
-        // 2. Determinar a revisão anterior para calcular o intervalo (se houver)
-        var revisaoAnterior = moto.RevisoesPlanejadas
-            .Where(r => r.Ordem < proximaRevisao.Ordem)
-            .OrderByDescending(r => r.Ordem)
-            .FirstOrDefault();
+        // 2. Lógica de Revisão Próxima e Atrasada baseada na janela de datas (conforme lógica do frontend)
+        var today = DateTime.UtcNow.Date;
+        var dataPrevista = proximaRevisao.DataPrevista.Date;
+        var dataMinima = dataPrevista.AddDays(-15);
+        var dataLimite = dataPrevista.AddDays(15);
 
-        // 3. Lógica de Revisão Próxima (80% do intervalo de KM ou Próximo da Data)
-        var kmAnterior = revisaoAnterior?.Quilometragem ?? 0;
-        var intervalKm = proximaRevisao.Quilometragem - kmAnterior;
-        var limiarKm = kmAnterior + (intervalKm * 0.80);
-
-        // Alerta Próximo por Quilometragem
-        var deveGerarAlertaProximo = moto.KilometragemAtual >= limiarKm;
-
-        // Alerta Próximo por Data (ex: faltando 30 dias para a data prevista)
-        var limiarData = proximaRevisao.DataPrevista.AddDays(-30);
-        if (DateTime.UtcNow >= limiarData)
-        {
-            deveGerarAlertaProximo = true;
-        }
+        // Revisão Próxima: Hoje está dentro da janela ideal de agendamento (entre 15 dias antes e 15 dias depois da data prevista)
+        var deveGerarAlertaProximo = today >= dataMinima && today <= dataLimite;
 
         if (deveGerarAlertaProximo)
         {
@@ -120,8 +108,8 @@ public class RevisaoAlertaJob : BackgroundService
             }
         }
 
-        // 4. Lógica de Revisão Atrasada (Passou da KM ou Passou da Data)
-        var estaAtrasada = moto.KilometragemAtual > proximaRevisao.Quilometragem || DateTime.UtcNow > proximaRevisao.DataPrevista;
+        // Revisão Atrasada: Hoje passou da data limite (mais de 15 dias após a data prevista)
+        var estaAtrasada = today > dataLimite;
 
         if (estaAtrasada)
         {

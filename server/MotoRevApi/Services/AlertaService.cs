@@ -123,7 +123,7 @@ public class AlertaService
         int motoId)
     {
         await CriarAlertaAsync(TipoAlerta.AgendamentoCriado, clienteUsuarioId, motoId: motoId, agendamentoId: agendamentoId);
-        await CriarAlertaAsync(TipoAlerta.AgendamentoCriado, concessionariaUsuarioId, motoId: motoId, agendamentoId: agendamentoId);
+        await CriarAlertaAsync(TipoAlerta.NovaSolicitacao, concessionariaUsuarioId, motoId: motoId, agendamentoId: agendamentoId);
     }
 
     public virtual async Task GerarAlertaAgendamentoAlteradoAsync(
@@ -133,7 +133,35 @@ public class AlertaService
         int motoId)
     {
         await CriarAlertaAsync(TipoAlerta.AgendamentoAlterado, clienteUsuarioId, motoId: motoId, agendamentoId: agendamentoId);
-        await CriarAlertaAsync(TipoAlerta.AgendamentoAlterado, concessionariaUsuarioId, motoId: motoId, agendamentoId: agendamentoId);
+        await CriarAlertaAsync(TipoAlerta.Reagendamento, concessionariaUsuarioId, motoId: motoId, agendamentoId: agendamentoId);
+    }
+
+    public virtual async Task GerarAlertaAgendamentoCanceladoAsync(
+        int agendamentoId,
+        string clienteUsuarioId,
+        string concessionariaUsuarioId,
+        int motoId)
+    {
+        await CriarAlertaAsync(TipoAlerta.Cancelamento, clienteUsuarioId, motoId: motoId, agendamentoId: agendamentoId);
+        await CriarAlertaAsync(TipoAlerta.Cancelamento, concessionariaUsuarioId, motoId: motoId, agendamentoId: agendamentoId);
+    }
+
+    public virtual async Task GerarAlertaAgendamentoAprovadoAsync(
+        int agendamentoId,
+        string clienteUsuarioId,
+        string concessionariaUsuarioId,
+        int motoId)
+    {
+        await CriarAlertaAsync(TipoAlerta.AgendamentoAprovado, clienteUsuarioId, motoId: motoId, agendamentoId: agendamentoId);
+    }
+
+    public virtual async Task GerarAlertaAgendamentoRecusadoAsync(
+        int agendamentoId,
+        string clienteUsuarioId,
+        string concessionariaUsuarioId,
+        int motoId)
+    {
+        await CriarAlertaAsync(TipoAlerta.AgendamentoRecusado, clienteUsuarioId, motoId: motoId, agendamentoId: agendamentoId);
     }
 
     public virtual async Task GerarAlertaRevisaoConcluidaAsync(

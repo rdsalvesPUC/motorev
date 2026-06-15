@@ -5,6 +5,7 @@ using MotoRevApi.Enums;
 using MotoRevApi.Exceptions;
 using MotoRevApi.Model;
 using MotoRevApi.Services;
+using Moq;
 using Xunit;
 
 namespace MotoRevApi.Tests.Services;
@@ -517,6 +518,167 @@ public class AgendamentoServiceTests
         Assert.Equal("aguardando_agendamento", item.Status);
         Assert.Null(item.MensagemRecusa);
         Assert.Null(item.DataRecusa);
+    }
+
+    [Fact]
+    public async Task AgendarRevisaoClienteAsync_DeveGerarAlertaAgendamentoCriado()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var alertaServiceMock = new Mock<AlertaService>();
+        var service = new AgendamentoService(context, alertaServiceMock.Object, () => _hoje);
+        var request = new AgendarRevisaoRequest(loja.Id, _hoje.AddDays(1));
+
+        // Act
+        await service.AgendarRevisaoClienteAsync(revisao.Id, "cliente-user", request);
+
+        // Assert
+        alertaServiceMock.Verify(s => s.GerarAlertaAgendamentoCriadoAsync(
+            It.IsAny<int>(),
+            "cliente-user",
+            "concessionaria-1",
+            moto.Id
+        ), Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelarAgendamentoClienteAsync_DeveGerarAlertaAgendamentoCancelado()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.Agendada,
+            CriadoEm = _hoje,
+            AtualizadoEm = _hoje
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var alertaServiceMock = new Mock<AlertaService>();
+        var service = new AgendamentoService(context, alertaServiceMock.Object, () => _hoje);
+
+        // Act
+        await service.CancelarAgendamentoClienteAsync(agendamento.Id, "cliente-user");
+
+        // Assert
+        alertaServiceMock.Verify(s => s.GerarAlertaAgendamentoCanceladoAsync(
+            agendamento.Id,
+            "cliente-user",
+            "concessionaria-1",
+            moto.Id
+        ), Times.Once);
+    }
+
+    [Fact]
+    public async Task RemarcarAgendamentoClienteAsync_DeveGerarAlertaAgendamentoAlterado()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.Agendada,
+            CriadoEm = _hoje,
+            AtualizadoEm = _hoje
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var alertaServiceMock = new Mock<AlertaService>();
+        var service = new AgendamentoService(context, alertaServiceMock.Object, () => _hoje);
+        var request = new RemarcarAgendamentoRequest(_hoje.AddDays(2));
+
+        // Act
+        await service.RemarcarAgendamentoClienteAsync(agendamento.Id, "cliente-user", request);
+
+        // Assert
+        alertaServiceMock.Verify(s => s.GerarAlertaAgendamentoAlteradoAsync(
+            It.IsAny<int>(),
+            "cliente-user",
+            "concessionaria-1",
+            moto.Id
+        ), Times.Once);
+    }
+
+    [Fact]
+    public async Task AceitarSolicitacaoConcessionariaAsync_DeveGerarAlertaAgendamentoAprovado()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.AguardandoConfirmacao,
+            CriadoEm = _hoje,
+            AtualizadoEm = _hoje
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var alertaServiceMock = new Mock<AlertaService>();
+        var service = new AgendamentoService(context, alertaServiceMock.Object, () => _hoje);
+
+        // Act
+        await service.AceitarSolicitacaoConcessionariaAsync(agendamento.Id, "concessionaria-1");
+
+        // Assert
+        alertaServiceMock.Verify(s => s.GerarAlertaAgendamentoAprovadoAsync(
+            agendamento.Id,
+            "cliente-user",
+            "concessionaria-1",
+            moto.Id
+        ), Times.Once);
+    }
+
+    [Fact]
+    public async Task RecusarSolicitacaoConcessionariaAsync_DeveGerarAlertaAgendamentoRecusado()
+    {
+        // Arrange
+        using var context = CreateContext();
+        var (moto, loja) = SeedBaseData(context, "cliente-user");
+        var revisao = AddRevisao(context, moto, ordem: 1, dataIdeal: _hoje);
+        var agendamento = new Agendamento
+        {
+            RevisaoMotoId = revisao.Id,
+            LojaId = loja.Id,
+            DataAgendada = _hoje.AddDays(1),
+            Status = StatusAgendamento.AguardandoConfirmacao,
+            CriadoEm = _hoje,
+            AtualizadoEm = _hoje
+        };
+        context.Agendamentos.Add(agendamento);
+        await context.SaveChangesAsync();
+
+        var alertaServiceMock = new Mock<AlertaService>();
+        var service = new AgendamentoService(context, alertaServiceMock.Object, () => _hoje);
+        var request = new RecusarAgendamentoRequest("Agenda cheia");
+
+        // Act
+        await service.RecusarSolicitacaoConcessionariaAsync(agendamento.Id, "concessionaria-1", request);
+
+        // Assert
+        alertaServiceMock.Verify(s => s.GerarAlertaAgendamentoRecusadoAsync(
+            agendamento.Id,
+            "cliente-user",
+            "concessionaria-1",
+            moto.Id
+        ), Times.Once);
     }
 
     private static (Moto Moto, Loja Loja) SeedBaseData(
