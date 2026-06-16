@@ -1,5 +1,5 @@
 import React from 'react';
-import { Drawer, List, Typography, Button, Empty, Tag, Flex, Badge, Divider } from 'antd';
+import { Drawer, List, Typography, Button, Empty, Tag, Flex, Badge, Divider, theme } from 'antd';
 import {
   BellOutlined,
   CheckOutlined,
@@ -26,17 +26,18 @@ interface NotificationsDrawerProps {
 }
 
 function NotificationIcon({ tipo }: { tipo: TipoAlerta }) {
+  const { token } = theme.useToken();
   const iconMap: Record<TipoAlerta, React.ReactNode> = {
-    RevisaoProxima: <CalendarOutlined style={{ color: '#1677ff' }} />,
-    RevisaoAtrasada: <WarningOutlined style={{ color: '#ff4d4f' }} />,
-    AgendamentoCriado: <CalendarOutlined style={{ color: '#1677ff' }} />,
-    AgendamentoAlterado: <CalendarOutlined style={{ color: '#faad14' }} />,
-    RevisaoConcluida: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
-    AgendamentoAprovado: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
-    AgendamentoRecusado: <CloseOutlined style={{ color: '#ff4d4f' }} />,
-    NovaSolicitacao: <BellOutlined style={{ color: '#1677ff' }} />,
-    Cancelamento: <CloseOutlined style={{ color: '#ff4d4f' }} />,
-    Reagendamento: <CalendarOutlined style={{ color: '#faad14' }} />,
+    RevisaoProxima: <CalendarOutlined style={{ color: token.colorPrimary }} />,
+    RevisaoAtrasada: <WarningOutlined style={{ color: token.colorError }} />,
+    AgendamentoCriado: <CalendarOutlined style={{ color: token.colorPrimary }} />,
+    AgendamentoAlterado: <CalendarOutlined style={{ color: token.colorWarning }} />,
+    RevisaoConcluida: <CheckCircleOutlined style={{ color: token.colorSuccess }} />,
+    AgendamentoAprovado: <CheckCircleOutlined style={{ color: token.colorSuccess }} />,
+    AgendamentoRecusado: <CloseOutlined style={{ color: token.colorError }} />,
+    NovaSolicitacao: <BellOutlined style={{ color: token.colorPrimary }} />,
+    Cancelamento: <CloseOutlined style={{ color: token.colorError }} />,
+    Reagendamento: <CalendarOutlined style={{ color: token.colorWarning }} />,
   };
   return iconMap[tipo] || <InfoCircleOutlined />;
 }
@@ -68,6 +69,7 @@ export default function NotificationsDrawer({
   onMarkAsRead,
   onMarkAllAsRead
 }: NotificationsDrawerProps) {
+  const { token } = theme.useToken();
 
   console.log('[NotificationsDrawer] Renderizando notificações:', notificacoes);
 
@@ -116,15 +118,15 @@ export default function NotificationsDrawer({
               style={{
                 padding: '16px 24px',
                 cursor: 'pointer',
-                background: notif.lido ? '#fff' : '#f0f5ff',
-                borderBottom: '1px solid #f0f0f0',
+                background: notif.lido ? token.colorBgContainer : token.colorPrimaryBg,
+                borderBottom: `1px solid ${token.colorBorderSecondary}`,
                 transition: 'background 0.2s',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = notif.lido ? '#fafafa' : '#e6f4ff';
+                e.currentTarget.style.background = notif.lido ? token.colorBgTextHover : token.colorPrimaryBgHover;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = notif.lido ? '#fff' : '#f0f5ff';
+                e.currentTarget.style.background = notif.lido ? token.colorBgContainer : token.colorPrimaryBg;
               }}
               onClick={() => !notif.lido && onMarkAsRead(notif.id)}
             >
@@ -140,7 +142,7 @@ export default function NotificationsDrawer({
                 </Flex>
 
                 <Paragraph
-                  style={{ margin: 0, fontSize: 13, color: '#595959' }}
+                  style={{ margin: 0, fontSize: 13, color: token.colorTextDescription }}
                   ellipsis={{ rows: 2 }}
                 >
                   {t(`alertas.mensagem.${notif.tipo}`, { 
@@ -179,7 +181,7 @@ export default function NotificationsDrawer({
       {notificacoes && notificacoes.length > 0 && (
         <>
           <Divider style={{ margin: 0 }} />
-          <div style={{ padding: '12px 24px', textAlign: 'center', background: '#fafafa' }}>
+          <div style={{ padding: '12px 24px', textAlign: 'center', background: token.colorFillAlter }}>
             <Text type="secondary" style={{ fontSize: 12 }}>
               {t('alertas.drawer.recentOnly', 'Exibindo notificações recentes')}
             </Text>
