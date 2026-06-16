@@ -10,6 +10,1057 @@
     }
   ],
   "paths": {
+    "/api/Agendamento/cliente": {
+      "get": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Lista os agendamentos e revisões disponíveis do cliente autenticado.",
+        "description": "Retorna apenas revisões visíveis na tela de Agendamentos do Cliente:\r\nrevisões dentro da janela de tolerância, solicitações aguardando confirmação,\r\nagendamentos confirmados, revisões em execução e revisões atrasadas ainda reagendáveis.\r\nRevisões planejadas fora da janela, concluídas ou perdidas não são retornadas.",
+        "responses": {
+          "200": {
+            "description": "Lista de agendamentos do cliente retornada com sucesso.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgendamentoClienteResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgendamentoClienteResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgendamentoClienteResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Usuário não autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Usuário autenticado sem a role 'Cliente'.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Cliente não encontrado para o usuário autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Agendamento/cliente/{agendamentoId}/cancelar": {
+      "patch": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Cancela um agendamento confirmado do cliente autenticado.",
+        "description": "Somente agendamentos com status `Agendada` podem ser cancelados.\r\nApós o cancelamento, a revisão volta a ser exibida para o Cliente como\r\n`Aguardando Agendamento`, desde que ainda esteja dentro da janela de tolerância.",
+        "parameters": [
+          {
+            "name": "agendamentoId",
+            "in": "path",
+            "description": "ID do agendamento a ser cancelado.",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Agendamento cancelado com sucesso."
+          },
+          "401": {
+            "description": "Usuário não autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Usuário autenticado sem a role 'Cliente'.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agendamento não encontrado ou não pertence ao cliente autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Agendamento não está em um status permitido para cancelamento.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Agendamento/cliente/{agendamentoId}/remarcar": {
+      "post": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Solicita a remarcação de um agendamento confirmado.",
+        "description": "O agendamento atual precisa estar com status `Agendada`.\r\nAo solicitar a remarcação, o agendamento antigo é marcado como `Cancelada`\r\ne uma nova solicitação é criada como `AguardandoConfirmacao` para análise da Concessionária.\r\nA nova data precisa respeitar a janela de tolerância da revisão.",
+        "parameters": [
+          {
+            "name": "agendamentoId",
+            "in": "path",
+            "description": "ID do agendamento confirmado que será remarcado.",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Nova data solicitada para a revisão.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemarcarAgendamentoRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemarcarAgendamentoRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemarcarAgendamentoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Solicitação de remarcação criada com sucesso."
+          },
+          "400": {
+            "description": "Dados de entrada inválidos.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Usuário não autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Usuário autenticado sem a role 'Cliente'.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agendamento não encontrado ou não pertence ao cliente autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Agendamento ou data solicitada não respeitam as regras de remarcação.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Agendamento/cliente/revisoes/{revisaoMotoId}/agendar": {
+      "post": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Solicita o agendamento ou reagendamento de uma revisão do cliente.",
+        "description": "Este endpoint atende dois fluxos do Cliente:\r\nagendar uma revisão em `Aguardando Agendamento` ou reagendar uma revisão `Atrasada`.\r\nA revisão precisa estar dentro da janela de tolerância e a loja selecionada precisa estar ativa.\r\nQuando a revisão está atrasada por um agendamento anterior vencido, o registro antigo é cancelado\r\nantes da criação da nova solicitação.",
+        "parameters": [
+          {
+            "name": "revisaoMotoId",
+            "in": "path",
+            "description": "ID da revisão planejada da moto do cliente.",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Loja e data solicitadas para o agendamento.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendarRevisaoRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendarRevisaoRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendarRevisaoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Solicitação de agendamento criada com sucesso."
+          },
+          "400": {
+            "description": "Dados de entrada inválidos.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Usuário não autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Usuário autenticado sem a role 'Cliente'.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Revisão ou loja não encontrada.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Revisão indisponível para agendamento ou data fora da janela de tolerância.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Agendamento/cliente/{agendamentoId}/recusa/visualizar": {
+      "patch": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Marca a mensagem de recusa como visualizada pelo cliente.",
+        "description": "Usado quando o Cliente fecha o alerta de solicitação recusada.\r\nA recusa deixa de ser retornada nas próximas listagens de agendamentos do Cliente.",
+        "parameters": [
+          {
+            "name": "agendamentoId",
+            "in": "path",
+            "description": "ID do agendamento recusado.",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Mensagem de recusa marcada como visualizada."
+          },
+          "401": {
+            "description": "Usuário não autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Usuário autenticado sem a role 'Cliente'.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agendamento não encontrado ou não pertence ao cliente autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Agendamento não está com status de recusa.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Agendamento/concessionaria": {
+      "get": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Lista os agendamentos das lojas da concessionária autenticada.",
+        "description": "Retorna somente agendamentos vinculados às lojas da Concessionária autenticada\r\ne nos status exibidos na tela da Concessionária:\r\n`AguardandoConfirmacao`, `Agendada`, `Recusada`, `EmExecucao` e `Concluida`.",
+        "responses": {
+          "200": {
+            "description": "Lista de agendamentos da concessionária retornada com sucesso.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgendamentoConcessionariaResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgendamentoConcessionariaResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AgendamentoConcessionariaResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Usuário não autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Usuário autenticado sem a role 'Concessionaria'.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Concessionária não encontrada para o usuário autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Agendamento/concessionaria/{agendamentoId}/aceitar": {
+      "patch": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Aceita uma solicitação de agendamento feita por um cliente.",
+        "description": "Apenas solicitações com status `AguardandoConfirmacao` podem ser aceitas.\r\nAo aceitar, o status passa para `Agendada` e o Cliente passa a visualizar\r\na revisão como agendada na data solicitada.",
+        "parameters": [
+          {
+            "name": "agendamentoId",
+            "in": "path",
+            "description": "ID da solicitação de agendamento.",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Solicitação aceita com sucesso."
+          },
+          "401": {
+            "description": "Usuário não autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Usuário autenticado sem a role 'Concessionaria'.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agendamento não encontrado ou não pertence à concessionária autenticada.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Agendamento não está aguardando confirmação.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Agendamento/concessionaria/{agendamentoId}/recusar": {
+      "post": {
+        "tags": [
+          "Agendamentos"
+        ],
+        "summary": "Recusa uma solicitação de agendamento feita por um cliente.",
+        "description": "Apenas solicitações com status `AguardandoConfirmacao` podem ser recusadas.\r\nAo recusar, o Cliente volta a visualizar a revisão como `Aguardando Agendamento`\r\ne recebe a mensagem de recusa informada pela Concessionária em um alerta fechável.",
+        "parameters": [
+          {
+            "name": "agendamentoId",
+            "in": "path",
+            "description": "ID da solicitação de agendamento.",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Motivo opcional da recusa exibido ao Cliente.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecusarAgendamentoRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecusarAgendamentoRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecusarAgendamentoRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Solicitação recusada com sucesso."
+          },
+          "400": {
+            "description": "Dados de entrada inválidos.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Usuário não autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Usuário autenticado sem a role 'Concessionaria'.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Agendamento não encontrado ou não pertence à concessionária autenticada.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Agendamento não está aguardando confirmação.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/alertas": {
+      "get": {
+        "tags": [
+          "Alertas"
+        ],
+        "summary": "Lista os alertas do usuário autenticado.",
+        "parameters": [
+          {
+            "name": "lido",
+            "in": "query",
+            "description": "Filtrar por status de leitura.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "tipo",
+            "in": "query",
+            "description": "Filtrar por tipo de alerta.",
+            "schema": {
+              "$ref": "#/components/schemas/TipoAlerta"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/alertas/nao-lidos/total": {
+      "get": {
+        "tags": [
+          "Alertas"
+        ],
+        "summary": "Retorna o total de alertas não lidos do usuário.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/alertas/{id}/ler": {
+      "put": {
+        "tags": [
+          "Alertas"
+        ],
+        "summary": "Marca um alerta específico como lido.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID do alerta.",
+            "required": true,
+            "schema": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/alertas/ler-todos": {
+      "put": {
+        "tags": [
+          "Alertas"
+        ],
+        "summary": "Marca todos os alertas do usuário como lidos.",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Auth/login": {
       "post": {
         "tags": [
@@ -2617,6 +3668,108 @@
           },
           "404": {
             "description": "Se a loja nao for encontrada.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/Dashboard/concessionaria/revisoes": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Retorna as filas de revisões da concessionária autenticada para um dia.",
+        "description": "Monta automaticamente as filas a partir dos agendamentos confirmados do dia.\r\nSão considerados os agendamentos das lojas da Concessionária autenticada nos status\r\n`Agendada`, `EmExecucao` e `Concluida`.\r\nEnquanto o sistema não possui cadastro real de mecânicos, a distribuição usa quatro\r\nmecânicos mockados e aplica round-robin pela ordem de chegada: data agendada, criação\r\ndo agendamento e ID.",
+        "parameters": [
+          {
+            "name": "data",
+            "in": "query",
+            "description": "Data desejada no formato yyyy-MM-dd. Se omitida, usa a data atual.",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard de filas retornado com sucesso.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardConcessionariaResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardConcessionariaResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardConcessionariaResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Usuário não autenticado.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Usuário autenticado sem a role 'Concessionaria'.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Concessionária não encontrada para o usuário autenticado.",
             "content": {
               "text/plain": {
                 "schema": {
@@ -6676,6 +7829,305 @@
   },
   "components": {
     "schemas": {
+      "AgendamentoClienteResponse": {
+        "required": [
+          "agendamentoId",
+          "revisaoMotoId",
+          "motoId",
+          "marca",
+          "modelo",
+          "placa",
+          "numeroRevisao",
+          "nomeRevisao",
+          "status",
+          "dataIdeal",
+          "dataMinima",
+          "dataLimite",
+          "dataAgendada",
+          "lojaId",
+          "nomeLoja",
+          "cidadeLoja",
+          "quantidadePecas",
+          "quantidadeServicos",
+          "prazoTexto"
+        ],
+        "type": "object",
+        "properties": {
+          "agendamentoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "revisaoMotoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "motoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "modelo": {
+            "type": "string"
+          },
+          "placa": {
+            "type": "string"
+          },
+          "numeroRevisao": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nomeRevisao": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "dataIdeal": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dataMinima": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dataLimite": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dataAgendada": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lojaId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nomeLoja": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cidadeLoja": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "quantidadePecas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quantidadeServicos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "prazoTexto": {
+            "type": "string"
+          },
+          "mensagemRecusa": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dataRecusa": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "AgendamentoConcessionariaResponse": {
+        "required": [
+          "agendamentoId",
+          "revisaoMotoId",
+          "motoId",
+          "lojaId",
+          "lojaNome",
+          "clienteNome",
+          "marca",
+          "modelo",
+          "placa",
+          "numeroRevisao",
+          "nomeRevisao",
+          "status",
+          "dataIdeal",
+          "dataAgendada",
+          "quilometragem",
+          "quantidadePecas",
+          "quantidadeServicos",
+          "mensagemRecusa",
+          "dataRecusa"
+        ],
+        "type": "object",
+        "properties": {
+          "agendamentoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "revisaoMotoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "motoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lojaId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lojaNome": {
+            "type": "string"
+          },
+          "clienteNome": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "modelo": {
+            "type": "string"
+          },
+          "placa": {
+            "type": "string"
+          },
+          "numeroRevisao": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nomeRevisao": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "dataIdeal": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dataAgendada": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "quilometragem": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quantidadePecas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quantidadeServicos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "mensagemRecusa": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dataRecusa": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "AgendarRevisaoRequest": {
+        "required": [
+          "lojaId",
+          "dataAgendada"
+        ],
+        "type": "object",
+        "properties": {
+          "lojaId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "dataAgendada": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "CategoriaPeca": {
         "type": "integer"
       },
@@ -7025,9 +8477,261 @@
           }
         }
       },
+      "DashboardConcessionariaResponse": {
+        "required": [
+          "data",
+          "totalMecanicos",
+          "totalRevisoes",
+          "revisoesAgendadas",
+          "revisoesEmExecucao",
+          "revisoesConcluidas",
+          "filas"
+        ],
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totalMecanicos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalRevisoes": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "revisoesAgendadas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "revisoesEmExecucao": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "revisoesConcluidas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "filas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FilaMecanicoResponse"
+            }
+          }
+        }
+      },
+      "FilaMecanicoResponse": {
+        "required": [
+          "mecanicoId",
+          "nome",
+          "especialidade",
+          "capacidadeDiaria",
+          "itens"
+        ],
+        "type": "object",
+        "properties": {
+          "mecanicoId": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "especialidade": {
+            "type": "string"
+          },
+          "capacidadeDiaria": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemFilaRevisaoResponse"
+            }
+          }
+        }
+      },
       "IFormFile": {
         "type": "string",
         "format": "binary"
+      },
+      "ItemFilaRevisaoResponse": {
+        "required": [
+          "agendamentoId",
+          "revisaoMotoId",
+          "motoId",
+          "lojaId",
+          "lojaNome",
+          "clienteNome",
+          "marca",
+          "modelo",
+          "placa",
+          "numeroRevisao",
+          "nomeRevisao",
+          "status",
+          "dataIdeal",
+          "dataAgendada",
+          "posicaoFila",
+          "quilometragem",
+          "quantidadePecas",
+          "quantidadeServicos",
+          "totalItens",
+          "itensConcluidos",
+          "progressoPercentual"
+        ],
+        "type": "object",
+        "properties": {
+          "agendamentoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "revisaoMotoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "motoId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lojaId": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "lojaNome": {
+            "type": "string"
+          },
+          "clienteNome": {
+            "type": "string"
+          },
+          "marca": {
+            "type": "string"
+          },
+          "modelo": {
+            "type": "string"
+          },
+          "placa": {
+            "type": "string"
+          },
+          "numeroRevisao": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "nomeRevisao": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "dataIdeal": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dataAgendada": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "posicaoFila": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quilometragem": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quantidadePecas": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "quantidadeServicos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "totalItens": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "itensConcluidos": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "progressoPercentual": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
       },
       "LinhaRequest": {
         "required": [
@@ -7748,6 +9452,20 @@
           }
         }
       },
+      "RecusarAgendamentoRequest": {
+        "required": [
+          "motivo"
+        ],
+        "type": "object",
+        "properties": {
+          "motivo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "RefreshTokenRequest": {
         "required": [
           "accessToken",
@@ -7814,6 +9532,18 @@
           },
           "telefone": {
             "type": "string"
+          }
+        }
+      },
+      "RemarcarAgendamentoRequest": {
+        "required": [
+          "novaData"
+        ],
+        "type": "object",
+        "properties": {
+          "novaData": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -8361,6 +10091,9 @@
       "StatusCadastro": {
         "type": "integer"
       },
+      "TipoAlerta": {
+        "type": "integer"
+      },
       "UserData": {
         "required": [
           "id",
@@ -8392,6 +10125,12 @@
   },
   "tags": [
     {
+      "name": "Agendamentos"
+    },
+    {
+      "name": "Alertas"
+    },
+    {
       "name": "Autenticação"
     },
     {
@@ -8399,6 +10138,9 @@
     },
     {
       "name": "Concessionárias"
+    },
+    {
+      "name": "Dashboard"
     },
     {
       "name": "Linhas de Motos"
