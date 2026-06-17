@@ -33,8 +33,7 @@ class SignalRService {
       console.log('[SignalR] Conexão estabelecida.');
     } catch (err) {
       console.error('[SignalR] Erro ao iniciar conexão:', err);
-      // O withAutomaticReconnect() ajuda, mas se falhar o start inicial 
-      // podemos tentar novamente manualmente
+      this.connection = null;
       setTimeout(() => this.startConnection(), 5000);
     }
   }
