@@ -1,5 +1,5 @@
 import * as signalR from '@microsoft/signalr';
-import { BASE_URL } from '@/app/services/http';
+import { SIGNALR_URL } from '@/app/services/http';
 import { tokenManager } from './tokenManager';
 import { Alerta } from '../models/Alerta';
 
@@ -10,7 +10,7 @@ class SignalRService {
   public async startConnection() {
     if (this.connection) return;
 
-    const hubUrl = BASE_URL.replace('/api', '') + '/hubs/notifications';
+    const hubUrl = SIGNALR_URL;
     
     this.connection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
