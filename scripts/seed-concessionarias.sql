@@ -154,6 +154,15 @@ BEGIN TRY
     SET [ConcessionariaId] = NULL
     WHERE [ConcessionariaId] IN (SELECT [Id] FROM @SeedConcessionariaIds);
 
+    IF OBJECT_ID(N'[dbo].[Agendamentos]', N'U') IS NOT NULL
+    BEGIN
+        DELETE agendamento
+        FROM [dbo].[Agendamentos] AS agendamento
+        INNER JOIN [dbo].[Lojas] AS loja
+            ON loja.[Id] = agendamento.[LojaId]
+        WHERE loja.[ConcessionariaId] IN (SELECT [Id] FROM @SeedConcessionariaIds);
+    END;
+
     DELETE FROM [dbo].[AspNetUserRoles]
     WHERE [UserId] LIKE N'SEED-CON-%';
 

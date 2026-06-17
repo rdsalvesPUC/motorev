@@ -155,6 +155,102 @@ namespace MotoRevApi.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("MotoRevApi.Model.Agendamento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AtualizadoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("DataAgendada")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("DataRecusa")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("LojaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("MensagemRecusa")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("RecusaVisualizadaCliente")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("RevisaoMotoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LojaId");
+
+                    b.HasIndex("RevisaoMotoId");
+
+                    b.HasIndex("RevisaoMotoId", "Status")
+                        .HasFilter("[Status] IN ('AguardandoConfirmacao', 'Agendada', 'EmExecucao')");
+
+                    b.HasIndex("LojaId", "DataAgendada", "Status");
+
+                    b.ToTable("Agendamentos");
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.Alerta", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AgendamentoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CriadoEm")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Lido")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("MarcaMoto")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ModeloMotoNome")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("MotoId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OrdemRevisao")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Quilometragem")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Tipo")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UsuarioId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Alertas");
+                });
+
             modelBuilder.Entity("MotoRevApi.Model.Cliente", b =>
                 {
                     b.Property<int>("Id")
@@ -843,6 +939,25 @@ namespace MotoRevApi.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("MotoRevApi.Model.Agendamento", b =>
+                {
+                    b.HasOne("MotoRevApi.Model.Loja", "Loja")
+                        .WithMany()
+                        .HasForeignKey("LojaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("MotoRevApi.Model.RevisaoMoto", "RevisaoMoto")
+                        .WithMany()
+                        .HasForeignKey("RevisaoMotoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Loja");
+
+                    b.Navigation("RevisaoMoto");
                 });
 
             modelBuilder.Entity("MotoRevApi.Model.Cliente", b =>

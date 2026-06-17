@@ -18,8 +18,10 @@ $seedScripts = @(
     "seed-pecas-servicos.sql",
     "seed-linhas.sql",
     "seed-modelos-motos.sql",
+    "seed-revisoes-padrao.sql",
     "seed-clientes-motos.sql",
-    "seed-concessionarias.sql"
+    "seed-concessionarias.sql",
+    "seed-agendamentos.sql"
 )
 
 function Invoke-SqlScript {

@@ -6,11 +6,12 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "test": "node --test src/app/pages/cliente/concessionarias/Concessionarias.utils.test.mjs"
+    "test": "node --test src/app/pages/cliente/concessionarias/Concessionarias.utils.test.mjs src/app/pages/cliente/revisoes/RevisoesCliente.utils.test.mjs"
   },
   "dependencies": {
     "@ant-design/colors": "^8.0.1",
     "@ant-design/icons": "^6.1.0",
+    "@microsoft/signalr": "^10.0.0",
     "antd": "^6.3.3",
     "canvas-confetti": "1.9.4",
     "date-fns": "3.6.0",

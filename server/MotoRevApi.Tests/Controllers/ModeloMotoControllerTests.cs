@@ -132,6 +132,23 @@ public class ModeloMotoControllerTests
     }
 
     [Fact]
+    public void ObterModelosDisponiveisParaCadastro_DeveRetornarLista()
+    {
+        var list = new List<ModeloMotoResponse>
+        {
+            new(1, "Ninja", "Kawasaki", 1, "400cc", 2023, true)
+        };
+        _modeloMotoServiceMock.Setup(s => s.ListarModelosDisponiveisParaCadastro()).Returns(list);
+
+        var result = _controller.ObterModelosDisponiveisParaCadastro();
+
+        var okResult = Assert.IsType<OkObjectResult>(result.Result);
+        Assert.Equal(200, okResult.StatusCode);
+        Assert.Equal(list, okResult.Value);
+        _modeloMotoServiceMock.Verify(s => s.ListarModelosDisponiveisParaCadastro(), Times.Once);
+    }
+
+    [Fact]
     public void ObterCatalogoModelosMotos_DeveRepasseFiltroStatus()
     {
         var list = new List<ModeloMotoResponse>

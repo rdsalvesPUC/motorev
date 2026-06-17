@@ -155,6 +155,36 @@ public class ModeloMotoServiceTests
     }
 
     [Fact]
+    public void ListarModelosDisponiveisParaCadastro_DeveRetornarApenasAtivosComRevisaoPadraoAtiva()
+    {
+        using var context = CreateContext();
+        var linhaComRevisao = SeedLinha(context);
+        var linhaSemRevisao = new Linha { Nome = "Linha Sem Revisao", Ativo = true };
+        var linhaComRevisaoInativa = new Linha { Nome = "Linha Revisao Inativa", Ativo = true };
+        context.Linhas.AddRange(linhaSemRevisao, linhaComRevisaoInativa);
+        context.SaveChanges();
+
+        context.ModelosMotos.AddRange(
+            new ModeloMoto { NomeModelo = "Apto", Marca = "Honda", LinhaId = linhaComRevisao.Id, Ativo = true },
+            new ModeloMoto { NomeModelo = "Sem Plano", Marca = "Yamaha", LinhaId = linhaSemRevisao.Id, Ativo = true },
+            new ModeloMoto { NomeModelo = "Modelo Inativo", Marca = "Honda", LinhaId = linhaComRevisao.Id, Ativo = false },
+            new ModeloMoto { NomeModelo = "Plano Inativo", Marca = "BMW", LinhaId = linhaComRevisaoInativa.Id, Ativo = true }
+        );
+        context.RevisoesPadrao.AddRange(
+            new RevisaoPadrao { Nome = "Primeira revisão", Ordem = 1, LinhaId = linhaComRevisao.Id, Ativo = true },
+            new RevisaoPadrao { Nome = "Revisão inativa", Ordem = 1, LinhaId = linhaComRevisaoInativa.Id, Ativo = false }
+        );
+        context.SaveChanges();
+
+        var service = new ModeloMotoService(context);
+
+        var result = service.ListarModelosDisponiveisParaCadastro();
+
+        var modelo = Assert.Single(result);
+        Assert.Equal("Apto", modelo.NomeModelo);
+    }
+
+    [Fact]
     public void ListarCatalogoModelosMotos_DeveRetornarAtivosEInativos()
     {
         using var context = CreateContext();

@@ -64,6 +64,7 @@ public class MotoController : ControllerBase
     /// <response code="401">Usuário não autenticado.</response>
     /// <response code="403">Usuário não tem permissão para criar motos.</response>
     /// <response code="409">Veículo com esta placa ou chassi já cadastrado.</response>
+    /// <response code="422">Modelo de moto sem modelo de revisão ativo vinculado.</response>
     [HttpPost]
     [Authorize(Roles = Roles.Cliente)]
     [ProducesResponseType(typeof(MotoResponse), StatusCodes.Status201Created)]
@@ -71,6 +72,7 @@ public class MotoController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> AdicionarMoto([FromBody] MotoRequest request)
     {
         if (!ModelState.IsValid)

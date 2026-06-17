@@ -5,6 +5,8 @@ import MinhasMotos from '@/app/pages/cliente/motos/MinhasMotos';
 import MotoForm from '@/app/pages/cliente/motos/MotoForm';
 import MotoDetalhes from '@/app/pages/cliente/motos/MotoDetalhes';
 import ConcessionariasCliente from '@/app/pages/cliente/concessionarias/Concessionarias';
+import RevisoesCliente from '@/app/pages/cliente/revisoes/RevisoesCliente';
+import AgendamentosCliente from '@/app/pages/cliente/agendamentos/AgendamentosCliente';
 import PerfilCliente from '@/app/pages/cliente/perfil/PerfilCliente';
 import { Typography } from 'antd';
 import {tokenManager} from "@/app/services/tokenManager";
@@ -47,6 +49,8 @@ export default function DashboardCliente() {
         <Route path={PATH_SEGMENTS.CLIENTE_MOTOS_NOVA} element={<MotoForm />} />
         <Route path={`${PATH_SEGMENTS.CLIENTE_MOTOS_EDITAR}/:id`} element={<MotoForm />} />
         <Route path={`${PATH_SEGMENTS.CLIENTE_MOTOS_DETALHES}/:id`} element={<MotoDetalhes />} />
+        <Route path={PATH_SEGMENTS.CLIENTE_REVISOES} element={<RevisoesCliente />} />
+        <Route path={PATH_SEGMENTS.CLIENTE_AGENDAMENTOS} element={<AgendamentosCliente />} />
         <Route path={PATH_SEGMENTS.CLIENTE_CONCESSIONARIAS} element={<ConcessionariasCliente />} />
         <Route path="*" element={<Navigate to={PATHS.DASHBOARD_CLIENTE} replace />} />
       </Routes>
