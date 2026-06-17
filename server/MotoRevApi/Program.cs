@@ -10,6 +10,8 @@ using Microsoft.OpenApi;
 using MotoRevApi.Data;
 using MotoRevApi.Data.Seed;
 using MotoRevApi.Handlers;
+using MotoRevApi.Jobs;
+using MotoRevApi.Hubs;
 using MotoRevApi.Model;
 using MotoRevApi.Profiles;
 using MotoRevApi.Services;
@@ -63,6 +65,23 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["JwtSettings:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+
+            // Se a requisição for para o hub do SignalR
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) &&
+                (path.StartsWithSegments("/hubs/notifications")))
+            {
+                // Lê o token da query string
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 
@@ -73,10 +92,16 @@ builder.Services.AddCors(options =>
     {
         policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
@@ -93,6 +118,8 @@ builder.Services.AddScoped<ServicoService>();
 builder.Services.AddScoped<ModeloMotoService>();
 builder.Services.AddScoped<LinhaService>();
 builder.Services.AddScoped<RevisaoPadraoService>();
+builder.Services.AddScoped<AlertaService>();
+builder.Services.AddHostedService<RevisaoAlertaJob>();
 builder.Services.AddScoped<AgendamentoService>();
 builder.Services.AddScoped<DashboardConcessionariaService>();
 builder.Services.AddEndpointsApiExplorer();
@@ -149,6 +176,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");
 
 app.Run();
 

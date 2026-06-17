@@ -29,15 +29,25 @@ public class AgendamentoService
     ];
 
     private readonly AppDbContext _context;
+    private readonly AlertaService? _alertaService;
     private readonly Func<DateTime> _todayProvider;
 
-    public AgendamentoService(AppDbContext context) : this(context, () => DateTime.Today)
+    public AgendamentoService(AppDbContext context) : this(context, null, () => DateTime.Today)
     {
     }
 
-    public AgendamentoService(AppDbContext context, Func<DateTime> todayProvider)
+    public AgendamentoService(AppDbContext context, Func<DateTime> todayProvider) : this(context, null, todayProvider)
+    {
+    }
+
+    public AgendamentoService(AppDbContext context, AlertaService? alertaService) : this(context, alertaService, () => DateTime.Today)
+    {
+    }
+
+    public AgendamentoService(AppDbContext context, AlertaService? alertaService, Func<DateTime> todayProvider)
     {
         _context = context;
+        _alertaService = alertaService;
         _todayProvider = todayProvider;
     }
 
@@ -158,6 +168,21 @@ public class AgendamentoService
         agendamento.AtualizadoEm = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        var loja = await _context.Lojas
+            .Include(l => l.Concessionaria)
+            .FirstOrDefaultAsync(l => l.Id == agendamento.LojaId);
+        var concessionariaUsuarioId = loja?.Concessionaria?.UsuarioId;
+
+        if (_alertaService != null && concessionariaUsuarioId != null)
+        {
+            await _alertaService.GerarAlertaAgendamentoCanceladoAsync(
+                agendamento.Id,
+                userId,
+                concessionariaUsuarioId,
+                agendamento.RevisaoMoto.MotoId
+            );
+        }
     }
 
     public virtual async Task RemarcarAgendamentoClienteAsync(
@@ -192,7 +217,7 @@ public class AgendamentoService
         agendamento.Status = StatusAgendamento.Cancelada;
         agendamento.AtualizadoEm = agora;
 
-        _context.Agendamentos.Add(new Agendamento
+        var novoAgendamento = new Agendamento
         {
             RevisaoMotoId = agendamento.RevisaoMotoId,
             LojaId = agendamento.LojaId,
@@ -200,9 +225,25 @@ public class AgendamentoService
             Status = StatusAgendamento.AguardandoConfirmacao,
             CriadoEm = agora,
             AtualizadoEm = agora
-        });
+        };
+        _context.Agendamentos.Add(novoAgendamento);
 
         await _context.SaveChangesAsync();
+
+        var loja = await _context.Lojas
+            .Include(l => l.Concessionaria)
+            .FirstOrDefaultAsync(l => l.Id == agendamento.LojaId);
+        var concessionariaUsuarioId = loja?.Concessionaria?.UsuarioId;
+
+        if (_alertaService != null && concessionariaUsuarioId != null)
+        {
+            await _alertaService.GerarAlertaAgendamentoAlteradoAsync(
+                novoAgendamento.Id,
+                userId,
+                concessionariaUsuarioId,
+                agendamento.RevisaoMoto.MotoId
+            );
+        }
     }
 
     public virtual async Task AgendarRevisaoClienteAsync(
@@ -211,11 +252,11 @@ public class AgendamentoService
         AgendarRevisaoRequest request)
     {
         var revisao = await BuscarRevisaoDoClienteAsync(revisaoMotoId, userId);
-        var lojaExiste = await _context.Lojas
-            .AsNoTracking()
-            .AnyAsync(l => l.Id == request.LojaId && l.Ativo);
+        var loja = await _context.Lojas
+            .Include(l => l.Concessionaria)
+            .FirstOrDefaultAsync(l => l.Id == request.LojaId && l.Ativo);
 
-        if (!lojaExiste)
+        if (loja == null)
         {
             throw new NotFoundException("Loja não encontrada.");
         }
@@ -248,7 +289,7 @@ public class AgendamentoService
             ultimoAgendamento.AtualizadoEm = agora;
         }
 
-        _context.Agendamentos.Add(new Agendamento
+        var agendamento = new Agendamento
         {
             RevisaoMotoId = revisaoMotoId,
             LojaId = request.LojaId,
@@ -256,9 +297,22 @@ public class AgendamentoService
             Status = StatusAgendamento.AguardandoConfirmacao,
             CriadoEm = agora,
             AtualizadoEm = agora
-        });
+        };
+        _context.Agendamentos.Add(agendamento);
 
         await _context.SaveChangesAsync();
+
+        var concessionariaUsuarioId = loja.Concessionaria?.UsuarioId;
+
+        if (_alertaService != null && concessionariaUsuarioId != null)
+        {
+            await _alertaService.GerarAlertaAgendamentoCriadoAsync(
+                agendamento.Id,
+                userId,
+                concessionariaUsuarioId,
+                revisao.MotoId
+            );
+        }
     }
 
     public virtual async Task VisualizarRecusaClienteAsync(int agendamentoId, string userId)
@@ -292,6 +346,16 @@ public class AgendamentoService
         agendamento.AtualizadoEm = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        if (_alertaService != null)
+        {
+            await _alertaService.GerarAlertaAgendamentoAprovadoAsync(
+                agendamento.Id,
+                agendamento.RevisaoMoto.Moto.Cliente.UsuarioId,
+                userId,
+                agendamento.RevisaoMoto.MotoId
+            );
+        }
     }
 
     public virtual async Task RecusarSolicitacaoConcessionariaAsync(
@@ -315,6 +379,16 @@ public class AgendamentoService
         agendamento.AtualizadoEm = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
+
+        if (_alertaService != null)
+        {
+            await _alertaService.GerarAlertaAgendamentoRecusadoAsync(
+                agendamento.Id,
+                agendamento.RevisaoMoto.Moto.Cliente.UsuarioId,
+                userId,
+                agendamento.RevisaoMoto.MotoId
+            );
+        }
     }
 
     private async Task<Agendamento> BuscarAgendamentoDoClienteAsync(int agendamentoId, string userId)
@@ -336,6 +410,9 @@ public class AgendamentoService
         var agendamento = await _context.Agendamentos
             .Include(a => a.Loja)
                 .ThenInclude(l => l.Concessionaria)
+            .Include(a => a.RevisaoMoto)
+                .ThenInclude(r => r.Moto)
+                    .ThenInclude(m => m.Cliente)
             .FirstOrDefaultAsync(a =>
                 a.Id == agendamentoId &&
                 a.Loja.Concessionaria.UsuarioId == userId);
