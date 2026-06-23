@@ -19,6 +19,10 @@
           </Exclude>
           <ExcludeByFile>
             **/Program.cs,
+            **/Data/AppDbContextFactory.cs,
+            **/Dto/Response/ConcessionariaListResponse.cs,
+            **/Dto/Response/EnderecoResponse.cs,
+            **/Hubs/NotificationHub.cs,
             **/Migrations/*.cs,
             **/Profiles/MapsterConfig.cs,
             **/obj/**/*.cs

@@ -10,5 +10,6 @@ public record ServicoResponse(
     CategoriaServico Categoria,
     int TempoEstimado,
     decimal Custo,
-    bool Ativo
+    bool Ativo,
+    string? StatusExecucao = null
 );

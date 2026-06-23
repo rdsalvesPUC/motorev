@@ -8,5 +8,6 @@ public record RevisaoPadraoPecaResponse(
     decimal Preco,
     int Estoque,
     string Status,
-    int Quantidade
+    int Quantidade,
+    string? StatusExecucao = null
 );

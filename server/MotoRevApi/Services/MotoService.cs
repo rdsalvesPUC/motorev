@@ -16,12 +16,18 @@ namespace MotoRevApi.Services;
 public class MotoService
 {
     private readonly AppDbContext _context;
+    private readonly DemoExecutionStateService? _demoExecutionStateService;
 
     public MotoService() { } // Construtor para Moq
 
-    public MotoService(AppDbContext context)
+    public MotoService(AppDbContext context) : this(context, null)
+    {
+    }
+
+    public MotoService(AppDbContext context, DemoExecutionStateService? demoExecutionStateService)
     {
         _context = context;
+        _demoExecutionStateService = demoExecutionStateService;
     }
 
     public virtual async Task<List<MotoResponse>> ListarMotosClienteAsync(string userId)
@@ -49,7 +55,10 @@ public class MotoService
             .Where(m => m.ClienteId == cliente.Id && m.Ativo)
             .ToListAsync();
 
-        return motos.Adapt<List<MotoResponse>>();
+        return motos
+            .Adapt<List<MotoResponse>>()
+            .Select(AplicarEstadoExecucaoDemo)
+            .ToList();
     }
 
     public virtual async Task<MotoResponse> CadastrarMotoAsync(MotoRequest request, string userId)
@@ -136,7 +145,7 @@ public class MotoService
                 .AsSplitQuery()
                 .FirstAsync(m => m.Id == moto.Id);
 
-            return savedMoto.Adapt<MotoResponse>();
+            return AplicarEstadoExecucaoDemo(savedMoto.Adapt<MotoResponse>());
         }
         catch
         {
@@ -173,7 +182,7 @@ public class MotoService
             throw new NotFoundException("Moto não encontrada.");
         }
 
-        return moto.Adapt<MotoResponse>();
+        return AplicarEstadoExecucaoDemo(moto.Adapt<MotoResponse>());
     }
 
     public virtual async Task<MotoResponse> AtualizarMotoAsync(int id, MotoUpdateRequest request, string userId)
@@ -238,13 +247,58 @@ public class MotoService
                 .AsSplitQuery()
                 .FirstAsync(m => m.Id == moto.Id);
 
-            return updatedMoto.Adapt<MotoResponse>();
+            return AplicarEstadoExecucaoDemo(updatedMoto.Adapt<MotoResponse>());
         }
         catch
         {
             await transaction.RollbackAsync();
             throw;
         }
+    }
+
+    private MotoResponse AplicarEstadoExecucaoDemo(MotoResponse moto)
+    {
+        if (_demoExecutionStateService == null)
+        {
+            return moto;
+        }
+
+        return moto with
+        {
+            RevisoesPlanejadas = moto.RevisoesPlanejadas
+                .Select(AplicarEstadoExecucaoDemo)
+                .ToList()
+        };
+    }
+
+    private RevisaoMotoResponse AplicarEstadoExecucaoDemo(RevisaoMotoResponse revisao)
+    {
+        if (_demoExecutionStateService == null)
+        {
+            return revisao;
+        }
+
+        return revisao with
+        {
+            Servicos = revisao.Servicos
+                .Select(servico => servico with
+                {
+                    StatusExecucao = _demoExecutionStateService.ObterStatusExecucao(
+                        revisao.Id,
+                        "servico",
+                        servico.Id)
+                })
+                .ToList(),
+            Pecas = revisao.Pecas
+                .Select(peca => peca with
+                {
+                    StatusExecucao = _demoExecutionStateService.ObterStatusExecucao(
+                        revisao.Id,
+                        "peca",
+                        peca.Id)
+                })
+                .ToList()
+        };
     }
 
     public virtual Task<bool> TemAgendamentosPendentesAsync(int motoId)

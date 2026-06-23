@@ -707,6 +707,15 @@ export default function MotoDetalhes() {
   }, [carregarAgendamentosCliente]);
 
   useEffect(() => {
+    const interval = window.setInterval(() => {
+      carregarDetalhes();
+      carregarAgendamentosCliente();
+    }, 30000);
+
+    return () => window.clearInterval(interval);
+  }, [carregarDetalhes, carregarAgendamentosCliente]);
+
+  useEffect(() => {
     const carregarLojas = async () => {
       try {
         const data = await concessionariaService.getLojasAtivas();

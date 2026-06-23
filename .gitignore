@@ -57,4 +57,5 @@ nunit-*.xml
 *.sln.DotSettings.user
 
 server/MotoRevApi/wwwroot
+server/MotoRevApi/demo-execucao-state.json
 /figma-maker-files/

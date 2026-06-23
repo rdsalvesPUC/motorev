@@ -8,23 +8,8 @@ import ConcessionariasCliente from '@/app/pages/cliente/concessionarias/Concessi
 import RevisoesCliente from '@/app/pages/cliente/revisoes/RevisoesCliente';
 import AgendamentosCliente from '@/app/pages/cliente/agendamentos/AgendamentosCliente';
 import PerfilCliente from '@/app/pages/cliente/perfil/PerfilCliente';
-import { Typography } from 'antd';
 import {tokenManager} from "@/app/services/tokenManager";
 import {PATH_SEGMENTS, PATHS} from "@/app/paths";
-import { t } from '@/app/i18n';
-
-const { Title, Paragraph } = Typography;
-
-function DashboardHome() {
-  return (
-    <>
-      <Title level={2}>{t('dashboard.welcome')}</Title>
-      <Paragraph>
-        {t('dashboard.clientAreaInfo')}
-      </Paragraph>
-    </>
-  );
-}
 
 export default function DashboardCliente() {
   const user = tokenManager.getUserData();
@@ -40,7 +25,7 @@ export default function DashboardCliente() {
       userName={userName}
     >
       <Routes>
-        <Route index element={<DashboardHome />} />
+        <Route index element={<Navigate to={PATHS.CLIENTE_MOTOS} replace />} />
         <Route
           path={PATH_SEGMENTS.PERFIL_USUARIO}
           element={<PerfilCliente onProfileUpdated={handleProfileUpdated} />}
@@ -52,7 +37,7 @@ export default function DashboardCliente() {
         <Route path={PATH_SEGMENTS.CLIENTE_REVISOES} element={<RevisoesCliente />} />
         <Route path={PATH_SEGMENTS.CLIENTE_AGENDAMENTOS} element={<AgendamentosCliente />} />
         <Route path={PATH_SEGMENTS.CLIENTE_CONCESSIONARIAS} element={<ConcessionariasCliente />} />
-        <Route path="*" element={<Navigate to={PATHS.DASHBOARD_CLIENTE} replace />} />
+        <Route path="*" element={<Navigate to={PATHS.CLIENTE_MOTOS} replace />} />
       </Routes>
     </DashboardLayout>
   );

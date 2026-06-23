@@ -8,4 +8,5 @@ export interface Servico {
   tempoEstimado: number;
   custo: number;
   ativo: boolean;
+  statusExecucao?: string | null;
 }
