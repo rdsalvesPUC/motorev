@@ -9,6 +9,7 @@ export interface RevisaoPadraoPecaResponse {
   estoque: number;
   status: string;
   quantidade: number;
+  statusExecucao?: string | null;
 }
 
 export interface RevisaoPadraoListResponse {
@@ -33,4 +34,3 @@ export interface RevisaoPadraoResponse {
   servicos: Servico[];
   pecas: RevisaoPadraoPecaResponse[];
 }
-

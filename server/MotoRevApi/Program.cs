@@ -119,6 +119,7 @@ builder.Services.AddScoped<ModeloMotoService>();
 builder.Services.AddScoped<LinhaService>();
 builder.Services.AddScoped<RevisaoPadraoService>();
 builder.Services.AddScoped<AlertaService>();
+builder.Services.AddSingleton<DemoExecutionStateService>();
 builder.Services.AddHostedService<RevisaoAlertaJob>();
 builder.Services.AddScoped<AgendamentoService>();
 builder.Services.AddScoped<DashboardConcessionariaService>();
