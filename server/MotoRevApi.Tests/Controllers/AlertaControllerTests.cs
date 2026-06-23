@@ -117,4 +117,72 @@ public class AlertaControllerTests
         Assert.IsType<NoContentResult>(result);
         _alertaServiceMock.Verify(s => s.MarcarTodosComoLidosAsync(UsuarioId), Times.Once);
     }
+
+    [Fact]
+    public async Task Listar_DeveRetornarUnauthorized_QuandoUsuarioIdForNulo()
+    {
+        // Arrange
+        var controllerWithoutUser = new AlertaController(_alertaServiceMock.Object);
+        controllerWithoutUser.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+
+        // Act
+        var result = await controllerWithoutUser.Listar(null, null);
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task ContarNaoLidos_DeveRetornarUnauthorized_QuandoUsuarioIdForNulo()
+    {
+        // Arrange
+        var controllerWithoutUser = new AlertaController(_alertaServiceMock.Object);
+        controllerWithoutUser.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+
+        // Act
+        var result = await controllerWithoutUser.ContarNaoLidos();
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task MarcarComoLido_DeveRetornarUnauthorized_QuandoUsuarioIdForNulo()
+    {
+        // Arrange
+        var controllerWithoutUser = new AlertaController(_alertaServiceMock.Object);
+        controllerWithoutUser.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+
+        // Act
+        var result = await controllerWithoutUser.MarcarComoLido(1);
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
+    }
+
+    [Fact]
+    public async Task MarcarTodosComoLidos_DeveRetornarUnauthorized_QuandoUsuarioIdForNulo()
+    {
+        // Arrange
+        var controllerWithoutUser = new AlertaController(_alertaServiceMock.Object);
+        controllerWithoutUser.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext()
+        };
+
+        // Act
+        var result = await controllerWithoutUser.MarcarTodosComoLidos();
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
+    }
 }
